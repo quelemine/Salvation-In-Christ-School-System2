@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+body {
+  background-color: rgb(249 250 251);
+  color: rgb(17 24 39);
+}
+
+.btn-primary {
+  background-color: rgb(37 99 235);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: rgb(29 78 216);
+}
+
+.btn-secondary {
+  background-color: rgb(107 114 128);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: rgb(75 85 99);
+}
+
+.btn-danger {
+  background-color: rgb(220 38 38);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+  background-color: rgb(185 28 28);
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgb(209 213 219);
+  border-radius: 0.5rem;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: rgb(59 130 246);
+  box-shadow: 0 0 0 2px rgb(59 130 246);
+}
+
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  padding: 1.5rem;
+}
+
+.print-sheet {
+  display: block;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body {
+    background: white;
+  }
+
+  .screen-only,
+  aside,
+  header,
+  [data-offline-banner] {
+    display: none !important;
+  }
+
+  main,
+  main > div {
+    padding: 0 !important;
+  }
+
+  .print-sheet {
+    display: block !important;
+    border: 1px solid #94a3b8;
+    border-radius: 0;
+    box-shadow: none;
+    width: 100%;
+  }
+}
+
+
+/* ── Admin sidebar nav scrollbar — left decorative track ─────────────────── */
+/* The visual bar is a decorative <div> rendered to the left of the nav.     */
+/* Hide the browser's native scrollbar on the nav itself (scrolling still    */
+/* works; the track div serves as the visual affordance).                    */
+.sidebar-nav {
+  scrollbar-width: none;   /* Firefox */
+}
+.sidebar-nav::-webkit-scrollbar {
+  display: none;            /* Chrome / Edge / Safari */
+}
