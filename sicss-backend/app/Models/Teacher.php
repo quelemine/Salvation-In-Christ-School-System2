@@ -50,7 +50,7 @@ class Teacher extends Model
 
     public function classes(): BelongsToMany
     {
-        return $this->belongsToMany(ClassModel::class, 'class_teacher');
+        return $this->belongsToMany(ClassModel::class, 'class_teacher', 'teacher_id', 'class_id');
     }
 
     public function subjects(): BelongsToMany

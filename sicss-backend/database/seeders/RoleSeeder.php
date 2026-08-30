@@ -42,6 +42,18 @@ class RoleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'name' => 'PRINCIPAL',
+                'slug' => 'principal',
+                'description' => 'School principal with staff oversight access',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'HEAD OF SCHOOL',
+                'slug' => 'head-of-school',
+                'description' => 'Receives school management reports',
+                'is_active' => true,
+            ],
+            [
                 'name' => 'PARENT',
                 'slug' => 'parent',
                 'description' => 'Parent with access to children information',
