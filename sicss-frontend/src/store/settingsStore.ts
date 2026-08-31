@@ -59,6 +59,7 @@ export interface SystemSettings {
   academicYear: string;
   country: string;
   currency: 'LRD' | 'USD';
+  exchangeRate: number; // LRD to USD conversion rate
   dateFormat: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
   timezone: string;
 }
@@ -179,6 +180,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     academicYear: '2026',
     country: 'Liberia',
     currency: 'LRD',
+    exchangeRate: 200, // 200 LRD = 1 USD (typical Liberian exchange rate)
     dateFormat: 'MM/DD/YYYY',
     timezone: 'Africa/Monrovia',
   },
@@ -246,6 +248,7 @@ interface SettingsState {
   updateReportCard: (r: Partial<ReportCardSettings>) => void;
   updateSystem: (s: Partial<SystemSettings>) => void;
   updatePayment: (p: Partial<PaymentSettings>) => void;
+  replaceSettings: (settings: Partial<AppSettings>) => void;
   resetAll: () => void;
 }
 
@@ -272,6 +275,16 @@ export const useSettingsStore = create<SettingsState>()(
       updatePayment: (p) =>
         set((state) => ({
           settings: { ...state.settings, payment: { ...state.settings.payment, ...p } },
+        })),
+      replaceSettings: (incoming) =>
+        set((state) => ({
+          settings: {
+            branding: { ...state.settings.branding, ...(incoming.branding ?? {}) },
+            theme: { ...state.settings.theme, ...(incoming.theme ?? {}) },
+            reportCard: { ...state.settings.reportCard, ...(incoming.reportCard ?? {}) },
+            system: { ...state.settings.system, ...(incoming.system ?? {}) },
+            payment: { ...state.settings.payment, ...(incoming.payment ?? {}) },
+          },
         })),
       resetAll: () => set({ settings: DEFAULT_SETTINGS }),
     }),

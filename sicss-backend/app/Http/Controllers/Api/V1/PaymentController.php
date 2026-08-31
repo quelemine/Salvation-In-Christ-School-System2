@@ -11,7 +11,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Payment::with(['student', 'fee', 'recordedBy']);
+        $query = Payment::with(['student.user:id,user_code', 'fee', 'recordedBy']);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -20,6 +20,7 @@ class PaymentController extends Controller
                     ->orWhereHas('student', function ($sq) use ($search) {
                         $sq->where('first_name', 'like', "%{$search}%")
                             ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn ($q) => $q->where('user_code', 'like', "%{$search}%"))
                             ->orWhere('student_id', 'like', "%{$search}%");
                     });
             });
@@ -95,13 +96,13 @@ class PaymentController extends Controller
             'payment_proof_url'  => $proofUrl,
         ]);
 
-        $payment->load(['student', 'fee', 'recordedBy']);
+        $payment->load(['student.user:id,user_code', 'fee', 'recordedBy']);
         return response()->json($payment, 201);
     }
 
     public function show(Payment $payment)
     {
-        $payment->load(['student', 'fee', 'recordedBy', 'receipts']);
+        $payment->load(['student.user:id,user_code', 'fee', 'recordedBy', 'receipts']);
         return response()->json($payment);
     }
 
@@ -127,7 +128,7 @@ class PaymentController extends Controller
             'status' => $request->status,
         ]);
 
-        $payment->load(['student', 'fee', 'recordedBy']);
+        $payment->load(['student.user:id,user_code', 'fee', 'recordedBy']);
         return response()->json($payment);
     }
 
@@ -139,7 +140,7 @@ class PaymentController extends Controller
 
     public function studentPayments(Request $request, $studentId)
     {
-        $query = Payment::with(['fee', 'recordedBy'])
+        $query = Payment::with(['student.user:id,user_code', 'fee', 'recordedBy'])
             ->where('student_id', $studentId);
 
         if ($request->has('academic_year')) {

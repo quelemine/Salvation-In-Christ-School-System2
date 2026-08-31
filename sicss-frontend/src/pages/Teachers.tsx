@@ -80,9 +80,10 @@ export default function Teachers() {
     finally { setLoading(false); }
   };
 
-  const filtered = teachers.filter((t) =>
-    `${t.first_name} ${t.last_name} ${t.email} ${t.employee_id}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = teachers.filter((t) => {
+    const displayId = (t as any).user?.user_code || t.employee_id;
+    return `${t.first_name} ${t.last_name} ${t.email} ${displayId}`.toLowerCase().includes(search.toLowerCase());
+  });
 
   const openAdd = () => { setEditingId(null); setUploadError(''); setFormData(emptyForm); setIsModalOpen(true); };
   const openEdit = (t: Teacher) => {
@@ -166,38 +167,62 @@ export default function Teachers() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; }
+          .rounded-xl { border-radius: 0 !important; }
+          .shadow-sm { box-shadow: none !important; }
+          table { border-collapse: collapse !important; width: 100% !important; }
+          th, td { border: 1px solid black !important; padding: 4px !important; font-size: 10px !important; }
+          th { background-color: #f0f0f0 !important; }
+        }
+      `}</style>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">People management</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Teachers</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Staff management</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Teachers</h1>
+          <p className="mt-1 text-sm text-slate-500">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.</p>
         </div>
         <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
           + Add teacher
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => window.print()} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          🖨️ Print
         </button>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
+        <div className="border-b border-slate-100 px-4 py-4 sm:px-5 no-print">
           <input
             type="search"
             placeholder="Search teachers…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input-field max-w-xs"
+            className="input-field w-full max-w-xs"
           />
         </div>
         {loading ? (
           <p className="py-12 text-center text-sm text-slate-500">Loading teachers…</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
+            <table className="min-w-[900px] divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
-                  {['Photo', 'Employee ID', 'Name', 'Salary structure', 'Email', 'Phone', 'Specialization', 'Hire date', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left">{h}</th>
-                  ))}
+                  <th className="px-3 sm:px-5 py-3 text-left">Photo</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Employee ID</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Name</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden sm:table-cell">Salary structure</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Email</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Phone</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Specialization</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Hire date</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Status</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -205,29 +230,29 @@ export default function Teachers() {
                   <tr><td colSpan={10} className="py-10 text-center text-slate-400">No teachers found.</td></tr>
                 ) : filtered.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50">
-                    <td className="px-5 py-3">
+                    <td className="px-3 sm:px-5 py-3">
                       {(t as any).photo
-                        ? <img src={(t as any).photo} alt={`${t.first_name} ${t.last_name}`} className="h-9 w-9 rounded-full border border-slate-200 object-cover" />
-                        : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{t.first_name?.[0]}{t.last_name?.[0]}</div>}
+                        ? <img src={(t as any).photo} alt={`${t.first_name} ${t.last_name}`} className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-slate-200 object-cover" />
+                        : <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{t.first_name?.[0]}{t.last_name?.[0]}</div>}
                     </td>
-                    <td className="px-5 py-3 font-mono text-xs text-slate-600">{t.employee_id}</td>
-                    <td className="px-5 py-3 font-semibold text-slate-900">{t.first_name} {t.last_name}</td>
-                    <td className="px-5 py-3 text-slate-600">{t.salary_structure?.name || '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{t.email}</td>
-                    <td className="px-5 py-3 text-slate-600">{t.phone || '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{t.subject_specialization || (t as any).specialization || '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{(t as any).hire_date || '—'}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    <td className="px-3 sm:px-5 py-3 font-mono text-xs text-slate-600">{(t as any).user?.user_code || t.employee_id}</td>
+                    <td className="px-3 sm:px-5 py-3 font-semibold text-slate-900">{t.first_name} {t.last_name}</td>
+                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden sm:table-cell">{t.salary_structure?.name || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{t.email}</td>
+                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{t.phone || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{t.subject_specialization || (t as any).specialization || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{(t as any).hire_date || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
                         (t as any).status === 'active' ? 'bg-emerald-100 text-emerald-800' :
                         (t as any).status === 'on_leave' ? 'bg-amber-100 text-amber-800' :
                         'bg-slate-100 text-slate-600'
                       }`}>{(t as any).status || 'active'}</span>
                     </td>
-                    <td className="px-5 py-3">
-                      <div className="flex gap-3">
-                        <button onClick={() => openEdit(t)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
-                        <button onClick={() => handleDelete(t.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                    <td className="px-3 sm:px-5 py-3">
+                      <div className="flex gap-2 flex-wrap">
+                        <button onClick={() => openEdit(t)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
+                        <button onClick={() => handleDelete(t.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -236,7 +261,7 @@ export default function Teachers() {
             </table>
           </div>
         )}
-        <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
+        <div className="border-t border-slate-100 px-4 py-3 sm:px-5 text-xs text-slate-400">
           {filtered.length} of {teachers.length} teacher{teachers.length !== 1 ? 's' : ''}
         </div>
       </div>
@@ -250,7 +275,7 @@ export default function Teachers() {
             </select>
             <p className="mt-1 text-xs text-slate-500">Create the user with a Class Teacher or Subject Teacher role first, then link it here.</p>
           </div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Employee ID <span className="text-rose-500">*</span></label><input required value={formData.employee_id} onChange={field('employee_id')} className="input-field" placeholder="EMP-001" /></div>
+          <div><label className="mb-1 block text-sm font-medium text-slate-700">Employee ID (optional - auto-generated if empty)</label><input value={formData.employee_id} onChange={field('employee_id')} className="input-field" placeholder="EMP-2026-0001" /></div>
           <div><label className="mb-1 block text-sm font-medium text-slate-700">First name <span className="text-rose-500">*</span></label><input required value={formData.first_name} onChange={field('first_name')} className="input-field" /></div>
           <div><label className="mb-1 block text-sm font-medium text-slate-700">Last name <span className="text-rose-500">*</span></label><input required value={formData.last_name} onChange={field('last_name')} className="input-field" /></div>
           <div><label className="mb-1 block text-sm font-medium text-slate-700">Email <span className="text-rose-500">*</span></label><input required type="email" value={formData.email} onChange={field('email')} className="input-field" /></div>

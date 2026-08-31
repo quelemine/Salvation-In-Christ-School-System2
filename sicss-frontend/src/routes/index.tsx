@@ -5,7 +5,6 @@ import MainLayout from '../layouts/MainLayout';
 import Dashboard from '../pages/Dashboard';
 import Students from '../pages/Students';
 import Attendance from '../pages/Attendance';
-import Fees from '../pages/Fees';
 import Divisions from '../pages/Divisions';
 import Users from '../pages/Users';
 import ActivityLogs from '../pages/ActivityLogs';
@@ -31,10 +30,11 @@ import HelpDeskAdmin from '../pages/HelpDeskAdmin';
 import FeeStructure from '../pages/FeeStructure';
 import FeeClearance from '../pages/FeeClearance';
 import StudentApplicationForm from '../pages/StudentApplicationForm';
-import MyGradeSheet from '../pages/MyGradeSheet';
 import StudentPortal from '../pages/StudentPortal';
+import StudentProfile from '../pages/StudentProfile';
 import TeacherPayroll from '../pages/TeacherPayroll';
 import TeacherAttendance from '../pages/TeacherAttendance';
+import AdminStaffUsers from '../pages/AdminStaffUsers';
 
 function RouteError() {
   const error = useRouteError() as { statusText?: string; status?: number };
@@ -74,21 +74,23 @@ const router = createBrowserRouter([
       // People
       { path: 'students', element: <Students /> },
       { path: 'student-application', element: <StudentApplicationForm /> },
+      { path: 'student-profile', element: <StudentProfile /> },
       { path: 'teachers', element: <Teachers /> },
       { path: 'teacher-payroll', element: <TeacherPayroll /> },
       { path: 'teacher-attendance', element: <TeacherAttendance /> },
+      { path: 'admin-staff', element: <AdminStaffUsers /> },
       // Academic work
       { path: 'grades', element: <Grades /> },
-      { path: 'my-grade-sheet', element: <MyGradeSheet /> },
+      { path: 'my-grade-sheet', element: <StudentPortal view="report-card" /> },
       { path: 'my-attendance', element: <StudentPortal view="attendance" /> },
       { path: 'my-assignments', element: <StudentPortal view="assignments" /> },
       { path: 'my-financial-records', element: <StudentPortal view="financial-records" /> },
+      { path: 'my-report-card', element: <StudentPortal view="report-card" /> },
       { path: 'attendance', element: <Attendance /> },
       { path: 'assignments', element: <Assignments /> },
       { path: 'comments', element: <Comments /> },
       { path: 'report-cards', element: <ReportCards /> },
       // Finance
-      { path: 'fees', element: <Fees /> },
       { path: 'fee-structure', element: <FeeStructure /> },
       { path: 'fee-clearance', element: <FeeClearance /> },
       { path: 'payments', element: <Payments /> },

@@ -58,12 +58,19 @@ export default function Settings() {
   const [resetConfirm, setResetConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const save = (fn: () => void) => {
     fn();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const latestSettings = useSettingsStore.getState().settings;
+    api.put('/settings', { settings: latestSettings })
+      .then(() => {
+        setSaveError('');
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      })
+      .catch(() => setSaveError('Unable to save settings for all users. Please try again.'));
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +89,11 @@ export default function Settings() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       updateBranding({ logoUrl: res.data.full_url });
+      // Auto-save settings after successful logo upload
+      const latestSettings = useSettingsStore.getState().settings;
+      await api.put('/settings', { settings: latestSettings });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } catch {
       setUploadError('Upload failed. Make sure the server is running and you are logged in as admin.');
     } finally {
@@ -126,6 +138,7 @@ export default function Settings() {
           <span>✓</span> Settings saved successfully.
         </div>
       )}
+      {saveError && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{saveError}</div>}
 
       <div className="flex gap-6 flex-col lg:flex-row">
         {/* Sidebar tabs */}
@@ -962,7 +975,7 @@ export default function Settings() {
                         Cancel
                       </button>
                       <button
-                        onClick={() => { resetAll(); setResetConfirm(false); setSaved(true); setTimeout(() => setSaved(false), 2500); }}
+                        onClick={() => { save(resetAll); setResetConfirm(false); }}
                         className="rounded-lg bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700"
                       >
                         Yes, reset everything

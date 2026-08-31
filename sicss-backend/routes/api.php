@@ -31,6 +31,8 @@ use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\StudentPortalController;
 use App\Http\Controllers\Api\V1\TeacherPayrollController;
 use App\Http\Controllers\Api\V1\TeacherAttendanceController;
+use App\Http\Controllers\Api\V1\GlobalSearchController;
+use App\Http\Controllers\Api\V1\SystemSettingsController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -51,14 +53,16 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/settings', [SystemSettingsController::class, 'show']);
         // Upload endpoints (admin only)
         // Academic reference data required when teachers enter grades.
-        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|teacher|class-teacher|subject-teacher|vice-principal-instruction');
-        Route::get('/classes', [ClassController::class, 'index'])->middleware('role:admin|teacher|class-teacher|subject-teacher|vice-principal-instruction');
-        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|teacher|class-teacher|subject-teacher|vice-principal-instruction');
-        Route::get('/grades', [GradeController::class, 'index'])->middleware('role:admin|teacher|class-teacher|subject-teacher|vice-principal-instruction');
+        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
+        Route::get('/classes', [ClassController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
+        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
+        Route::get('/grades', [GradeController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
 
         Route::middleware('role:admin')->group(function () {
+            Route::put('/settings', [SystemSettingsController::class, 'update']);
             Route::post('/upload/logo', [UploadController::class, 'logo']);
             Route::delete('/upload/logo', [UploadController::class, 'deleteLogo']);
             Route::post('/upload/teacher-image', [UploadController::class, 'teacherImage']);
@@ -66,10 +70,10 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
-        Route::get('/my-salary', [TeacherPayrollController::class, 'mySalary'])->middleware('role:teacher|class-teacher|subject-teacher');
-        Route::get('/my-teacher-attendance', [TeacherAttendanceController::class, 'mine'])->middleware('role:teacher|class-teacher|subject-teacher');
+        Route::get('/my-salary', [TeacherPayrollController::class, 'mySalary'])->middleware('role:teacher|class-sponsor|subject-teacher');
+        Route::get('/my-teacher-attendance', [TeacherAttendanceController::class, 'mine'])->middleware('role:teacher|class-sponsor|subject-teacher');
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->middleware('role:admin');
-        Route::put('/profile', [UserController::class, 'updateSelf']);
+        Route::put('/profile', [UserController::class, 'updateSelf'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|student|finance|finance-staff');
 
         // Next sequential student ID — must be before apiResource to avoid {student} capture
         Route::get('/students/next-id', function() {
@@ -83,13 +87,23 @@ Route::prefix('v1')->group(function () {
                 $parts = explode('-', $lastStudent->student_id);
                 $next  = (int) ($parts[2] ?? 0) + 1;
             }
+
+            $lastRegistration = \App\Models\Student::where('registration_number', 'like', "REG-{$year}-%")
+                ->orderByRaw("CAST(SPLIT_PART(registration_number, '-', 3) AS INTEGER) DESC")
+                ->first();
+            $nextRegistration = $lastRegistration
+                ? (int) (explode('-', $lastRegistration->registration_number)[2] ?? 0) + 1
+                : 1;
+
             return response()->json([
                 'student_id' => "STU-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT),
+                'registration_number' => "REG-{$year}-" . str_pad($nextRegistration, 3, '0', STR_PAD_LEFT),
             ]);
         });
 
         // Student application — all authenticated users can submit
         Route::post('/students', [StudentController::class, 'store'])->middleware('role:admin');
+        Route::get('/students/me', [StudentController::class, 'me'])->middleware('role:student');
 
         // Fee structures & student clearance
         Route::get('/fee-structures', [FeeStructureController::class, 'index']);
@@ -144,6 +158,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/test/student', [TestController::class, 'studentOnly'])->middleware('role:student');
 
         Route::middleware('role:admin')->group(function () {
+            Route::get('/search', GlobalSearchController::class);
             Route::get('/users', [UserController::class, 'index']);
             Route::get('/roles', [UserController::class, 'roles']);
             Route::post('/users', [UserController::class, 'store']);
@@ -160,11 +175,58 @@ Route::prefix('v1')->group(function () {
                     'approval_date'         => 'nullable|date',
                     'admission_date'        => 'nullable|date',
                     'class_id'              => 'nullable|exists:classes,id',
+                    'username'              => 'nullable|string',
+                    'password'              => 'nullable|string|min:8',
                 ]);
+
+                // If approving and student doesn't have a user account, create one
+                if ($data['application_status'] === 'approved' && !$student->user_id) {
+                    $role = \App\Models\Role::where('slug', 'student')->first();
+                    if (!$role) {
+                        return response()->json(['message' => 'Student role not found'], 500);
+                    }
+
+                    // Generate username if not provided
+                    $username = $data['username'] ?? strtolower($student->first_name . '.' . $student->last_name);
+                    
+                    // Generate password if not provided
+                    $password = $data['password'] ?? \Illuminate\Support\Str::random(10);
+
+                    // Create user account
+                    $user = \App\Models\User::create([
+                        'first_name' => $student->first_name,
+                        'last_name' => $student->last_name,
+                        'email' => $student->parent_guardian_email ?? $student->email ?? $username . '@sicss.local',
+                        'password' => \Illuminate\Support\Facades\Hash::make($password),
+                        'role_id' => $role->id,
+                        'phone' => $student->phone,
+                        'address' => $student->address,
+                        'is_active' => true,
+                    ]);
+
+                    // Link user to student
+                    $data['user_id'] = $user->id;
+                }
+
                 $student->update($data);
-                return response()->json($student->fresh(['class']));
+                
+                $response = $student->fresh(['class', 'user']);
+                
+                // Include credentials if a new user was created
+                if (isset($data['user_id']) && $student->user) {
+                    $response->credentials = [
+                        'username' => $student->user->user_code,
+                        'password' => $password ?? null,
+                        'email' => $student->user->email,
+                    ];
+                }
+                
+                return response()->json($response);
             });
             Route::apiResource('report-cards', ReportCardController::class)->only(['index', 'store']);
+            Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval']);
+            Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:class-sponsor|admin');
+            Route::post('/report-cards/{id}/vpi-approve', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
             Route::apiResource('divisions', DivisionController::class)->except(['index']);
             Route::apiResource('classes', ClassController::class)->except(['index']);
             Route::apiResource('teachers', TeacherController::class);
@@ -173,21 +235,18 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('students', StudentController::class)->except(['store']);
         });
 
-        Route::middleware('role:teacher|class-teacher|subject-teacher')->group(function () {
-            // Teachers can only view students in their assigned classes (enforced in controller)
-            Route::get('students', [StudentController::class, 'index']);
-            Route::get('students/{student}', [StudentController::class, 'show']);
-        });
 
         Route::get('/my-grade-sheet', [GradeController::class, 'myGradeSheet'])->middleware('role:student');
-        Route::prefix('student-portal')->middleware('role:student')->group(function () {
+        Route::get('/report-cards/me', [ReportCardController::class, 'mine'])->middleware('role:student');
+        Route::prefix('student-portal')->middleware('role:student|parent')->group(function () {
             Route::get('/profile', [StudentPortalController::class, 'profile']);
             Route::get('/attendance', [StudentPortalController::class, 'attendance']);
             Route::get('/assignments', [StudentPortalController::class, 'assignments']);
             Route::get('/financial-records', [StudentPortalController::class, 'financialRecords']);
+            Route::get('/report-card', [StudentPortalController::class, 'reportCard']);
         });
 
-        Route::middleware('role:admin|class-teacher')->group(function () {
+        Route::middleware('role:admin|class-sponsor')->group(function () {
             Route::prefix('attendance')->group(function () {
                 Route::get('/', [AttendanceController::class, 'index']);
                 Route::post('/', [AttendanceController::class, 'store']);
@@ -209,10 +268,10 @@ Route::prefix('v1')->group(function () {
             });
         });
 
-        Route::middleware('role:admin|teacher|class-teacher|subject-teacher')->group(function () {
+        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher')->group(function () {
             Route::prefix('grades')->group(function () {
                 Route::post('/', [GradeController::class, 'store']);
-                Route::post('/{grade}/submit', [GradeController::class, 'submit'])->middleware('role:teacher|class-teacher|subject-teacher');
+                Route::post('/{grade}/submit', [GradeController::class, 'submit'])->middleware('role:teacher|class-sponsor|subject-teacher');
                 Route::get('/{grade}', [GradeController::class, 'show']);
                 Route::put('/{grade}', [GradeController::class, 'update']);
                 Route::delete('/{grade}', [GradeController::class, 'destroy']);

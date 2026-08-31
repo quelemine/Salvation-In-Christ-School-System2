@@ -41,9 +41,10 @@ interface Props {
   readOnly?: boolean;
   isNewStudent?: boolean;          // true = show document upload section
   classes?: ClassOption[];
+  missingFields?: string[];
 }
 
-export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoChange, readOnly, isNewStudent = true, classes: classesProp }: Props) {
+export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoChange, readOnly, isNewStudent = true, classes: classesProp, missingFields = [] }: Props) {
   const photoRef   = useRef<HTMLInputElement>(null);
   const docRef     = useRef<HTMLInputElement>(null);
   const [classes, setClasses] = useState<ClassOption[]>(classesProp ?? []);
@@ -78,10 +79,12 @@ export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoCh
 
   const f = (key: string) => data[key] ?? '';
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange(key, e.target.value);
+  const invalid = (key: string): React.CSSProperties => missingFields.includes(key) ? { borderBottom: '2px solid #dc2626', background: '#fef2f2' } : {};
 
   return (
     <section className="application-section application-student-info" style={sec}>
       <div style={secTitle}>A. Student Information</div>
+      {!readOnly && missingFields.length > 0 && <p style={{ margin: '0 0 10px', fontSize: 12, color: '#b91c1c', fontFamily: 'system-ui, sans-serif' }}>Please complete the highlighted fields.</p>}
 
       {/* Photo box — right-floated */}
       <div style={{ float: 'right', marginLeft: 14, marginBottom: 10, textAlign: 'center' }}>
@@ -109,14 +112,14 @@ export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoCh
       <div style={row}>
         <label style={{ ...lbl, flex: 2 }}>
           Full Name:
-          <input style={fld} value={f('full_name')} onChange={set('full_name')} readOnly={readOnly}
+          <input style={{ ...fld, ...invalid('full_name') }} value={f('full_name')} onChange={set('full_name')} readOnly={readOnly}
             placeholder={readOnly ? '' : 'First Middle Last'} />
         </label>
         <label style={lbl}>
           Gender:
           {readOnly
             ? <input style={fld} value={f('gender')} readOnly />
-            : <select style={fld} value={f('gender')} onChange={set('gender')}>
+            : <select style={{ ...fld, ...invalid('gender') }} value={f('gender')} onChange={set('gender')}>
                 <option value="">— Select —</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -129,7 +132,7 @@ export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoCh
       <div style={row}>
         <label style={lbl}>
           Date of Birth:
-          <input style={fld} type={readOnly ? 'text' : 'date'} value={f('date_of_birth')} onChange={set('date_of_birth')} readOnly={readOnly} />
+          <input style={{ ...fld, ...invalid('date_of_birth') }} type={readOnly ? 'text' : 'date'} value={f('date_of_birth')} onChange={set('date_of_birth')} readOnly={readOnly} />
         </label>
         <label style={lbl}>
           Place of Birth:

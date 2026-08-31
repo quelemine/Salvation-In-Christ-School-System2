@@ -12,13 +12,14 @@ class TeacherController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Teacher::with(['user.role', 'salaryStructure', 'sponsoredClass', 'subjectClassAssignments.subject', 'subjectClassAssignments.class']);
+        $query = Teacher::with(['user.role', 'user:id,user_code', 'salaryStructure', 'sponsoredClass', 'subjectClassAssignments.subject', 'subjectClassAssignments.class']);
 
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($q) => $q->where('user_code', 'like', "%{$search}%"))
                     ->orWhere('employee_id', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
@@ -37,7 +38,7 @@ class TeacherController extends Controller
         $request->validate([
             'user_id' => 'nullable|exists:users,id',
             'salary_structure_id' => 'nullable|exists:salary_structures,id',
-            'employee_id' => 'required|string|unique:teachers',
+            'employee_id' => 'nullable|string|unique:teachers',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:teachers',
@@ -53,7 +54,13 @@ class TeacherController extends Controller
             'status' => 'in:active,inactive,on_leave',
         ]);
 
-        $teacher = Teacher::create($request->except(['sponsor_class_id', 'subject_assignments']));
+        // Auto-generate employee ID if not provided
+        $data = $request->except(['sponsor_class_id', 'subject_assignments']);
+        if (empty($data['employee_id'])) {
+            $data['employee_id'] = $this->generateEmployeeId();
+        }
+
+        $teacher = Teacher::create($data);
         $this->syncTeachingScope($request, $teacher);
         return response()->json($this->loadScope($teacher), 201);
     }
@@ -105,7 +112,7 @@ class TeacherController extends Controller
         ]);
 
         $role = $teacher->user?->role?->slug;
-        if ($role === 'class-teacher') {
+        if ($role === 'class-sponsor') {
             TeacherSubjectClass::where('teacher_id', $teacher->id)->delete();
             if ($request->has('sponsor_class_id')) {
                 \App\Models\ClassModel::where('sponsor_teacher_id', $teacher->id)->update(['sponsor_teacher_id' => null]);
@@ -133,6 +140,31 @@ class TeacherController extends Controller
 
     private function loadScope(Teacher $teacher): Teacher
     {
-        return $teacher->fresh(['user.role', 'salaryStructure', 'sponsoredClass', 'subjectClassAssignments.subject', 'subjectClassAssignments.class']);
+        return $teacher->fresh(['user.role', 'user:id,user_code', 'salaryStructure', 'sponsoredClass', 'subjectClassAssignments.subject', 'subjectClassAssignments.class']);
+    }
+
+    private function generateEmployeeId(): string
+    {
+        $prefix = 'EMP';
+        $year = date('Y');
+        
+        // Get the last teacher with an auto-generated employee ID for this year
+        $lastTeacher = Teacher::where('employee_id', 'like', "{$prefix}-{$year}-%")
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        $lastNumber = 0;
+        if ($lastTeacher && preg_match("/^{$prefix}-{$year}-(\d{4})$/", $lastTeacher->employee_id, $matches)) {
+            $lastNumber = (int) $matches[1];
+        }
+        
+        // Generate a unique ID
+        do {
+            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+            $employeeId = "{$prefix}-{$year}-{$newNumber}";
+            $lastNumber++;
+        } while (Teacher::where('employee_id', $employeeId)->exists());
+        
+        return $employeeId;
     }
 }

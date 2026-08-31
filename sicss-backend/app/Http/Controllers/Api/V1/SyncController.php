@@ -48,6 +48,17 @@ class SyncController extends Controller
             $action = $change['action'];
             $data = $change['data'];
 
+            if ($entityType === 'students' && ! $request->user()->hasRole('admin')) {
+                $results[] = [
+                    'entity_type' => $entityType,
+                    'entity_uuid' => $entityUuid,
+                    'action' => $action,
+                    'status' => 'failed',
+                    'error' => 'Only administrators can create or modify student records.',
+                ];
+                continue;
+            }
+
             // Create sync log entry
             $syncLog = SyncLog::create([
                 'user_id' => $userId,

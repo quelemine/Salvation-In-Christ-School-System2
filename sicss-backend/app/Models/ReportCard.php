@@ -11,6 +11,7 @@ class ReportCard extends Model
         'student_id', 'class_id', 'teacher_id', 'academic_year', 'grade_level', 'subject_marks',
         'aggregate', 'average', 'rank', 'total_in_class', 'conduct', 'promotion_status',
         'conditional_subjects', 'promoted_to', 'class_sponsor', 'principal', 'closing_date',
+        'approval_status', 'sponsor_approved_by', 'sponsor_approved_at', 'vpi_approved_by', 'vpi_approved_at', 'rejection_reason',
     ];
 
     protected $casts = ['subject_marks' => 'array', 'aggregate' => 'decimal:2', 'average' => 'decimal:2'];

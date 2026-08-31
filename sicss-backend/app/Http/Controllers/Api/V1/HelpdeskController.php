@@ -33,9 +33,24 @@ class HelpdeskController extends Controller
             'description' => 'required|string',
             'category'    => 'in:account,academic,finance,technical,other',
             'priority'    => 'in:low,medium,high,urgent',
+            'assigned_to' => 'sometimes|nullable|in:head-of-school,principal,vice-principal-instruction',
         ]);
 
         $data['user_id'] = $request->user()->id;
+        
+        // If parent specified a role to assign to, find a user with that role
+        if (!empty($data['assigned_to'])) {
+            $assignedUser = \App\Models\User::where('role_id', function($query) use ($data) {
+                $query->select('id')->from('roles')->where('slug', $data['assigned_to']);
+            })->first();
+            
+            if ($assignedUser) {
+                $data['assigned_to'] = $assignedUser->id;
+            } else {
+                unset($data['assigned_to']);
+            }
+        }
+        
         $ticket = HelpdeskTicket::create($data)->load($this->ticketWith());
 
         return response()->json($ticket, 201);

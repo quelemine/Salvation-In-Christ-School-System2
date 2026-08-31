@@ -71,7 +71,8 @@ export default function Profile() {
   const isStudent = user?.role?.slug === 'student';
   const isTeacher = ['teacher', 'class-teacher', 'subject-teacher'].includes(user?.role?.slug || '');
   const isFinance = ['finance', 'finance-staff'].includes(user?.role?.slug || '');
-  const isProfileReadOnly = isStudent || isTeacher || isFinance;
+  const isParent = user?.role?.slug === 'parent';
+  const isProfileReadOnly = isStudent || isTeacher || isFinance || isParent;
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [studentProfileError, setStudentProfileError] = useState('');
 

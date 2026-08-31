@@ -122,7 +122,7 @@ class UserController extends Controller
         $user = $request->user();
 
         abort_if(
-            in_array($user->role?->slug, ['student', 'teacher', 'class-teacher', 'subject-teacher', 'finance', 'finance-staff'], true),
+            in_array($user->role?->slug, ['student', 'teacher', 'class-sponsor', 'subject-teacher', 'finance', 'finance-staff'], true),
             403,
             'This profile is managed by an administrator. Please contact the school for changes.'
         );

@@ -3,6 +3,7 @@ import api from '../services/api';
 import { classService, type Class } from '../services/classService';
 import { formatCurrency, type CurrencyCode } from '../utils/currency';
 import { useSettingsStore } from '../store/settingsStore';
+import { useAuthStore } from '../store/authStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Category = 'tuition' | 'registration' | 'uniform' | 'exam' | 'activity' | 'library' | 'other';
@@ -47,8 +48,12 @@ const newItem = (currency: CurrencyCode): StructureItem => ({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function FeeStructure() {
   const { settings } = useSettingsStore();
+  const { user } = useAuthStore();
   const defaultCurrency = settings.system.currency as CurrencyCode;
   const currentYear = settings.system.academicYear;
+
+  // Check if user can edit (admin or finance roles only)
+  const canEdit = user?.role?.slug === 'admin' || user?.role?.slug === 'finance' || user?.role?.slug === 'finance-staff';
 
   const [structures, setStructures] = useState<Structure[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -275,9 +280,11 @@ export default function FeeStructure() {
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Fee structure</h1>
           <p className="mt-2 text-sm text-slate-500">Define the complete fee breakdown for each academic year. Use these structures to verify student clearance before printing report cards.</p>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + New fee structure
-        </button>
+        {canEdit && (
+          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+            + New fee structure
+          </button>
+        )}
       </div>
 
       {msg && <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${msg.ok ? 'border border-emerald-200 bg-emerald-50 text-emerald-800' : 'border border-rose-200 bg-rose-50 text-rose-700'}`}>{msg.ok ? '✓' : '✕'} {msg.text}</div>}
@@ -342,10 +349,12 @@ export default function FeeStructure() {
                     {activeStructure.description && ` · ${activeStructure.description}`}
                   </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={() => openEdit(activeStructure)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
-                  <button onClick={() => handleDelete(activeStructure.id)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50">Delete</button>
-                </div>
+                {canEdit && (
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => openEdit(activeStructure)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
+                    <button onClick={() => handleDelete(activeStructure.id)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50">Delete</button>
+                  </div>
+                )}
               </div>
 
               {/* Summary */}

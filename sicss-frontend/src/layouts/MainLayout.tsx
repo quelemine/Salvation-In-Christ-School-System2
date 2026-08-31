@@ -60,6 +60,7 @@ export default function MainLayout() {
 
     const adminItems = [
       { path: '/users',          label: 'User accounts',   icon: '◉'  },
+      { path: '/admin-staff',    label: 'Admin & Staff',   icon: '👥' },
       { path: '/announcements',  label: 'Announcements',   icon: '📢' },
       { path: '/helpdesk-admin', label: 'Help desk',       icon: '🎫' },
       { path: '/divisions',     label: 'Divisions',     icon: '🏫' },
@@ -74,7 +75,6 @@ export default function MainLayout() {
       { path: '/grades',        label: 'Grades',        icon: '📝' },
       { path: '/assignments',   label: 'Assignments',   icon: '📄' },
       { path: '/comments',      label: 'Comments',      icon: '💬' },
-      { path: '/fees',           label: 'Finance',         icon: '💰' },
       { path: '/fee-structure',  label: 'Fee structure',   icon: '📋' },
       { path: '/fee-clearance',  label: 'Fee clearance',   icon: '✅' },
       { path: '/payments',       label: 'Payments',        icon: '💳' },
@@ -89,17 +89,18 @@ export default function MainLayout() {
     ];
 
     const teacherItems = [
-      { path: '/attendance',  label: 'Attendance',  icon: '📋' },
-      { path: '/grades',      label: 'Grades',      icon: '📝' },
-      { path: '/assignments', label: 'Assignments', icon: '📄' },
-      { path: '/comments',    label: 'Comments',    icon: '💬' },
+      { path: '/fee-structure', label: 'Fee structure', icon: '📋' },
+      { path: '/attendance',     label: 'Attendance',     icon: '📋' },
+      { path: '/grades',         label: 'Grades',         icon: '📝' },
+      { path: '/assignments',    label: 'Assignments',    icon: '📄' },
+      { path: '/comments',       label: 'Comments',       icon: '💬' },
     ];
 
     const financeItems = [
-      { path: '/fees',      label: 'Fees',     icon: '💰' },
-      { path: '/payments',  label: 'Payments', icon: '💳' },
-      { path: '/receipts',  label: 'Receipts', icon: '🧾' },
-      { path: '/reports',   label: 'Reports',  icon: '📊' },
+      { path: '/fee-structure', label: 'Fee structure', icon: '�' },
+      { path: '/payments',      label: 'Payments',      icon: '💳' },
+      { path: '/receipts',      label: 'Receipts',      icon: '🧾' },
+      { path: '/reports',       label: 'Reports',       icon: '📊' },
     ];
 
     // Admin gets their own common items (without /helpdesk since they use /helpdesk-admin)
@@ -110,13 +111,13 @@ export default function MainLayout() {
     ];
 
     if (role === 'admin')                              return [...adminCommonItems, ...adminItems];
-    if (role === 'class-teacher')                      return [...commonItems, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/attendance', label: 'Attendance', icon: '📋' }, { path: '/comments', label: 'Comments', icon: '💬' }];
-    if (role === 'subject-teacher')                    return [...commonItems, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }];
-    if (role === 'student')                            return [...commonItems, { path: '/my-grade-sheet', label: 'My grade sheet', icon: '📝' }, { path: '/my-attendance', label: 'My attendance', icon: '📋' }, { path: '/my-assignments', label: 'My assignments', icon: '📄' }, { path: '/my-financial-records', label: 'My finance', icon: '💳' }];
-    if (role === 'vice-principal-instruction')         return [...commonItems, { path: '/grades', label: 'Grade approvals', icon: '✓' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
+    if (role === 'class-teacher')                      return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/attendance', label: 'Attendance', icon: '📋' }, { path: '/comments', label: 'Comments', icon: '💬' }];
+    if (role === 'subject-teacher')                    return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }];
+    if (role === 'student')                            return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/my-grade-sheet', label: 'My grade sheet', icon: '📝' }, { path: '/my-attendance', label: 'My attendance', icon: '📋' }, { path: '/my-assignments', label: 'My assignments', icon: '📄' }, { path: '/my-financial-records', label: 'My finance', icon: '💳' }];
+    if (role === 'vice-principal-instruction')         return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/grades', label: 'Grade approvals', icon: '✓' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
     if (role === 'teacher')                            return [...commonItems, ...teacherItems];
     if (role === 'finance' || role === 'finance-staff') return [...commonItems, ...financeItems, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
-    if (role === 'principal' || role === 'head-of-school') return [...commonItems, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
+    if (role === 'principal' || role === 'head-of-school') return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
     return commonItems;
   };
 
@@ -124,22 +125,22 @@ export default function MainLayout() {
 
   const allowedPaths: Record<string, string[]> = {
     admin:          [...menuItems.map((item) => item.path), '/settings', '/security', '/change-password', '/announcements', '/helpdesk', '/helpdesk-admin'],
-    teacher:        ['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-application', '/students', '/attendance', '/grades', '/assignments', '/comments'],
-    'class-teacher':['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-application', '/students', '/attendance', '/comments'],
-    'subject-teacher':['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-application', '/students', '/grades', '/assignments'],
-    finance:        ['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-application', '/fees', '/payments', '/receipts', '/reports', '/teacher-attendance'],
-    'finance-staff':['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-application', '/fees', '/payments', '/receipts', '/reports', '/teacher-attendance'],
-    'vice-principal-instruction': ['/dashboard', '/profile', '/change-password', '/helpdesk', '/grades', '/teacher-attendance'],
-    principal:      ['/dashboard', '/profile', '/change-password', '/helpdesk', '/teacher-attendance'],
-    'head-of-school': ['/dashboard', '/profile', '/change-password', '/helpdesk', '/teacher-attendance'],
-    student:        ['/dashboard', '/profile', '/change-password', '/helpdesk', '/my-grade-sheet', '/my-attendance', '/my-assignments', '/my-financial-records'],
+    teacher:        ['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/students', '/attendance', '/grades', '/assignments', '/comments'],
+    'class-teacher':['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments'],
+    'subject-teacher':['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/students', '/grades', '/assignments'],
+    finance:        ['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
+    'finance-staff':['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
+    'vice-principal-instruction': ['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/grades', '/teacher-attendance'],
+    principal:      ['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/teacher-attendance'],
+    'head-of-school': ['/dashboard', '/profile', '/change-password', '/helpdesk', '/fee-structure', '/teacher-attendance'],
+    student:        ['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-profile', '/fee-structure', '/my-grade-sheet', '/my-report-card', '/my-attendance', '/my-assignments', '/my-financial-records'],
   };
 
   const role = user?.role?.slug || '';
   // Allow any path that starts with an allowed prefix, or exact match
   // Also always allow /dashboard and /profile for any authenticated user
   const baseAllowed = allowedPaths[role] || ['/dashboard', '/profile', '/change-password'];
-  const alwaysAllowed = ['/dashboard', '/profile', '/change-password', '/helpdesk'];
+  const alwaysAllowed = ['/dashboard', '/profile', '/change-password', '/helpdesk', '/student-profile', '/my-grade-sheet', '/my-report-card', '/my-attendance', '/my-assignments', '/my-financial-records'];
   const canAccess = [...baseAllowed, ...alwaysAllowed].includes(location.pathname);
 
   useEffect(() => { setIsMobileMenuOpen(false); }, [location.pathname]);
@@ -207,12 +208,33 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <style>{`
+        .sidebar-nav::-webkit-scrollbar {
+          width: 8px;
+        }
+        .sidebar-nav::-webkit-scrollbar-track {
+          background: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'};
+          border-radius: 4px;
+        }
+        .sidebar-nav::-webkit-scrollbar-thumb {
+          background: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.4)'};
+          border-radius: 4px;
+          border: 2px solid ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'};
+        }
+        .sidebar-nav::-webkit-scrollbar-thumb:hover {
+          background: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'};
+        }
+        .sidebar-nav {
+          scrollbar-width: thin;
+          scrollbar-color: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.3) rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.4) rgba(255,255,255,0.1)'};
+        }
+      `}</style>
       <OfflineBanner />
       <div className="flex min-h-screen">
 
         {/* ── Desktop sidebar ─────────────────────────────── */}
         <aside
-          className={`hidden w-64 shrink-0 lg:flex lg:flex-col ${sidebarBg}`}
+          className={`hidden w-64 shrink-0 lg:flex lg:flex-col h-screen ${sidebarBg}`}
           style={sidebarColorStyle}
         >
           <div className={`flex items-center gap-3 border-b px-5 py-6 ${theme.sidebarStyle === 'light' ? 'border-slate-200' : 'border-white/10'}`}>
@@ -239,7 +261,7 @@ export default function MainLayout() {
 
         {/* ── Mobile drawer ───────────────────────────────── */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,20rem)] flex-col shadow-2xl transition-transform duration-300 lg:hidden ${sidebarBg} ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,20rem)] flex-col shadow-2xl transition-transform duration-300 lg:hidden h-screen ${sidebarBg} ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
           style={sidebarColorStyle}
         >
           <div className={`flex items-center justify-between border-b px-5 py-5 ${theme.sidebarStyle === 'light' ? 'border-slate-200' : 'border-white/10'}`}>

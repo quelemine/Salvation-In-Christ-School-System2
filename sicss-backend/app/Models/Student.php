@@ -44,4 +44,9 @@ class Student extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getUserCodeAttribute(): string
+    {
+        return $this->user?->user_code ?? $this->student_id;
+    }
 }

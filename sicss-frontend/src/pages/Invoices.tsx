@@ -99,9 +99,11 @@ export default function Invoices() {
   const onFeeChange = (feeId: string) => {
     const fee = fees.find((f) => f.id === Number(feeId));
     if (!fee) { update({ fee: null }); return; }
+    const amount = fee.amount_lrd || 0;
+    const currency: CurrencyCode = 'LRD';
     update({
       fee: fee as any,
-      items: [{ description: fee.name, quantity: 1, unitPrice: Number(fee.amount), currency: (fee.currency as CurrencyCode) || defaultCurrency }],
+      items: [{ description: fee.name, quantity: 1, unitPrice: amount, currency }],
     });
   };
 

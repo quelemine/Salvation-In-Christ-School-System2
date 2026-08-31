@@ -1,5 +1,6 @@
 export interface User {
   id: number;
+  user_code?: string;
   uuid: string;
   first_name: string;
   last_name: string;
@@ -63,6 +64,7 @@ export interface Student {
   admission_date: string;
   status: 'active' | 'inactive' | 'graduated' | 'transferred';
   class?: Class;
+  user?: User;
 }
 
 export interface Teacher {
@@ -82,6 +84,7 @@ export interface Teacher {
   qualifications?: string;
   specialization?: string;
   status: 'active' | 'inactive' | 'on_leave';
+  user?: User;
 }
 
 export interface Subject {
@@ -160,8 +163,8 @@ export interface Fee {
   name: string;
   slug: string;
   description?: string;
-  amount: number;
-  currency: 'USD' | 'LRD';
+  amount_lrd?: number;
+  amount_usd?: number;
   class_id?: number;
   academic_year: string;
   status: 'active' | 'inactive';

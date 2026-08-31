@@ -65,7 +65,7 @@ class DashboardController extends Controller
         }
 
         // Teachers only receive aggregates for classes assigned to them.
-        if (in_array($role, ['teacher', 'class-teacher', 'subject-teacher'], true)) {
+        if (in_array($role, ['teacher', 'class-sponsor', 'subject-teacher'], true)) {
             $teacher = Teacher::where('user_id', $request->user()->id)->first();
             $classIds = collect();
             if ($teacher) {

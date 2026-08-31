@@ -5,6 +5,7 @@ import { useSettingsStore } from './store/settingsStore';
 import { useEffect } from 'react';
 import { syncManager } from './sync/syncManager';
 import { authService } from './services/authService';
+import api from './services/api';
 
 // Accent colour palettes — maps store key → [bg, hover, ring, text, light-bg, light-text]
 const ACCENT_MAP: Record<string, string[]> = {
@@ -68,12 +69,14 @@ function ThemeInjector() {
 
 function App() {
   const { isAuthenticated, updateUser } = useAuthStore();
+  const replaceSettings = useSettingsStore((state) => state.replaceSettings);
 
   useEffect(() => {
     if (isAuthenticated) {
       authService.me().then(updateUser).catch(() => undefined);
+      api.get('/settings').then((response) => replaceSettings(response.data)).catch(() => undefined);
     }
-  }, [isAuthenticated, updateUser]);
+  }, [isAuthenticated, updateUser, replaceSettings]);
 
   useEffect(() => {
     if (isAuthenticated) {

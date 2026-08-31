@@ -10,7 +10,7 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Attendance::with('student', 'class', 'teacher');
+        $query = Attendance::with('student.user:id,user_code', 'class', 'teacher');
 
         if ($request->has('class_id')) {
             $query->where('class_id', $request->class_id);
@@ -48,7 +48,7 @@ class AttendanceController extends Controller
         ]);
 
         $attendance = Attendance::create($request->all());
-        $attendance->load('student', 'class', 'teacher');
+        $attendance->load('student.user:id,user_code', 'class', 'teacher');
         return response()->json($attendance, 201);
     }
 
@@ -73,7 +73,7 @@ class AttendanceController extends Controller
                 ],
                 $attendanceData
             );
-            $attendance->load('student', 'class', 'teacher');
+            $attendance->load('student.user:id,user_code', 'class', 'teacher');
             $attendances[] = $attendance;
         }
 
@@ -82,7 +82,7 @@ class AttendanceController extends Controller
 
     public function show(Attendance $attendance)
     {
-        $attendance->load('student', 'class', 'teacher');
+        $attendance->load('student.user:id,user_code', 'class', 'teacher');
         return response()->json($attendance);
     }
 
@@ -98,7 +98,7 @@ class AttendanceController extends Controller
         ]);
 
         $attendance->update($request->all());
-        $attendance->load('student', 'class', 'teacher');
+        $attendance->load('student.user:id,user_code', 'class', 'teacher');
         return response()->json($attendance);
     }
 
@@ -110,7 +110,7 @@ class AttendanceController extends Controller
 
     public function studentHistory(Request $request, $studentId)
     {
-        $query = Attendance::with('class', 'teacher')
+        $query = Attendance::with('student.user:id,user_code', 'class', 'teacher')
             ->where('student_id', $studentId);
 
         if ($request->has('date_from')) {
@@ -131,7 +131,7 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
-        $attendances = Attendance::with('student')
+        $attendances = Attendance::with('student.user:id,user_code')
             ->where('class_id', $classId)
             ->where('date', $request->date)
             ->get();

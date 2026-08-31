@@ -8,13 +8,28 @@ use App\Models\Attendance;
 use App\Models\Fee;
 use App\Models\Payment;
 use App\Models\Student;
+use App\Models\ReportCard;
 use Illuminate\Http\Request;
 
 class StudentPortalController extends Controller
 {
     private function student(Request $request): Student
     {
-        abort_unless($student = Student::with('class')->where('user_id', $request->user()->id)->first(), 404, 'No student profile is linked to this account.');
+        // Check if user is a student
+        $student = Student::with('class')->where('user_id', $request->user()->id)->first();
+        
+        // If not a student, check if user is a parent/guardian
+        if (!$student && $request->user()->role?->slug === 'parent') {
+            // Find student(s) linked to this parent via parent_guardian_email
+            $student = Student::with('class')
+                ->where('parent_guardian_email', $request->user()->email)
+                ->first();
+            
+            abort_unless($student, 404, 'No student profile is linked to this parent account.');
+        } else {
+            abort_unless($student, 404, 'No student profile is linked to this account.');
+        }
+        
         return $student;
     }
 
@@ -44,5 +59,22 @@ class StudentPortalController extends Controller
         $fees = Fee::where('class_id', $student->class_id)->where('status', 'active')->orderBy('due_date')->get();
         $payments = Payment::with('fee:id,name,amount,currency')->where('student_id', $student->id)->where('status', 'completed')->orderByDesc('payment_date')->get();
         return response()->json(['fees' => $fees, 'payments' => $payments, 'total_due' => (float) $fees->sum('amount'), 'total_paid' => (float) $payments->sum('amount'), 'balance' => (float) $fees->sum('amount') - (float) $payments->sum('amount')]);
+    }
+
+    public function reportCard(Request $request)
+    {
+        $student = $this->student($request);
+        $academicYear = $request->input('academic_year', date('Y'));
+        
+        $reportCard = ReportCard::with(['student.class', 'class', 'teacher'])
+            ->where('student_id', $student->id)
+            ->where('academic_year', $academicYear)
+            ->first();
+        
+        if (!$reportCard) {
+            return response()->json(['message' => 'No report card found for the specified academic year'], 404);
+        }
+        
+        return response()->json($reportCard);
     }
 }

@@ -14,8 +14,8 @@ class Fee extends Model
         'name',
         'slug',
         'description',
-        'amount',
-        'currency',
+        'amount_lrd',
+        'amount_usd',
         'class_id',
         'academic_year',
         'status',
@@ -24,8 +24,8 @@ class Fee extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'currency' => 'string',
+        'amount_lrd' => 'decimal:2',
+        'amount_usd' => 'decimal:2',
         'is_mandatory' => 'boolean',
         'due_date' => 'date',
     ];

@@ -23,26 +23,28 @@ class DemoDataSeeder extends Seeder
     {
         $roles = Role::whereIn('slug', [
             'admin',
-            'class-teacher',
+            'class-sponsor',
             'subject-teacher',
             'student',
             'vice-principal-instruction',
             'principal',
             'head-of-school',
             'parent',
-            'finance-staff',
         ])->pluck('id', 'slug');
-        $password = Hash::make('1234');
+        $testPassword = env('SICSS_TEST_SEED_PASSWORD');
+        if (! is_string($testPassword) || $testPassword === '') {
+            throw new \RuntimeException('SICSS_TEST_SEED_PASSWORD must be set before running the demo data seeder.');
+        }
+        $password = Hash::make($testPassword);
 
         $accounts = [
-            ['email' => 'class.teacher.test@sicss.com', 'first_name' => 'Maria', 'last_name' => 'Class Teacher', 'role' => 'class-teacher'],
+            ['email' => 'class.sponsor.test@sicss.com', 'first_name' => 'Maria', 'last_name' => 'Class Sponsor', 'role' => 'class-sponsor'],
             ['email' => 'subject.teacher.test@sicss.com', 'first_name' => 'Samuel', 'last_name' => 'Subject Teacher', 'role' => 'subject-teacher'],
             ['email' => 'student.test@sicss.com', 'first_name' => 'Daniel', 'last_name' => 'Student', 'role' => 'student'],
             ['email' => 'vpi.test@sicss.com', 'first_name' => 'Victoria', 'last_name' => 'VPI', 'role' => 'vice-principal-instruction'],
             ['email' => 'principal.test@sicss.com', 'first_name' => 'Patricia', 'last_name' => 'Principal', 'role' => 'principal'],
             ['email' => 'head.of.school.test@sicss.com', 'first_name' => 'Helen', 'last_name' => 'Head of School', 'role' => 'head-of-school'],
             ['email' => 'parent.test@sicss.com', 'first_name' => 'Sarah', 'last_name' => 'Parent', 'role' => 'parent'],
-            ['email' => 'finance.test@sicss.com', 'first_name' => 'James', 'last_name' => 'Finance', 'role' => 'finance-staff'],
         ];
 
         $users = [];
@@ -59,7 +61,7 @@ class DemoDataSeeder extends Seeder
             );
         }
 
-        $teacherUser = $users['class-teacher'];
+        $teacherUser = $users['class-sponsor'];
         $studentUser = $users['student'];
 
         $primary = Division::updateOrCreate(['slug' => 'primary-school'], ['name' => 'Primary School', 'description' => 'Primary school division', 'order' => 1, 'is_active' => true]);
@@ -79,7 +81,7 @@ class DemoDataSeeder extends Seeder
         $gradeFour->subjects()->syncWithoutDetaching([$math->id, $english->id]);
         $gradeSeven->subjects()->syncWithoutDetaching([$math->id]);
 
-        $teacher = Teacher::updateOrCreate(['employee_id' => 'TCH-0001'], ['user_id' => $teacherUser->id, 'first_name' => 'Maria', 'last_name' => 'Class Teacher', 'email' => 'class.teacher.test@sicss.com', 'gender' => 'female', 'hire_date' => now()->subYears(2)->toDateString(), 'specialization' => 'Primary education', 'status' => 'active']);
+        $teacher = Teacher::updateOrCreate(['employee_id' => 'TCH-0001'], ['user_id' => $teacherUser->id, 'first_name' => 'Maria', 'last_name' => 'Class Sponsor', 'email' => 'class.sponsor.test@sicss.com', 'gender' => 'female', 'hire_date' => now()->subYears(2)->toDateString(), 'specialization' => 'Primary education', 'status' => 'active']);
         $subjectTeacher = Teacher::updateOrCreate(['employee_id' => 'TCH-0002'], ['user_id' => $users['subject-teacher']->id, 'first_name' => 'Samuel', 'last_name' => 'Subject Teacher', 'email' => 'subject.teacher.test@sicss.com', 'gender' => 'male', 'hire_date' => now()->subYears(1)->toDateString(), 'specialization' => 'Mathematics', 'status' => 'active']);
         $subjectTeacher->subjects()->syncWithoutDetaching([$math->id]);
         $subjectTeacher->classes()->syncWithoutDetaching([$gradeFour->id, $gradeSeven->id]);
@@ -103,7 +105,7 @@ class DemoDataSeeder extends Seeder
         Receipt::updateOrCreate(['receipt_number' => 'DEMO-REC-0001'], ['payment_id' => $paymentLrd->id, 'student_id' => $daniel->id, 'total_amount' => 150, 'currency' => 'LRD', 'receipt_date' => now()->toDateString(), 'generated_by' => $teacherUser->id]);
         Receipt::updateOrCreate(['receipt_number' => 'DEMO-REC-0002'], ['payment_id' => $paymentUsd->id, 'student_id' => $grace->id, 'total_amount' => 50, 'currency' => 'USD', 'receipt_date' => now()->toDateString(), 'generated_by' => $teacherUser->id]);
 
-        $this->command?->info('Demo data ready. Test password for every seeded user: 1234');
-        $this->command?->info('class.teacher.test@sicss.com, subject.teacher.test@sicss.com, student.test@sicss.com, vpi.test@sicss.com, principal.test@sicss.com, head.of.school.test@sicss.com, parent.test@sicss.com, finance.test@sicss.com');
+        $this->command?->info('Demo data ready. Test password loaded from SICSS_TEST_SEED_PASSWORD.');
+        $this->command?->info('class.sponsor.test@sicss.com, subject.teacher.test@sicss.com, student.test@sicss.com, vpi.test@sicss.com, principal.test@sicss.com, head.of.school.test@sicss.com, parent.test@sicss.com');
     }
 }

@@ -11,7 +11,7 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::with('class');
+        $query = Student::with('class')->with('user:id,user_code');
 
         if ($this->isScopedTeacher($request)) {
             $classIds = $this->permittedClassIds($request);
@@ -24,6 +24,7 @@ class StudentController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($q) => $q->where('user_code', 'like', "%{$search}%"))
                     ->orWhere('student_id', 'like', "%{$search}%");
             });
         }
@@ -87,7 +88,9 @@ class StudentController extends Controller
         ]);
 
         // Normalise gender to lowercase
-        $data = $request->all();
+        // Registration numbers are issued by the system and cannot be supplied
+        // or changed by clients.
+        $data = $request->except('registration_number');
         if ($request->user()?->hasRole('student')) $data['user_id'] = $request->user()->id;
         $data['gender'] = strtolower($data['gender'] ?? 'other');
         if (!in_array($data['gender'], ['male', 'female', 'other'])) {
@@ -98,6 +101,7 @@ class StudentController extends Controller
         if (empty($data['student_id'])) {
             $year = date('Y');
             $last = \App\Models\Student::where('student_id', 'like', "STU-{$year}-%")
+                ->where('student_id', 'not like', "%-%-%")  // Exclude timestamped IDs
                 ->orderByRaw("CAST(SPLIT_PART(student_id, '-', 3) AS INTEGER) DESC")
                 ->first();
             $next = 1;
@@ -106,7 +110,15 @@ class StudentController extends Controller
                 $next  = (int) ($parts[2] ?? 0) + 1;
             }
             $data['student_id'] = "STU-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT);
+
+            // Ensure unique student_id (avoid collision by incrementing)
+            while (\App\Models\Student::where('student_id', $data['student_id'])->exists()) {
+                $next++;
+                $data['student_id'] = "STU-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT);
+            }
         }
+
+        $data['registration_number'] = $this->nextRegistrationNumber();
 
         // Default admission_date to today
         if (empty($data['admission_date'])) {
@@ -116,11 +128,6 @@ class StudentController extends Controller
         // Default status
         if (empty($data['status'])) {
             $data['status'] = 'active';
-        }
-
-        // Ensure unique student_id (avoid collision)
-        if (\App\Models\Student::where('student_id', $data['student_id'])->exists()) {
-            $data['student_id'] = $data['student_id'] . '-' . time();
         }
 
         $student = \App\Models\Student::create($data);
@@ -133,7 +140,7 @@ class StudentController extends Controller
         if ($this->isScopedTeacher($request) && !in_array($student->class_id, $this->permittedClassIds($request))) {
             return response()->json(['message' => 'Unauthorized - student is not in your assigned class'], 403);
         }
-        $student->load('class');
+        $student->load('class')->load('user:id,user_code');
         return response()->json($student);
     }
 
@@ -182,7 +189,8 @@ class StudentController extends Controller
             'application_status'     => 'nullable|in:pending,approved,rejected',
         ]);
 
-        $data = $request->all();
+        // Preserve the registration number already issued for this student.
+        $data = $request->except('registration_number');
         // Normalise gender
         if (!empty($data['gender'])) {
             $data['gender'] = strtolower($data['gender']);
@@ -196,9 +204,24 @@ class StudentController extends Controller
         if (empty($data['student_id'])) {
             $data['student_id'] = $student->student_id;
         }
+        $data['registration_number'] = $student->registration_number ?: $this->nextRegistrationNumber();
 
         $student->update($data);
         $student->load('class');
+        return response()->json($student);
+    }
+
+    public function me(Request $request)
+    {
+        $student = Student::where('user_id', $request->user()->id)
+            ->with('class')
+            ->with('user:id,user_code,email')
+            ->first();
+        
+        if (!$student) {
+            return response()->json(['message' => 'Student profile not found'], 404);
+        }
+        
         return response()->json($student);
     }
 
@@ -210,7 +233,7 @@ class StudentController extends Controller
 
     private function isScopedTeacher(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['teacher', 'class-teacher', 'subject-teacher']);
+        return $request->user()->hasAnyRole(['teacher', 'class-sponsor', 'subject-teacher']);
     }
 
     private function permittedClassIds(Request $request): array
@@ -226,5 +249,21 @@ class StudentController extends Controller
             ->merge(\App\Models\ClassModel::where('sponsor_teacher_id', $teacher->id)->pluck('id'));
 
         return $classIds->unique()->values()->all();
+    }
+
+    private function nextRegistrationNumber(): string
+    {
+        $year = date('Y');
+        $last = Student::where('registration_number', 'like', "REG-{$year}-%")
+            ->orderByRaw("CAST(SPLIT_PART(registration_number, '-', 3) AS INTEGER) DESC")
+            ->first();
+
+        $next = 1;
+        if ($last) {
+            $parts = explode('-', $last->registration_number);
+            $next = (int) ($parts[2] ?? 0) + 1;
+        }
+
+        return "REG-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT);
     }
 }

@@ -157,7 +157,7 @@ function TakeAttendanceModal({
                         <p className="text-sm font-semibold text-slate-900 truncate">
                           {student.first_name} {student.last_name}
                         </p>
-                        <p className="text-xs text-slate-400">{student.student_id}</p>
+                        <p className="text-xs text-slate-400">{(student as any).user?.user_code || student.student_id}</p>
                       </div>
                       {/* Status selector */}
                       <select
@@ -290,16 +290,16 @@ export default function Attendance() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Attendance</h1>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Attendance</h1>
           <p className="mt-1 text-sm text-slate-500">Record and review daily student attendance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={handleSync} disabled={syncing}
-            className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            className="rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
             {syncing ? '↻ Syncing…' : '↻ Sync'}
           </button>
           <button onClick={() => setShowModal(true)}
-            className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
+            className="rounded-lg bg-slate-950 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-cyan-700">
             📋 Take Attendance
           </button>
         </div>
@@ -325,19 +325,19 @@ export default function Attendance() {
 
       {/* Filters */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
           <input type="date" value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="input-field w-auto" />
+            className="input-field w-auto flex-1 sm:flex-none" />
           <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
-            className="input-field w-auto">
+            className="input-field w-auto flex-1 sm:flex-none">
             <option value="">All classes</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
             ))}
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="input-field w-auto">
+            className="input-field w-auto flex-1 sm:flex-none">
             <option value="">All statuses</option>
             {(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => (
               <option key={s} value={s}>{STATUS_META[s].label}</option>
@@ -356,12 +356,16 @@ export default function Attendance() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
+            <table className="min-w-[700px] divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
-                  {['Student', 'Class', 'Date', 'Status', 'Remarks', 'Change status', 'Actions'].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left">{h}</th>
-                  ))}
+                  <th className="px-3 sm:px-5 py-3 text-left">Student</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden sm:table-cell">Class</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Date</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Status</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Remarks</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Change status</th>
+                  <th className="px-3 sm:px-5 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -370,38 +374,38 @@ export default function Attendance() {
                   const sm = STATUS_META[status] || STATUS_META.present;
                   return (
                     <tr key={record.id} className="hover:bg-slate-50">
-                      <td className="px-5 py-3 font-semibold text-slate-900">
+                      <td className="px-3 sm:px-5 py-3 font-semibold text-slate-900">
                         {record.student?.first_name} {record.student?.last_name}
                       </td>
-                      <td className="px-5 py-3 text-slate-600">
+                      <td className="px-3 sm:px-5 py-3 text-slate-600 hidden sm:table-cell">
                         {(record as any).class?.name || '—'}
                       </td>
-                      <td className="px-5 py-3 text-slate-600">
+                      <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">
                         {(record as any).date || selectedDate}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${sm.bg} ${sm.color}`}>
+                      <td className="px-3 sm:px-5 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${sm.bg} ${sm.color}`}>
                           {sm.label}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-500">
+                      <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">
                         {(record as any).remarks || '—'}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-3 sm:px-5 py-3">
                         <select
                           value={status}
                           onChange={(e) => handleStatusChange(record, e.target.value as StatusType)}
-                          className={`rounded-lg border-0 px-2.5 py-1.5 text-xs font-semibold ${sm.bg} ${sm.color} focus:outline-none focus:ring-1 focus:ring-offset-1`}
+                          className={`rounded-lg border-0 px-2 py-1.5 text-xs font-semibold ${sm.bg} ${sm.color} focus:outline-none focus:ring-1 focus:ring-offset-1`}
                         >
                           {(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => (
                             <option key={s} value={s}>{STATUS_META[s].label}</option>
                           ))}
                         </select>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-3 sm:px-5 py-3">
                         <button
                           onClick={() => handleDeleteRecord(record.id)}
-                          className="text-xs font-semibold text-rose-600 hover:underline"
+                          className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap"
                         >
                           Delete
                         </button>

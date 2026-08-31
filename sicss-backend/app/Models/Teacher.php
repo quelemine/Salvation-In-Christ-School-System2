@@ -82,4 +82,9 @@ class Teacher extends Model
     {
         return $this->subjectClassAssignments()->pluck('class_id')->unique()->values()->all();
     }
+
+    public function getUserCodeAttribute(): string
+    {
+        return $this->user?->user_code ?? $this->employee_id;
+    }
 }

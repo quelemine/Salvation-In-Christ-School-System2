@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Syncable;
+use App\Models\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,6 +37,45 @@ class User extends Authenticatable
         'remember_token',
         'two_fa_code',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if ($user->user_code) {
+                return;
+            }
+
+            $year = now()->format('Y');
+            $prefix = static::userCodePrefix($user->role_id);
+            $lastUser = static::where('user_code', 'like', "{$prefix}-{$year}-%")
+                ->orderByDesc('user_code')
+                ->first();
+            $next = $lastUser
+                ? (int) (explode('-', $lastUser->user_code)[2] ?? 0) + 1
+                : 1;
+
+            $user->user_code = "{$prefix}-{$year}-".str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        });
+    }
+
+    public static function userCodePrefix(?int $roleId): string
+    {
+        $slug = $roleId ? Role::find($roleId)?->slug : null;
+
+        return match ($slug) {
+            'student' => 'STU',
+            'teacher' => 'TCH',
+            'class-teacher' => 'CTH',
+            'subject-teacher' => 'STH',
+            'parent' => 'PAR',
+            'finance', 'finance-staff' => 'FIN',
+            'vice-principal-instruction' => 'VPI',
+            'principal' => 'PRI',
+            'head-of-school' => 'HOS',
+            'admin' => 'ADM',
+            default => 'USR',
+        };
+    }
 
     protected function casts(): array
     {

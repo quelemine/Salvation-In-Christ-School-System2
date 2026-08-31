@@ -18,8 +18,8 @@ class RoleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'CLASS TEACHER',
-                'slug' => 'class-teacher',
+                'name' => 'CLASS SPONSOR',
+                'slug' => 'class-sponsor',
                 'description' => 'Class sponsor with access to all students in their sponsored class',
                 'is_active' => true,
             ],

@@ -50,6 +50,7 @@ export default function OfficialUseSection({ data, onChange, classId, onClassIdC
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [nextId, setNextId] = useState('');
+  const [nextRegistrationNumber, setNextRegistrationNumber] = useState('');
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -63,6 +64,7 @@ export default function OfficialUseSection({ data, onChange, classId, onClassIdC
     if (!f('student_id')) {
       api.get('/students/next-id').then((res) => {
         setNextId(res.data.student_id);
+        setNextRegistrationNumber(res.data.registration_number ?? '');
         onChange('student_id', res.data.student_id);
       }).catch(() => {});
     }
@@ -115,9 +117,11 @@ export default function OfficialUseSection({ data, onChange, classId, onClassIdC
               </div>
             </label>
             <label style={lbl}>
-              Registration Number:
-              <input style={fld} value={f('registration_number')} onChange={set('registration_number')}
-                readOnly={!editable} placeholder="e.g. REG-2026-001" />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Registration Number (Auto-generated):</span>
+              <div style={{ ...fld, minHeight: 30, padding: '5px 8px', background: '#f8fafc', color: '#0f172a', fontFamily: 'monospace', fontWeight: 700 }}>
+                {f('registration_number') || nextRegistrationNumber || 'REG-2026-???'}
+              </div>
+              <span style={{ display: 'block', marginTop: 3, fontSize: 10, color: '#888' }}>Assigned automatically when the student is saved</span>
             </label>
           </div>
 

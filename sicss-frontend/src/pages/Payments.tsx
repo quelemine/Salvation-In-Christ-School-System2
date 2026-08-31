@@ -275,7 +275,7 @@ export default function Payments() {
             <label className="mb-1 block text-sm font-medium text-slate-700">Student <span className="text-rose-500">*</span></label>
             <select required value={formData.student_id} onChange={field('student_id')} className="input-field">
               <option value="">Select student</option>
-              {students.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
+              {students.map((s) => <option key={s.id} value={s.id}>{(s as any).user?.user_code || (s as any).student_id} - {s.first_name} {s.last_name}</option>)}
             </select>
           </div>
           {/* Fee */}
@@ -283,10 +283,10 @@ export default function Payments() {
             <label className="mb-1 block text-sm font-medium text-slate-700">Fee <span className="text-rose-500">*</span></label>
             <select required value={formData.fee_id} onChange={(e) => {
               const fee = fees.find((f) => f.id === Number(e.target.value));
-              setFormData({ ...formData, fee_id: e.target.value, amount: fee ? String(fee.amount) : formData.amount, currency: (fee?.currency as CurrencyCode) || defaultCurrency });
+              setFormData({ ...formData, fee_id: e.target.value, amount: fee ? String(fee.amount_lrd || 0) : formData.amount, currency: 'LRD' as CurrencyCode });
             }} className="input-field">
               <option value="">Select fee</option>
-              {fees.map((f) => <option key={f.id} value={f.id}>{f.name} ({formatCurrency(Number(f.amount), (f.currency as CurrencyCode) || 'LRD')})</option>)}
+              {fees.map((f) => <option key={f.id} value={f.id}>{f.name} ({formatCurrency(Number(f.amount_lrd || 0), 'LRD' as CurrencyCode)})</option>)}
             </select>
           </div>
           {/* Amount */}

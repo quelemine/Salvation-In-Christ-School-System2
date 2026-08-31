@@ -12,7 +12,7 @@ class GradeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Grade::with('student.class', 'subject', 'teacher');
+        $query = Grade::with('student.class', 'student.user:id,user_code', 'subject', 'teacher');
 
         if ($this->isTeacher($request)) {
             $teacher = $this->teacherFor($request);
@@ -81,7 +81,7 @@ class GradeController extends Controller
         $grade = new Grade($data);
         $grade->grade = $grade->calculateGradeLetter($request->score);
         $grade->save();
-        $grade->load('student', 'subject', 'teacher');
+        $grade->load('student.user:id,user_code', 'subject', 'teacher');
         return response()->json($grade, 201);
     }
 
@@ -90,7 +90,7 @@ class GradeController extends Controller
         if ($this->isTeacher($request) && !$this->canTeach($request, $grade->student_id, $grade->subject_id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $grade->load('student', 'subject', 'teacher');
+        $grade->load('student.user:id,user_code', 'subject', 'teacher');
         return response()->json($grade);
     }
 
@@ -117,7 +117,7 @@ class GradeController extends Controller
         $grade->update($data);
         $grade->grade = $grade->calculateGradeLetter($request->score);
         $grade->save();
-        $grade->load('student', 'subject', 'teacher');
+        $grade->load('student.user:id,user_code', 'subject', 'teacher');
         return response()->json($grade);
     }
 
@@ -240,7 +240,7 @@ class GradeController extends Controller
             'review_note' => null,
         ]);
 
-        return response()->json($grade->fresh(['student.class', 'subject', 'teacher']));
+        return response()->json($grade->fresh(['student.class', 'student.user:id,user_code', 'subject', 'teacher']));
     }
 
     public function review(Request $request, Grade $grade)
@@ -257,12 +257,12 @@ class GradeController extends Controller
             'reviewed_by' => $request->user()->id,
         ]);
 
-        return response()->json($grade->fresh(['student.class', 'subject', 'teacher']));
+        return response()->json($grade->fresh(['student.class', 'student.user:id,user_code', 'subject', 'teacher']));
     }
 
     private function isTeacher(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['teacher', 'class-teacher', 'subject-teacher']);
+        return $request->user()->hasAnyRole(['teacher', 'class-sponsor', 'subject-teacher']);
     }
 
     private function teacherFor(Request $request): ?Teacher
