@@ -39,8 +39,13 @@ export default function AnnouncementsBanner() {
 
   useEffect(() => {
     api.get('/announcements/feed')
-      .then((r) => setItems(r.data))
-      .catch(() => {})
+      .then((r) => {
+        console.log('Announcements loaded:', r.data);
+        setItems(r.data);
+      })
+      .catch((err) => {
+        console.error('Failed to load announcements:', err);
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { subjectService, type Subject } from '../services/subjectService';
 import { FormModal } from '../components/FormModal';
+import { useAuthStore } from '../store/authStore';
 
 type FormData = {
   code: string;
@@ -27,6 +28,8 @@ function toSlug(value: string) {
 }
 
 export default function Subjects() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -106,9 +109,11 @@ export default function Subjects() {
           <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic structure</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Subjects</h1>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + Add subject
-        </button>
+        {isAdmin && (
+          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+            + Add subject
+          </button>
+        )}
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
@@ -152,10 +157,14 @@ export default function Subjects() {
                       </span>
                     </td>
                     <td className="px-5 py-3">
-                      <div className="flex gap-3">
-                        <button onClick={() => openEdit(s)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
-                        <button onClick={() => handleDelete(s.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex gap-3">
+                          <button onClick={() => openEdit(s)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
+                          <button onClick={() => handleDelete(s.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { studentService } from '../services/studentService';
 import { useAuthStore } from '../store/authStore';
 import type { Student } from '../types';
@@ -7,6 +8,7 @@ import api from '../services/api';
 
 // ── Main Students page ────────────────────────────────────────────────────────
 export default function Students() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAdmin = user?.role?.slug === 'admin';
   const isStudent = user?.role?.slug === 'student';
@@ -23,6 +25,8 @@ export default function Students() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [studentProfile, setStudentProfile] = useState<any>(null);
+  const [approvalError, setApprovalError] = useState('');
+  const [approvingId, setApprovingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (isStudent) {
@@ -58,43 +62,22 @@ export default function Students() {
   };
 
   const handleApprove = async (id: number) => {
-    const student = students.find(s => s.id === id);
-    if (!student) return;
-
-    const username = prompt('Enter username (leave blank to auto-generate):');
-    const password = prompt('Enter password (leave blank to auto-generate):');
-
+    setApprovalError('');
+    setApprovingId(id);
     try {
-      const response = await api.post(`/students/${id}/approve`, {
+      await api.post(`/students/${id}/approve`, {
         application_status: 'approved',
-        username: username || undefined,
-        password: password || undefined,
       });
-
-      const credentials = (response.data as any).credentials;
-      if (credentials) {
-        alert(`Student approved!\n\nUser Code: ${credentials.username}\nPassword: ${credentials.password}\nEmail: ${credentials.email}\n\nPlease share these credentials with the student.`);
-      } else {
-        alert('Student approved successfully!');
-      }
-
-      loadStudents();
+      navigate(`/users/account/student/${id}`);
     } catch (error: any) {
-      alert('Failed to approve student: ' + (error.response?.data?.message || error.message));
+      setApprovalError(error.response?.data?.message || 'Unable to approve this student. Please try again.');
+    } finally {
+      setApprovingId(null);
     }
   };
 
   const handleCreateLogin = (student: Student) => {
-    // Navigate to users page with pre-filled information
-    const params = new URLSearchParams({
-      prefill_first_name: student.first_name,
-      prefill_last_name: student.last_name,
-      prefill_email: student.user?.email || `${student.first_name.toLowerCase()}.${student.last_name.toLowerCase()}@sicss.com`,
-      prefill_phone: student.phone || '',
-      prefill_address: student.address || '',
-      student_id: String(student.id),
-    });
-    window.location.href = `/users?${params.toString()}`;
+    navigate(`/users/account/student/${student.id}`);
   };
 
   const availableFields = [
@@ -316,6 +299,8 @@ export default function Students() {
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">My Application Record</h1>
             <p className="mt-1 text-sm text-slate-500">View your student application details</p>
           </div>
+
+          {approvalError && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{approvalError}</p>}
 
           {loading ? (
             <p className="py-12 text-center text-sm text-slate-500">Loading your application record…</p>
@@ -547,34 +532,33 @@ export default function Students() {
                         return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${cls}`}>{appStatus}</span>;
                       })()}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
-                        student.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                      }`}>{student.status}</span>
-                    </td>
                     <td className="px-3 sm:px-4 py-3 no-print">
-                      {isAdmin && <div className="flex gap-2 flex-wrap">
-                        {(student as any).application_status === 'pending' && (
-                          <button onClick={() => handleApprove(student.id)}
-                            className="text-xs font-semibold text-emerald-600 hover:underline whitespace-nowrap">
-                            Approve
+                      {isAdmin ? (
+                        <div className="flex gap-2 flex-wrap">
+                          {(student as any).application_status === 'pending' && (
+                            <button onClick={() => handleApprove(student.id)} disabled={approvingId === student.id}
+                              className="text-xs font-semibold text-emerald-600 hover:underline whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50">
+                              {approvingId === student.id ? 'Approving…' : 'Approve'}
+                            </button>
+                          )}
+                          {(student as any).application_status === 'approved' && !student.user && (
+                            <button onClick={() => handleCreateLogin(student)}
+                              className="text-xs font-semibold text-cyan-600 hover:underline whitespace-nowrap">
+                              Create Login
+                            </button>
+                          )}
+                          <a href={`/student-application?id=${student.id}`}
+                            className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">
+                            Edit
+                          </a>
+                          <button onClick={() => handleDelete(student.id)}
+                            className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">
+                            Delete
                           </button>
-                        )}
-                        {(student as any).application_status === 'approved' && !student.user && (
-                          <button onClick={() => handleCreateLogin(student)}
-                            className="text-xs font-semibold text-cyan-600 hover:underline whitespace-nowrap">
-                            Create Login
-                          </button>
-                        )}
-                        <a href={`/student-application?id=${student.id}`}
-                          className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">
-                          Edit
-                        </a>
-                        <button onClick={() => handleDelete(student.id)}
-                          className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">
-                          Delete
-                        </button>
-                      </div>}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

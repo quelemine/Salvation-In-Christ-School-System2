@@ -16,7 +16,7 @@ type AdminStaffUser = {
   is_active: boolean;
 };
 
-const adminRoles = ['admin', 'finance', 'finance-staff', 'vice-principal-instruction', 'principal', 'head-of-school'];
+const adminRoles = ['admin', 'finance', 'finance-staff', 'vice-principal-instruction', 'principal', 'proprietor', 'proprietress'];
 
 export default function AdminStaffUsers() {
   const [users, setUsers] = useState<AdminStaffUser[]>([]);
@@ -68,7 +68,8 @@ export default function AdminStaffUsers() {
       case 'finance-staff': return 'bg-emerald-100 text-emerald-800';
       case 'vice-principal-instruction': return 'bg-purple-100 text-purple-700';
       case 'principal': return 'bg-blue-100 text-blue-700';
-      case 'head-of-school': return 'bg-amber-100 text-amber-700';
+      case 'proprietor': return 'bg-amber-100 text-amber-700';
+      case 'proprietress': return 'bg-rose-100 text-rose-700';
       default: return 'bg-slate-100 text-slate-600';
     }
   };

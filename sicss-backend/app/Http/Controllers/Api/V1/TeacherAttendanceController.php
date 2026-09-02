@@ -52,7 +52,7 @@ class TeacherAttendanceController extends Controller
     private function notifyAttendanceRecorded($records, array $data, Request $request): void
     {
         $type = $data['attendance_type'] === 'meeting' ? 'staff meeting' : 'working day';
-        $leaders = User::whereHas('role', fn ($query) => $query->whereIn('slug', ['finance', 'finance-staff', 'principal', 'vice-principal-instruction', 'head-of-school']))->pluck('id');
+        $leaders = User::whereHas('role', fn ($query) => $query->whereIn('slug', ['finance', 'finance-staff', 'principal', 'vice-principal-instruction', 'proprietor', 'proprietress']))->pluck('id');
         if ($leaders->isNotEmpty()) {
             Announcement::create(['created_by' => $request->user()->id, 'title' => 'Teacher attendance recorded', 'body' => "Teacher attendance for {$type} on {$data['attendance_date']} has been recorded. Review the staff attendance register for details.", 'priority' => 'important', 'category' => 'academic', 'audience' => $leaders->implode(','), 'publish_at' => now(), 'expires_at' => now()->addDays(7)]);
         }

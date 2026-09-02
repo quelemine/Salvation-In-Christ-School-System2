@@ -52,12 +52,13 @@ Route::prefix('v1')->group(function () {
         Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
     });
 
+    Route::get('/settings', [SystemSettingsController::class, 'show']);
+    Route::get('/classes', [ClassController::class, 'index']);
+
     Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/settings', [SystemSettingsController::class, 'show']);
         // Upload endpoints (admin only)
         // Academic reference data required when teachers enter grades.
         Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
-        Route::get('/classes', [ClassController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
         Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
         Route::get('/grades', [GradeController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
 
@@ -96,8 +97,8 @@ Route::prefix('v1')->group(function () {
                 : 1;
 
             return response()->json([
-                'student_id' => "STU-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT),
-                'registration_number' => "REG-{$year}-" . str_pad($nextRegistration, 3, '0', STR_PAD_LEFT),
+                'student_id' => "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT),
+                'registration_number' => "REG-{$year}-" . str_pad($nextRegistration, 4, '0', STR_PAD_LEFT),
             ]);
         });
 
@@ -110,14 +111,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/fee-structures/{feeStructure}', [FeeStructureController::class, 'show']);
         Route::get('/students/{student}/clearance', [FeeStructureController::class, 'checkClearance']);
 
+        // Salary structures - viewable by admin and principal, manageable by admin only
+        Route::get('/salary-structures', [TeacherPayrollController::class, 'structures'])->middleware('role:admin|principal');
+
         Route::middleware('role:admin')->group(function () {
-            Route::get('/salary-structures', [TeacherPayrollController::class, 'structures']);
             Route::post('/salary-structures', [TeacherPayrollController::class, 'storeStructure']);
             Route::put('/salary-structures/{salaryStructure}', [TeacherPayrollController::class, 'updateStructure']);
             Route::get('/teacher-payrolls', [TeacherPayrollController::class, 'payrolls']);
             Route::post('/teacher-payrolls', [TeacherPayrollController::class, 'createPayroll']);
             Route::post('/teacher-payrolls/{payroll}/mark-paid', [TeacherPayrollController::class, 'markPaid']);
-            Route::post('/teacher-attendance/bulk', [TeacherAttendanceController::class, 'bulk']);
+            Route::post('/teacher-attendance/bulk', [TeacherAttendanceController::class, 'bulk'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
             Route::get('/staff-attendance-members', [TeacherAttendanceController::class, 'staff']);
             Route::get('/teacher-attendance-settings', [TeacherAttendanceController::class, 'settings']);
             Route::put('/teacher-attendance-settings', [TeacherAttendanceController::class, 'updateSettings']);
@@ -128,7 +131,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/students/{student}/clearance', [FeeStructureController::class, 'clearStudent']);
             Route::get('/student-clearances', [FeeStructureController::class, 'studentClearances']);
         });
-        Route::get('/teacher-attendance', [TeacherAttendanceController::class, 'index'])->middleware('role:admin|finance|finance-staff|principal|vice-principal-instruction|head-of-school');
+        Route::get('/teacher-attendance', [TeacherAttendanceController::class, 'index'])->middleware('role:admin|finance|finance-staff|principal|vice-principal-instruction|proprietor|proprietress');
         Route::get('/helpdesk/my-tickets', [HelpdeskController::class, 'myTickets']);
         Route::post('/helpdesk/tickets', [HelpdeskController::class, 'store']);
         Route::get('/helpdesk/tickets/{ticket}', [HelpdeskController::class, 'show']);
@@ -146,8 +149,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
         Route::post('/announcements/read-all', [AnnouncementController::class, 'markAllRead']);
 
-        // Announcements — admin management
-        Route::middleware('role:admin')->group(function () {
+        // Announcements — admin and VPI management
+        Route::middleware('role:admin|vice-principal-instruction')->group(function () {
             Route::get('/announcements', [AnnouncementController::class, 'index']);
             Route::post('/announcements', [AnnouncementController::class, 'store']);
             Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update']);
@@ -157,11 +160,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/test/teacher', [TestController::class, 'teacherOnly'])->middleware('role:teacher');
         Route::get('/test/student', [TestController::class, 'studentOnly'])->middleware('role:student');
 
+        // Users - viewable by admin and VPI, manageable by admin only
+        Route::get('/users', [UserController::class, 'index'])->middleware('role:admin|vice-principal-instruction');
+        Route::get('/roles', [UserController::class, 'roles'])->middleware('role:admin|vice-principal-instruction');
+
         Route::middleware('role:admin')->group(function () {
             Route::get('/search', GlobalSearchController::class);
-            Route::get('/users', [UserController::class, 'index']);
-            Route::get('/roles', [UserController::class, 'roles']);
             Route::post('/users', [UserController::class, 'store']);
+            Route::get('/users/{user}', [UserController::class, 'show']);
             Route::put('/users/{user}', [UserController::class, 'update']);
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
             // Student application approval (admin only)
@@ -175,64 +181,40 @@ Route::prefix('v1')->group(function () {
                     'approval_date'         => 'nullable|date',
                     'admission_date'        => 'nullable|date',
                     'class_id'              => 'nullable|exists:classes,id',
-                    'username'              => 'nullable|string',
-                    'password'              => 'nullable|string|min:8',
                 ]);
 
-                // If approving and student doesn't have a user account, create one
-                if ($data['application_status'] === 'approved' && !$student->user_id) {
-                    $role = \App\Models\Role::where('slug', 'student')->first();
-                    if (!$role) {
-                        return response()->json(['message' => 'Student role not found'], 500);
-                    }
-
-                    // Generate username if not provided
-                    $username = $data['username'] ?? strtolower($student->first_name . '.' . $student->last_name);
-                    
-                    // Generate password if not provided
-                    $password = $data['password'] ?? \Illuminate\Support\Str::random(10);
-
-                    // Create user account
-                    $user = \App\Models\User::create([
-                        'first_name' => $student->first_name,
-                        'last_name' => $student->last_name,
-                        'email' => $student->parent_guardian_email ?? $student->email ?? $username . '@sicss.local',
-                        'password' => \Illuminate\Support\Facades\Hash::make($password),
-                        'role_id' => $role->id,
-                        'phone' => $student->phone,
-                        'address' => $student->address,
-                        'is_active' => true,
-                    ]);
-
-                    // Link user to student
-                    $data['user_id'] = $user->id;
-                }
-
                 $student->update($data);
-                
-                $response = $student->fresh(['class', 'user']);
-                
-                // Include credentials if a new user was created
-                if (isset($data['user_id']) && $student->user) {
-                    $response->credentials = [
-                        'username' => $student->user->user_code,
-                        'password' => $password ?? null,
-                        'email' => $student->user->email,
-                    ];
-                }
-                
-                return response()->json($response);
+
+                return response()->json($student->fresh(['class', 'user']));
             });
-            Route::apiResource('report-cards', ReportCardController::class)->only(['index', 'store']);
-            Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval']);
-            Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:class-sponsor|admin');
-            Route::post('/report-cards/{id}/vpi-approve', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
             Route::apiResource('divisions', DivisionController::class)->except(['index']);
             Route::apiResource('classes', ClassController::class)->except(['index']);
-            Route::apiResource('teachers', TeacherController::class);
             Route::apiResource('subjects', SubjectController::class)->except(['index']);
             // Admin can manage students (update, delete, index by default)
-            Route::apiResource('students', StudentController::class)->except(['store']);
+            Route::apiResource('students', StudentController::class)->only(['update', 'destroy']);
+        });
+
+        // Divisions, classes, and subjects - viewable by admin and principal
+        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
+        Route::get('/classes', [ClassController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
+        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
+
+        // Teachers - viewable by admin, VPI, and principal, manageable by admin only
+        Route::get('/teachers', [TeacherController::class, 'index'])->middleware('role:admin|vice-principal-instruction|principal');
+        Route::middleware('role:admin')->group(function () {
+            Route::apiResource('teachers', TeacherController::class)->except(['index']);
+        });
+
+        // Report cards - accessible by admin, VPI, class-sponsor, and principal
+        Route::get('/report-cards', [ReportCardController::class, 'index'])->middleware('role:admin|vice-principal-instruction|class-sponsor|principal');
+        Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval']);
+        Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:class-sponsor|admin');
+        Route::post('/report-cards/{id}/vpi-approve', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
+
+        // Teachers, admins, VPI, and principal can view students
+        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal')->group(function () {
+            Route::get('/students', [StudentController::class, 'index']);
+            Route::get('/students/{student}', [StudentController::class, 'show']);
         });
 
 
@@ -246,16 +228,19 @@ Route::prefix('v1')->group(function () {
             Route::get('/report-card', [StudentPortalController::class, 'reportCard']);
         });
 
-        Route::middleware('role:admin|class-sponsor')->group(function () {
+        // Student attendance - viewable by admin, class-sponsor, VPI, principal, proprietor|proprietress
+        // Addable by admin, class-sponsor, principal
+        Route::get('/attendance', [AttendanceController::class, 'index'])->middleware('role:admin|class-sponsor|vice-principal-instruction|principal|proprietor|proprietress');
+        Route::get('/attendance/{attendance}', [AttendanceController::class, 'show'])->middleware('role:admin|class-sponsor|vice-principal-instruction|principal|proprietor|proprietress');
+        Route::get('/attendance/student/{studentId}/history', [AttendanceController::class, 'studentHistory'])->middleware('role:admin|class-sponsor|vice-principal-instruction|principal|proprietor|proprietress');
+        Route::get('/attendance/class/{classId}/report', [AttendanceController::class, 'classReport'])->middleware('role:admin|class-sponsor|vice-principal-instruction|principal|proprietor|proprietress');
+
+        Route::middleware('role:admin|class-sponsor|principal')->group(function () {
             Route::prefix('attendance')->group(function () {
-                Route::get('/', [AttendanceController::class, 'index']);
                 Route::post('/', [AttendanceController::class, 'store']);
                 Route::post('/bulk', [AttendanceController::class, 'storeBulk']);
-                Route::get('/{attendance}', [AttendanceController::class, 'show']);
                 Route::put('/{attendance}', [AttendanceController::class, 'update']);
                 Route::delete('/{attendance}', [AttendanceController::class, 'destroy']);
-                Route::get('/student/{studentId}/history', [AttendanceController::class, 'studentHistory']);
-                Route::get('/class/{classId}/report', [AttendanceController::class, 'classReport']);
             });
 
             Route::prefix('student-comments')->group(function () {
@@ -268,7 +253,7 @@ Route::prefix('v1')->group(function () {
             });
         });
 
-        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher')->group(function () {
+        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction')->group(function () {
             Route::prefix('grades')->group(function () {
                 Route::post('/', [GradeController::class, 'store']);
                 Route::post('/{grade}/submit', [GradeController::class, 'submit'])->middleware('role:teacher|class-sponsor|subject-teacher');

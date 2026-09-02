@@ -3,6 +3,7 @@ import { payrollService, teacherService, type SalaryStructure, type Teacher } fr
 import { classService, type Class } from '../services/classService';
 import { subjectService, type Subject } from '../services/subjectService';
 import { authService } from '../services/authService';
+import { useAuthStore } from '../store/authStore';
 import type { User } from '../types';
 import { FormModal } from '../components/FormModal';
 import api from '../services/api';
@@ -48,6 +49,8 @@ const emptyForm: FormData = {
 };
 
 export default function Teachers() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -70,12 +73,17 @@ export default function Teachers() {
   const load = async () => {
     setLoading(true);
     try {
-      const [res, userData, classData, subjectData, structures] = await Promise.all([teacherService.getAll(), authService.users(), classService.getAll(), subjectService.getAll(), payrollService.structures()]);
-      setTeachers(res.data || (res as unknown as Teacher[]) || []);
-      setUsers(userData);
-      setClasses((classData as any).data || classData as any);
-      setSubjects((subjectData as any).data || subjectData as any);
-      setSalaryStructures(structures);
+      if (isAdmin) {
+        const [res, userData, classData, subjectData, structures] = await Promise.all([teacherService.getAll(), authService.users(), classService.getAll(), subjectService.getAll(), payrollService.structures()]);
+        setTeachers(res.data || (res as unknown as Teacher[]) || []);
+        setUsers(userData);
+        setClasses((classData as any).data || classData as any);
+        setSubjects((subjectData as any).data || subjectData as any);
+        setSalaryStructures(structures);
+      } else {
+        const res = await teacherService.getAll();
+        setTeachers(res.data || (res as unknown as Teacher[]) || []);
+      }
     } catch { setError('Failed to load teachers.'); }
     finally { setLoading(false); }
   };
@@ -184,9 +192,11 @@ export default function Teachers() {
           <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Teachers</h1>
           <p className="mt-1 text-sm text-slate-500">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.</p>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + Add teacher
-        </button>
+        {isAdmin && (
+          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+            + Add teacher
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         <button onClick={() => window.print()} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -250,10 +260,14 @@ export default function Teachers() {
                       }`}>{(t as any).status || 'active'}</span>
                     </td>
                     <td className="px-3 sm:px-5 py-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => openEdit(t)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
-                        <button onClick={() => handleDelete(t.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex gap-2 flex-wrap">
+                          <button onClick={() => openEdit(t)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
+                          <button onClick={() => handleDelete(t.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

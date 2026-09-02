@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { classService, type Class } from '../services/classService';
 import { divisionService, type Division } from '../services/divisionService';
 import { FormModal } from '../components/FormModal';
+import { useAuthStore } from '../store/authStore';
 
 type Form = { division_id: string; name: string; section: string; capacity: string; is_active: boolean };
 const empty: Form = { division_id: '', name: '', section: '', capacity: '30', is_active: true };
@@ -27,6 +28,8 @@ const getClassSuggestions = (divisionName: string, description: string): string[
 };
 
 export default function Classes() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const [classes, setClasses]     = useState<Class[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -108,9 +111,11 @@ export default function Classes() {
           <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Classes</h1>
           <p className="mt-1 text-sm text-slate-500">{classes.length} class{classes.length !== 1 ? 'es' : ''} configured.</p>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + Add class
-        </button>
+        {isAdmin && (
+          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+            + Add class
+          </button>
+        )}
       </div>
 
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
@@ -142,10 +147,14 @@ export default function Classes() {
                       </span>
                     </td>
                     <td className="px-3 sm:px-5 py-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => openEdit(cls)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
-                        <button onClick={() => handleDelete(cls.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex gap-2 flex-wrap">
+                          <button onClick={() => openEdit(cls)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
+                          <button onClick={() => handleDelete(cls.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

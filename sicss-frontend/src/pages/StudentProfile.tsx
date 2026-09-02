@@ -30,7 +30,7 @@ export default function StudentProfile() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       setMsg({ ok: false, text: 'New passwords do not match.' });
       return;

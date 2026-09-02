@@ -35,6 +35,7 @@ import StudentProfile from '../pages/StudentProfile';
 import TeacherPayroll from '../pages/TeacherPayroll';
 import TeacherAttendance from '../pages/TeacherAttendance';
 import AdminStaffUsers from '../pages/AdminStaffUsers';
+import UserAccountPage from '../pages/UserAccountPage';
 
 function RouteError() {
   const error = useRouteError() as { statusText?: string; status?: number };
@@ -79,6 +80,8 @@ const router = createBrowserRouter([
       { path: 'teacher-payroll', element: <TeacherPayroll /> },
       { path: 'teacher-attendance', element: <TeacherAttendance /> },
       { path: 'admin-staff', element: <AdminStaffUsers /> },
+      // User account setup — opened after approving a student application
+      { path: 'users/account/student/:studentId', element: <UserAccountPage /> },
       // Academic work
       { path: 'grades', element: <Grades /> },
       { path: 'my-grade-sheet', element: <StudentPortal view="report-card" /> },

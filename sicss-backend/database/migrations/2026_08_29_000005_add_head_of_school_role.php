@@ -8,13 +8,18 @@ return new class extends Migration
     public function up(): void
     {
         DB::table('roles')->updateOrInsert(
-            ['slug' => 'head-of-school'],
-            ['name' => 'HEAD OF SCHOOL', 'description' => 'Receives school management reports', 'is_active' => true, 'updated_at' => now(), 'created_at' => now()]
+            ['slug' => 'proprietor'],
+            ['name' => 'PROPRIETOR', 'description' => 'School proprietor with management oversight', 'is_active' => true, 'updated_at' => now(), 'created_at' => now()]
+        );
+        DB::table('roles')->updateOrInsert(
+            ['slug' => 'proprietress'],
+            ['name' => 'PROPRIETRESS', 'description' => 'School proprietress with management oversight', 'is_active' => true, 'updated_at' => now(), 'created_at' => now()]
         );
     }
 
     public function down(): void
     {
-        DB::table('roles')->where('slug', 'head-of-school')->delete();
+        DB::table('roles')->where('slug', 'proprietor')->delete();
+        DB::table('roles')->where('slug', 'proprietress')->delete();
     }
 };

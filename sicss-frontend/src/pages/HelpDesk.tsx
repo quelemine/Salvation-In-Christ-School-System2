@@ -51,12 +51,13 @@ const CATEGORY_ICONS: Record<TicketCategory, string> = {
 function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
   const { user } = useAuthStore();
   const isParent = user?.role?.slug === 'parent';
+  const isVPI = user?.role?.slug === 'vice-principal-instruction';
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     subject: '', description: '',
     category: 'other' as TicketCategory,
     priority: 'medium' as TicketPriority,
-    assigned_to: '' as 'head-of-school' | 'principal' | 'vice-principal-instruction' | '',
+    assigned_to: '' as 'proprietor' | 'proprietress' | 'principal' | 'vice-principal-instruction' | '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -66,7 +67,7 @@ function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
     if (!form.subject.trim() || !form.description.trim()) {
       setError('Subject and description are required.'); return;
     }
-    if (isParent && !form.assigned_to) {
+    if ((isParent || isVPI) && !form.assigned_to) {
       setError('Please select a recipient.'); return;
     }
     setSaving(true); setError('');
@@ -123,14 +124,15 @@ function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
         </div>
       </div>
 
-      {isParent && (
+      {(isParent || isVPI) && (
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Send message to <span className="text-rose-500">*</span></label>
           <select value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value as any })} className="input-field">
             <option value="">Select recipient...</option>
-            <option value="head-of-school">Head of School</option>
+            <option value="proprietor">Proprietor</option>
+            <option value="proprietress">Proprietress</option>
             <option value="principal">Principal</option>
-            <option value="vice-principal-instruction">Vice Principal Instruction</option>
+            {isParent && <option value="vice-principal-instruction">Vice Principal Instruction</option>}
           </select>
         </div>
       )}

@@ -53,6 +53,7 @@ export function useNotifications() {
       // ── 1. Announcements (all users) ────────────────────────────────────
       try {
         const annRes = await api.get('/announcements/feed');
+        console.log('Notifications hook - announcements loaded:', annRes.data);
         for (const ann of annRes.data as any[]) {
           notifs.push({
             id:        `ann-${ann.id}`,
@@ -66,7 +67,9 @@ export function useNotifications() {
             priority:  ann.priority,
           });
         }
-      } catch { /* silent */ }
+      } catch (err) {
+        console.error('Notifications hook - failed to load announcements:', err);
+      }
 
       if (isAdmin) {
         // ── 2a. Admin: new tickets with no staff reply yet ─────────────────

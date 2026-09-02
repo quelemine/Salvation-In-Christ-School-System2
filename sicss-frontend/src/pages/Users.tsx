@@ -161,7 +161,7 @@ export default function Users() {
       admin: 'admin', teacher: 'teacher', 'class-teacher': 'class.teacher',
       'subject-teacher': 'subject.teacher', student: 'student', parent: 'parent',
       finance: 'finance', 'finance-staff': 'finance',
-      'vice-principal-instruction': 'vice.principal', principal: 'principal', 'head-of-school': 'head.of.school',
+      'vice-principal-instruction': 'vice.principal', principal: 'principal', proprietor: 'proprietor', proprietress: 'proprietress',
     }[slug] || slug.replace(/-/g, '.');
     const used = new Set(users.map((user) => user.email.toLowerCase()));
     let candidate = `${localPart}@sicss.com`;
@@ -174,7 +174,7 @@ export default function Users() {
     const prefix = {
       admin: 'ADM', teacher: 'TCH', 'class-teacher': 'CTH', 'subject-teacher': 'STH',
       student: 'STU', parent: 'PAR', finance: 'FIN', 'finance-staff': 'FIN',
-      'vice-principal-instruction': 'VPI', principal: 'PRI', 'head-of-school': 'HOS',
+      'vice-principal-instruction': 'VPI', principal: 'PRI', proprietor: 'PRO', proprietress: 'PRE',
     }[slug || ''] || 'USR';
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     const values = crypto.getRandomValues(new Uint32Array(7));

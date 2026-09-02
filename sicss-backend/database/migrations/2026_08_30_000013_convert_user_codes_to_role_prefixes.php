@@ -24,7 +24,8 @@ return new class extends Migration
                     'finance', 'finance-staff' => 'FIN',
                     'vice-principal-instruction' => 'VPI',
                     'principal' => 'PRI',
-                    'head-of-school' => 'HOS',
+                    'proprietor' => 'PRO',
+                    'proprietress' => 'PRO',
                     'admin' => 'ADM',
                     default => 'USR',
                 };

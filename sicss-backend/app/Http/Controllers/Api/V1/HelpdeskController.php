@@ -33,7 +33,7 @@ class HelpdeskController extends Controller
             'description' => 'required|string',
             'category'    => 'in:account,academic,finance,technical,other',
             'priority'    => 'in:low,medium,high,urgent',
-            'assigned_to' => 'sometimes|nullable|in:head-of-school,principal,vice-principal-instruction',
+            'assigned_to' => 'sometimes|nullable|in:proprietor,proprietress,principal,vice-principal-instruction',
         ]);
 
         $data['user_id'] = $request->user()->id;

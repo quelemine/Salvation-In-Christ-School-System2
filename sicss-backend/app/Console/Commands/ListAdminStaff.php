@@ -30,7 +30,7 @@ class ListAdminStaff extends Command
         $this->info(str_repeat('=', 80));
         $this->newLine();
 
-        $adminRoles = ['admin', 'finance', 'finance-staff', 'vice-principal-instruction', 'principal', 'head-of-school'];
+        $adminRoles = ['admin', 'finance', 'finance-staff', 'vice-principal-instruction', 'principal', 'proprietor', 'proprietress'];
 
         $users = User::with('role')
             ->whereHas('role', function($query) use ($adminRoles) {

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { divisionService, type Division } from '../services/divisionService';
 import { FormModal } from '../components/FormModal';
+import { useAuthStore } from '../store/authStore';
 
 type Form = { name: string; description: string };
 const empty: Form = { name: '', description: '' };
 
 export default function Divisions() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
@@ -83,9 +86,11 @@ export default function Divisions() {
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Divisions</h1>
           <p className="mt-1 text-sm text-slate-500">Divisions group related classes together (e.g. Primary, Junior High).</p>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + Add division
-        </button>
+        {isAdmin && (
+          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+            + Add division
+          </button>
+        )}
       </div>
 
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
@@ -111,10 +116,14 @@ export default function Divisions() {
                     <td className="px-5 py-3 text-slate-600">{d.description || '—'}</td>
                     <td className="px-5 py-3 text-slate-400 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}</td>
                     <td className="px-5 py-3">
-                      <div className="flex gap-3">
-                        <button onClick={() => openEdit(d)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
-                        <button onClick={() => setDeleteId(d.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex gap-3">
+                          <button onClick={() => openEdit(d)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
+                          <button onClick={() => setDeleteId(d.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

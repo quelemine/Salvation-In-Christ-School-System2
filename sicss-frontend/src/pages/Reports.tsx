@@ -117,7 +117,7 @@ export default function Reports() {
           <button onClick={sendManagementReport} disabled={loading} className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
             {loading ? 'Sending…' : `Send ${monthYear} management report`}
           </button>
-          <span className="text-xs text-slate-500">Sends completed income, payment status, and payment-method totals to Admin and Head of School.</span>
+          <span className="text-xs text-slate-500">Sends completed income, payment status, and payment-method totals to Admin, Proprietor, and Proprietress.</span>
         </div>
       </div>
 

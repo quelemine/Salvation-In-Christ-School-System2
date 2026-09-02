@@ -39,11 +39,11 @@ class FinancialReportController extends Controller
 
         $recipients = User::query()->with('role')
             ->where('is_active', true)
-            ->whereHas('role', fn ($query) => $query->whereIn('slug', ['admin', 'head-of-school']))
+            ->whereHas('role', fn ($query) => $query->whereIn('slug', ['admin', 'proprietor', 'proprietress']))
             ->pluck('email')->filter()->unique()->values();
 
         if ($recipients->isEmpty()) {
-            return response()->json(['message' => 'No active Admin or Head of School recipient is configured.'], 422);
+            return response()->json(['message' => 'No active Admin, Proprietor, or Proprietress recipient is configured.'], 422);
         }
 
         $lines = [

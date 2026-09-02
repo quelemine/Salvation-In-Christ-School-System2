@@ -68,11 +68,9 @@ function StudentRegistrationDetails({ profile, error }: { profile: any; error: s
 export default function Profile() {
   const { user, updateUser } = useAuthStore();
   const [tab, setTab] = useState<Tab>('overview');
+  const isAdmin = user?.role?.slug === 'admin';
   const isStudent = user?.role?.slug === 'student';
-  const isTeacher = ['teacher', 'class-teacher', 'subject-teacher'].includes(user?.role?.slug || '');
-  const isFinance = ['finance', 'finance-staff'].includes(user?.role?.slug || '');
-  const isParent = user?.role?.slug === 'parent';
-  const isProfileReadOnly = isStudent || isTeacher || isFinance || isParent;
+  const isProfileReadOnly = !isAdmin;
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [studentProfileError, setStudentProfileError] = useState('');
 

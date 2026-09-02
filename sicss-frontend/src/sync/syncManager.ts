@@ -130,7 +130,17 @@ class SyncManager {
             console.warn('Failed to delete record:', e);
           }
         } else {
-          await store.put(change.data);
+          try {
+            if (storeName === 'users') {
+              // Users are managed server-side only — skip pull to avoid
+              // unique-index constraint errors on email / user_code
+              continue;
+            }
+            // For all other stores: try put; on constraint error skip the record
+            await store.put(change.data);
+          } catch (putError) {
+            console.warn(`Skipping pull record for ${change.entity_type} (constraint):`, putError);
+          }
         }
       }
 

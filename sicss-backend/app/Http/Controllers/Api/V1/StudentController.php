@@ -109,12 +109,12 @@ class StudentController extends Controller
                 $parts = explode('-', $last->student_id);
                 $next  = (int) ($parts[2] ?? 0) + 1;
             }
-            $data['student_id'] = "STU-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT);
+            $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
 
             // Ensure unique student_id (avoid collision by incrementing)
             while (\App\Models\Student::where('student_id', $data['student_id'])->exists()) {
                 $next++;
-                $data['student_id'] = "STU-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT);
+                $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
         }
 
@@ -264,6 +264,6 @@ class StudentController extends Controller
             $next = (int) ($parts[2] ?? 0) + 1;
         }
 
-        return "REG-{$year}-" . str_pad($next, 3, '0', STR_PAD_LEFT);
+        return "REG-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
     }
 }

@@ -18,13 +18,19 @@ class DivisionController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:divisions',
+            'slug' => 'nullable|string|max:255|unique:divisions',
             'description' => 'nullable|string',
-            'order' => 'integer',
-            'is_active' => 'boolean',
+            'order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        $division = Division::create($request->all());
+        $data = $request->all();
+        // Auto-generate slug from name if not provided
+        if (!isset($data['slug']) || empty($data['slug'])) {
+            $data['slug'] = strtolower(str_replace(' ', '-', trim($data['name'])));
+        }
+
+        $division = Division::create($data);
         return response()->json($division, 201);
     }
 

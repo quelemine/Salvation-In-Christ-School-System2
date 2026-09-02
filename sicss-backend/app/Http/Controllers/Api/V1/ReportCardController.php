@@ -11,7 +11,7 @@ class ReportCardController extends Controller
     public function index(Request $request)
     {
         $query = ReportCard::with(['student.class', 'class', 'teacher']);
-        
+
         if ($request->filled('student_id')) {
             $query->where('student_id', $request->student_id);
         }
@@ -21,7 +21,10 @@ class ReportCardController extends Controller
         if ($request->filled('academic_year')) {
             $query->where('academic_year', $request->academic_year);
         }
-        
+        if ($request->filled('approval_status')) {
+            $query->where('approval_status', $request->approval_status);
+        }
+
         return response()->json($query->latest()->get());
     }
 
@@ -182,13 +185,13 @@ class ReportCardController extends Controller
     public function vpiApprove(Request $request, $id)
     {
         $reportCard = ReportCard::find($id);
-        
+
         if (!$reportCard) {
             return response()->json(['message' => 'Report card not found'], 404);
         }
 
         if ($reportCard->approval_status !== 'pending_vpi') {
-            return response()->json(['message' => 'Report card is not pending VPI approval'], 400);
+            return response()->json(['message' => 'Report card is not pending VPI approval. Current status: ' . $reportCard->approval_status], 400);
         }
 
         $data = $request->validate([

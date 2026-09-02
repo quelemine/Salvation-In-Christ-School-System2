@@ -71,7 +71,7 @@ class AuthController extends Controller
             ]);
 
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'email' => ['Invalid email or password. If you forgot your password, you can reset it using the Forgot Password option.'],
             ]);
         }
 

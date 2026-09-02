@@ -14,7 +14,10 @@ class GradeController extends Controller
     {
         $query = Grade::with('student.class', 'student.user:id,user_code', 'subject', 'teacher');
 
-        if ($this->isTeacher($request)) {
+        // VPI and Admin see all grades without filtering
+        if ($request->user()->hasRole('admin') || $request->user()->hasRole('vice-principal-instruction')) {
+            // No filtering - show all grades
+        } elseif ($this->isTeacher($request)) {
             $teacher = $this->teacherFor($request);
             if (!$teacher) return response()->json(['data' => [], 'total' => 0]);
             if ($request->user()->hasRole('subject-teacher')) {

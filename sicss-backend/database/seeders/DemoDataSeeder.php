@@ -28,7 +28,8 @@ class DemoDataSeeder extends Seeder
             'student',
             'vice-principal-instruction',
             'principal',
-            'head-of-school',
+            'proprietor',
+            'proprietress',
             'parent',
         ])->pluck('id', 'slug');
         $testPassword = env('SICSS_TEST_SEED_PASSWORD');
@@ -43,7 +44,8 @@ class DemoDataSeeder extends Seeder
             ['email' => 'student.test@sicss.com', 'first_name' => 'Daniel', 'last_name' => 'Student', 'role' => 'student'],
             ['email' => 'vpi.test@sicss.com', 'first_name' => 'Victoria', 'last_name' => 'VPI', 'role' => 'vice-principal-instruction'],
             ['email' => 'principal.test@sicss.com', 'first_name' => 'Patricia', 'last_name' => 'Principal', 'role' => 'principal'],
-            ['email' => 'head.of.school.test@sicss.com', 'first_name' => 'Helen', 'last_name' => 'Head of School', 'role' => 'head-of-school'],
+            ['email' => 'proprietor.test@sicss.com', 'first_name' => 'John', 'last_name' => 'Proprietor', 'role' => 'proprietor'],
+            ['email' => 'proprietress.test@sicss.com', 'first_name' => 'Helen', 'last_name' => 'Proprietress', 'role' => 'proprietress'],
             ['email' => 'parent.test@sicss.com', 'first_name' => 'Sarah', 'last_name' => 'Parent', 'role' => 'parent'],
         ];
 
@@ -106,6 +108,6 @@ class DemoDataSeeder extends Seeder
         Receipt::updateOrCreate(['receipt_number' => 'DEMO-REC-0002'], ['payment_id' => $paymentUsd->id, 'student_id' => $grace->id, 'total_amount' => 50, 'currency' => 'USD', 'receipt_date' => now()->toDateString(), 'generated_by' => $teacherUser->id]);
 
         $this->command?->info('Demo data ready. Test password loaded from SICSS_TEST_SEED_PASSWORD.');
-        $this->command?->info('class.sponsor.test@sicss.com, subject.teacher.test@sicss.com, student.test@sicss.com, vpi.test@sicss.com, principal.test@sicss.com, head.of.school.test@sicss.com, parent.test@sicss.com');
+        $this->command?->info('Test accounts: class.sponsor.test@sicss.com, subject.teacher.test@sicss.com, student.test@sicss.com, vpi.test@sicss.com, principal.test@sicss.com, proprietor.test@sicss.com, proprietress.test@sicss.com, parent.test@sicss.com');
     }
 }

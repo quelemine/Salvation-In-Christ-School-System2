@@ -48,9 +48,15 @@ class RoleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'HEAD OF SCHOOL',
-                'slug' => 'head-of-school',
-                'description' => 'Receives school management reports',
+                'name' => 'PROPRIETOR',
+                'slug' => 'proprietor',
+                'description' => 'School proprietor with management oversight',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'PROPRIETRESS',
+                'slug' => 'proprietress',
+                'description' => 'School proprietress with management oversight',
                 'is_active' => true,
             ],
             [
@@ -77,5 +83,9 @@ class RoleSeeder extends Seeder
         // The original broad Teacher role is retained for existing records only.
         // Administrators must reassign those accounts to one of the scoped roles.
         Role::where('slug', 'teacher')->update(['is_active' => false]);
+
+        // Head of School is replaced by Proprietor / Proprietress.
+        // Deactivate it so it no longer appears in role selectors.
+        Role::where('slug', 'head-of-school')->update(['is_active' => false]);
     }
 }
