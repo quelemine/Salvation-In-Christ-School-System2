@@ -112,6 +112,7 @@ export default function MainLayout() {
     if (role === 'class-teacher')                      return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/comments', label: 'Comments', icon: '💬' }];
     if (role === 'subject-teacher')                    return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }];
     if (role === 'student')                            return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/my-grade-sheet', label: 'My grade sheet', icon: '📝' }, { path: '/my-attendance', label: 'My attendance', icon: '📋' }, { path: '/my-assignments', label: 'My assignments', icon: '📄' }, { path: '/my-financial-records', label: 'My finance', icon: '💳' }];
+    if (role === 'parent')                             return [...commonItems, { path: '/parent-portal', label: 'My children', icon: '👨‍👩‍👧' }, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }];
     if (role === 'vice-principal-instruction')         return [...commonItems, { path: '/divisions', label: 'Divisions', icon: '🏢' }, { path: '/classes', label: 'Classes', icon: '🏫' }, { path: '/subjects', label: 'Subjects', icon: '📚' }, { path: '/teachers', label: 'Teachers', icon: '👨‍🏫' }, { path: '/students', label: 'Students', icon: '👨‍🎓' }, { path: '/grades', label: 'Academic records', icon: '📝' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }, { path: '/announcements', label: 'Announcements', icon: '📢' }];
     if (role === 'teacher')                            return [...commonItems, ...teacherItems];
     if (role === 'finance' || role === 'finance-staff') return [...commonItems, ...financeItems, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
@@ -133,6 +134,7 @@ export default function MainLayout() {
     proprietor:     ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/users', '/admin-staff'],
     proprietress:   ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/users', '/admin-staff'],
     student:        ['/dashboard', '/profile', '/helpdesk', '/student-profile', '/fee-structure', '/my-grade-sheet', '/my-report-card', '/my-attendance', '/my-assignments', '/my-financial-records'],
+    parent:         ['/dashboard', '/profile', '/helpdesk', '/parent-portal', '/fee-structure'],
   };
 
   const role = user?.role?.slug || '';
@@ -197,7 +199,7 @@ export default function MainLayout() {
         {/* Scrollable nav — offset to sit beside the track */}
         <nav className="flex-1 overflow-y-auto py-5 pr-3 pl-5 sidebar-nav">
           <p className={`px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] ${theme.sidebarStyle === 'light' ? 'text-slate-400' : 'text-white/30'}`}>
-            {role === 'admin' ? 'Admin features' : ['teacher', 'class-teacher', 'subject-teacher'].includes(role) ? 'Teaching' : role === 'finance' || role === 'finance-staff' ? 'Finance' : 'My workspace'}
+            {role === 'admin' ? 'Admin features' : ['teacher', 'class-teacher', 'subject-teacher'].includes(role) ? 'Teaching' : role === 'finance' || role === 'finance-staff' ? 'Finance' : role === 'parent' ? 'Parent portal' : 'My workspace'}
           </p>
           <ul className="space-y-0.5">{menuItems.map((item) => <NavItem key={item.path} item={item} />)}</ul>
         </nav>

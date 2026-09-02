@@ -36,6 +36,7 @@ import TeacherPayroll from '../pages/TeacherPayroll';
 import TeacherAttendance from '../pages/TeacherAttendance';
 import AdminStaffUsers from '../pages/AdminStaffUsers';
 import UserAccountPage from '../pages/UserAccountPage';
+import ParentPortal from '../pages/ParentPortal';
 
 function RouteError() {
   const error = useRouteError() as { statusText?: string; status?: number };
@@ -83,6 +84,8 @@ const router = createBrowserRouter([
       { path: 'admin-staff', element: <AdminStaffUsers /> },
       // User account setup — opened after approving a student application
       { path: 'users/account/student/:studentId', element: <UserAccountPage /> },
+      // Parent portal — children's academic records
+      { path: 'parent-portal', element: <ParentPortal /> },
       // Academic work
       { path: 'grades', element: <Grades /> },
       { path: 'my-grade-sheet', element: <StudentPortal view="report-card" /> },

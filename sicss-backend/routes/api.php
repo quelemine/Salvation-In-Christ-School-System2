@@ -229,6 +229,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/report-cards/me', [ReportCardController::class, 'mine'])->middleware('role:student');
         Route::prefix('student-portal')->middleware('role:student|parent')->group(function () {
             Route::get('/profile', [StudentPortalController::class, 'profile']);
+            Route::get('/children', [StudentPortalController::class, 'children']); // parent: list all linked children
             Route::get('/attendance', [StudentPortalController::class, 'attendance']);
             Route::get('/assignments', [StudentPortalController::class, 'assignments']);
             Route::get('/financial-records', [StudentPortalController::class, 'financialRecords']);
