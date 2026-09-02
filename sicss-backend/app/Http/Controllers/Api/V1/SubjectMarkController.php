@@ -267,6 +267,65 @@ class SubjectMarkController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Teacher: all their own submissions (especially revision_requested)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns all submissions belonging to the authenticated teacher,
+     * joined with report card + student info so the teacher can see
+     * every pending revision without needing to select a specific card first.
+     */
+    public function mySubmissions(Request $request)
+    {
+        $teacher = Teacher::where('user_id', $request->user()->id)->first();
+        if (!$teacher) {
+            return response()->json(['submissions' => []]);
+        }
+
+        $rows = DB::table('report_card_subject_submissions as rss')
+            ->join('report_cards as rc', 'rc.id', '=', 'rss.report_card_id')
+            ->leftJoin('students as st', 'st.id', '=', 'rc.student_id')
+            ->leftJoin('classes as cl', 'cl.id', '=', 'rc.class_id')
+            ->where('rss.teacher_id', $teacher->id)
+            ->whereIn('rc.approval_status', ['draft', 'pending_sponsor'])
+            ->orderByRaw("CASE WHEN rss.submission_status = 'revision_requested' THEN 0 ELSE 1 END")
+            ->orderBy('rss.feedback_sent_at', 'desc')
+            ->get([
+                'rss.id',
+                'rss.report_card_id',
+                'rss.subject',
+                'rss.submission_status',
+                'rss.sponsor_feedback',
+                'rss.feedback_sent_at',
+                'rss.submitted_at',
+                'rc.academic_year',
+                'rc.approval_status',
+                'st.first_name as student_first',
+                'st.last_name  as student_last',
+                'st.student_id as student_code',
+                'cl.name       as class_name',
+                'cl.section    as class_section',
+            ]);
+
+        return response()->json([
+            'submissions' => $rows->map(fn($r) => [
+                'id'                => $r->id,
+                'report_card_id'    => $r->report_card_id,
+                'subject'           => $r->subject,
+                'submission_status' => $r->submission_status ?? 'submitted',
+                'sponsor_feedback'  => $r->sponsor_feedback,
+                'feedback_sent_at'  => $r->feedback_sent_at,
+                'submitted_at'      => $r->submitted_at,
+                'academic_year'     => $r->academic_year,
+                'approval_status'   => $r->approval_status,
+                'student_name'      => trim("{$r->student_first} {$r->student_last}"),
+                'student_code'      => $r->student_code,
+                'class_name'        => trim("{$r->class_name}" . ($r->class_section ? " {$r->class_section}" : '')),
+            ]),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Private helpers — in-app notifications via the Announcements mechanism
     // ─────────────────────────────────────────────────────────────────────────
 

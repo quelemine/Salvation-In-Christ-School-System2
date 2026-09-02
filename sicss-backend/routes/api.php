@@ -229,6 +229,8 @@ Route::prefix('v1')->group(function () {
         // Sponsor feedback on individual subject submissions
         Route::post('/report-cards/{id}/subject-submissions/{submissionId}/request-revision',       [SubjectMarkController::class, 'requestRevision'])->middleware('role:class-sponsor|admin');
         Route::post('/report-cards/{id}/subject-submissions/{submissionId}/accept',                 [SubjectMarkController::class, 'acceptSubmission'])->middleware('role:class-sponsor|admin');
+        // Subject teacher: fetch all their own pending revision requests across all report cards
+        Route::get('/my-subject-submissions',                                                        [SubjectMarkController::class, 'mySubmissions'])->middleware('role:subject-teacher|class-sponsor|admin');
 
         // VPI: approve/reject compiled report card
         Route::post('/report-cards/{id}/vpi-review', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');

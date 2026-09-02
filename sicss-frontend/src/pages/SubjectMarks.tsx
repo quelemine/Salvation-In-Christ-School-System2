@@ -2,13 +2,12 @@
  * SubjectMarks — /subject-marks
  *
  * Subject teachers use this page to:
- *   1. Select a report card (filtered to their class)
- *   2. Pick their subject
- *   3. See if the class sponsor has requested a revision (with their feedback comment)
- *   4. Enter or correct marks for all periods/exams
- *   5. Submit (or resubmit) to the class sponsor
+ *   1. See ALL pending revision requests across every report card immediately on load
+ *   2. Select a report card and subject
+ *   3. See the sponsor's feedback comment before entering marks
+ *   4. Submit or resubmit marks to the class sponsor
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { reportCardSubjects, SEM1_PERIODS, SEM2_PERIODS, parseMark, scoreColor } from '../services/reportCardService';
@@ -31,6 +30,22 @@ type Submission = {
   submission_status: 'submitted' | 'revision_requested' | 'accepted';
   sponsor_feedback?: string | null;
   feedback_sent_at?: string | null;
+};
+
+// Shape returned by /my-subject-submissions
+type MySubmission = {
+  id: number;
+  report_card_id: number;
+  subject: string;
+  submission_status: 'submitted' | 'revision_requested' | 'accepted';
+  sponsor_feedback?: string | null;
+  feedback_sent_at?: string | null;
+  submitted_at: string;
+  academic_year: string;
+  approval_status: string;
+  student_name: string;
+  student_code: string;
+  class_name: string;
 };
 
 const ALL_PERIODS = [...SEM1_PERIODS, 'Exam 1', ...SEM2_PERIODS, 'Exam 2'];
@@ -89,16 +104,35 @@ export default function SubjectMarks() {
   const { user } = useAuthStore();
   const isClassSponsor = user?.role?.slug === 'class-sponsor';
 
-  const [reportCards, setReportCards] = useState<RC[]>([]);
-  const [selectedRC, setSelectedRC]   = useState<number | ''>('');
-  const [subject, setSubject]         = useState('');
-  const [marks, setMarks]             = useState<Record<string, string>>({});
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [saving, setSaving]           = useState(false);
-  const [msg, setMsg]                 = useState<{ ok: boolean; text: string } | null>(null);
-  const [filterYear, setFilterYear]   = useState(new Date().getFullYear().toString());
-  const [filterClass, _setFilterClass] = useState('');
+  // All-submissions overview (loaded on mount — shows revisions before any selection)
+  const [mySubmissions, setMySubmissions]   = useState<MySubmission[]>([]);
+  const [mySubsLoading, setMySubsLoading]   = useState(true);
+
+  // Per-report-card state
+  const [reportCards, setReportCards]       = useState<RC[]>([]);
+  const [selectedRC, setSelectedRC]         = useState<number | ''>('');
+  const [subject, setSubject]               = useState('');
+  const [marks, setMarks]                   = useState<Record<string, string>>({});
+  const [submissions, setSubmissions]       = useState<Submission[]>([]);
+  const [loading, setLoading]               = useState(true);
+  const [saving, setSaving]                 = useState(false);
+  const [msg, setMsg]                       = useState<{ ok: boolean; text: string } | null>(null);
+  const [filterYear, setFilterYear]         = useState(new Date().getFullYear().toString());
+  const [filterClass, _setFilterClass]      = useState('');
+
+  // Load ALL teacher's submissions on mount — so revisions are visible immediately
+  const loadMySubmissions = useCallback(async () => {
+    setMySubsLoading(true);
+    try {
+      const res = await api.get('/my-subject-submissions');
+      setMySubmissions(res.data.submissions || []);
+    } catch { setMySubmissions([]); }
+    finally { setMySubsLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!isClassSponsor) loadMySubmissions();
+  }, [isClassSponsor, loadMySubmissions]);
 
   useEffect(() => { loadReportCards(); }, [filterYear, filterClass]);
 
@@ -135,9 +169,27 @@ export default function SubjectMarks() {
   const handleSelectSubject = (subj: string) => {
     setSubject(subj);
     setMsg(null);
-    // Pre-fill with any existing submission for this subject
     const existing = submissions.find((s) => s.subject === subj);
     setMarks(existing?.subject_marks || {});
+  };
+
+  // Called from a revision card — jump straight to the right RC + subject
+  const jumpToRevision = async (mySub: MySubmission) => {
+    setMsg(null);
+    // Pre-select the year if different
+    if (mySub.academic_year !== filterYear) setFilterYear(mySub.academic_year);
+    // Select the report card
+    handleSelectRC(mySub.report_card_id);
+    // Wait for submissions to load, then select the subject
+    setTimeout(async () => {
+      const res = await api.get(`/report-cards/${mySub.report_card_id}/subject-submissions`);
+      const subs = res.data.submissions || [];
+      setSubmissions(subs);
+      setSubject(mySub.subject);
+      const existing = subs.find((s: Submission) => s.subject === mySub.subject);
+      setMarks(existing?.subject_marks || {});
+      setTimeout(() => document.getElementById('marks-entry')?.scrollIntoView({ behavior: 'smooth' }), 150);
+    }, 300);
   };
 
   const handleSubmit = async () => {
@@ -163,6 +215,8 @@ export default function SubjectMarks() {
           : `✓ Marks for ${subject} submitted successfully to the class sponsor.`,
       });
       await loadSubmissions(selectedRC as number);
+      // Refresh the top-level overview so the revision card disappears
+      await loadMySubmissions();
     } catch (err: any) {
       setMsg({ ok: false, text: err.response?.data?.message || 'Failed to submit marks.' });
     } finally { setSaving(false); }
@@ -174,8 +228,11 @@ export default function SubjectMarks() {
   const isRevisionRequired = currentSubmission?.submission_status === 'revision_requested';
   const isAccepted         = currentSubmission?.submission_status === 'accepted';
 
-  // Subjects with revision requested — shown in overview as alerts
+  // From the per-RC submissions list (shown in card overview)
   const revisionRequested  = submissions.filter((s) => s.submission_status === 'revision_requested');
+
+  // From the all-submissions endpoint (shown at page top, before any RC is selected)
+  const globalRevisions    = mySubmissions.filter((s) => s.submission_status === 'revision_requested');
 
   return (
     <div className="space-y-5">
@@ -196,42 +253,78 @@ export default function SubjectMarks() {
         </div>
       )}
 
-      {/* ── Revision alerts (shown as soon as a card is selected) ── */}
-      {revisionRequested.length > 0 && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 space-y-2">
-          <p className="text-sm font-bold text-rose-800">
-            ⚠ {revisionRequested.length} subject{revisionRequested.length !== 1 ? 's' : ''} need your attention
-          </p>
-          {revisionRequested.map((s) => (
-            <div key={s.subject} className="rounded-lg border border-rose-200 bg-white p-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-slate-900">{s.subject}</span>
-                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">Revision requested</span>
-                {s.feedback_sent_at && (
-                  <span className="text-[10px] text-slate-400">
-                    {new Date(s.feedback_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+      {/* ── GLOBAL: Revision requests visible immediately on page load ── */}
+      {!isClassSponsor && !mySubsLoading && globalRevisions.length > 0 && (
+        <div className="rounded-xl border-2 border-rose-300 bg-rose-50 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⚠</span>
+            <div>
+              <p className="text-sm font-bold text-rose-800">
+                {globalRevisions.length} revision{globalRevisions.length !== 1 ? 's' : ''} requested by class sponsor
+              </p>
+              <p className="text-xs text-rose-600 mt-0.5">The class sponsor has reviewed your marks and wants corrections. Please fix and resubmit.</p>
+            </div>
+          </div>
+
+          {globalRevisions.map((mySub) => (
+            <div key={mySub.id} className="rounded-xl border border-rose-200 bg-white p-4 space-y-2 shadow-sm">
+              {/* Header */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-900">{mySub.subject}</span>
+                    <span className="rounded-full border border-rose-200 bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                      Revision requested
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {mySub.student_name}
+                    {mySub.student_code ? ` (${mySub.student_code})` : ''}
+                    {' · '}{mySub.class_name}
+                    {' · '}{mySub.academic_year}
+                  </p>
+                </div>
+                {mySub.feedback_sent_at && (
+                  <span className="text-[10px] text-rose-400 shrink-0">
+                    {new Date(mySub.feedback_sent_at).toLocaleDateString('en-GB', {
+                      day: 'numeric', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
                   </span>
                 )}
               </div>
-              {s.sponsor_feedback && (
-                <div className="mt-2 rounded-lg border-l-4 border-rose-400 bg-rose-50 px-3 py-2">
-                  <p className="text-xs font-semibold text-rose-700 mb-1">Class sponsor's comment:</p>
-                  <p className="text-sm text-slate-800">{s.sponsor_feedback}</p>
+
+              {/* Sponsor's comment — prominently displayed */}
+              {mySub.sponsor_feedback && (
+                <div className="rounded-lg border-l-4 border-rose-400 bg-rose-50 px-4 py-3">
+                  <p className="text-xs font-bold text-rose-700 mb-1">Class sponsor's comment:</p>
+                  <p className="text-sm text-slate-800 leading-relaxed">{mySub.sponsor_feedback}</p>
                 </div>
               )}
+
               <button
-                onClick={() => {
-                  handleSelectSubject(s.subject);
-                  if (selectedRC !== activeRC?.id) return;
-                  // scroll down to entry grid
-                  setTimeout(() => document.getElementById('marks-entry')?.scrollIntoView({ behavior: 'smooth' }), 100);
-                }}
-                className="mt-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700"
+                onClick={() => jumpToRevision(mySub)}
+                className="mt-1 w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700 text-center"
               >
-                ✏ Edit and resubmit {s.subject}
+                ✏ Edit and resubmit {mySub.subject}
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Loading state for my-submissions */}
+      {!isClassSponsor && mySubsLoading && (
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 animate-pulse">
+          Checking for revision requests…
+        </div>
+      )}
+
+      {/* No revisions — green all-clear */}
+      {!isClassSponsor && !mySubsLoading && globalRevisions.length === 0 && mySubmissions.length > 0 && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 flex items-center gap-2">
+          <span className="text-emerald-600">✓</span>
+          <p className="text-sm font-medium text-emerald-800">No revision requests — all your submitted marks are in good standing.</p>
         </div>
       )}
 
@@ -292,11 +385,16 @@ export default function SubjectMarks() {
         </div>
       )}
 
-      {/* ── Submissions overview ── */}
+      {/* ── Submissions overview (after a card is selected) ── */}
       {selectedRC && submissions.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-3">
+          <div className="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
             <p className="text-sm font-bold text-slate-900">Your submitted subjects ({submissions.length} of {reportCardSubjects.length})</p>
+            {revisionRequested.length > 0 && (
+              <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                {revisionRequested.length} revision{revisionRequested.length !== 1 ? 's' : ''} pending
+              </span>
+            )}
           </div>
           <div className="divide-y divide-slate-100">
             {reportCardSubjects.map((s) => {
@@ -309,19 +407,37 @@ export default function SubjectMarks() {
                 </div>
               );
               return (
-                <div key={s} className="flex flex-wrap items-center gap-2 px-5 py-2.5">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${
-                    sub.submission_status === 'accepted' ? 'bg-emerald-500'
-                    : sub.submission_status === 'revision_requested' ? 'bg-rose-500'
-                    : 'bg-amber-400'
-                  }`} />
-                  <span className="text-sm font-medium text-slate-800">{s}</span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${SUB_STATUS_COLORS[sub.submission_status]}`}>
-                    {SUB_STATUS_LABELS[sub.submission_status]}
-                  </span>
-                  <span className="text-[10px] text-slate-400 ml-auto">
-                    {new Date(sub.submitted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </span>
+                <div key={s} className="px-5 py-2.5 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      sub.submission_status === 'accepted'          ? 'bg-emerald-500'
+                      : sub.submission_status === 'revision_requested' ? 'bg-rose-500'
+                      : 'bg-amber-400'
+                    }`} />
+                    <span className="text-sm font-medium text-slate-800">{s}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${SUB_STATUS_COLORS[sub.submission_status]}`}>
+                      {SUB_STATUS_LABELS[sub.submission_status]}
+                    </span>
+                    <span className="text-[10px] text-slate-400 ml-auto">
+                      {new Date(sub.submitted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                  {/* Show sponsor feedback inline in the overview list too */}
+                  {sub.submission_status === 'revision_requested' && sub.sponsor_feedback && (
+                    <div className="ml-4 rounded-lg border-l-4 border-rose-300 bg-rose-50 px-3 py-2">
+                      <p className="text-xs font-semibold text-rose-600 mb-0.5">Sponsor's comment:</p>
+                      <p className="text-xs text-slate-700">{sub.sponsor_feedback}</p>
+                      <button
+                        onClick={() => {
+                          handleSelectSubject(s);
+                          setTimeout(() => document.getElementById('marks-entry')?.scrollIntoView({ behavior: 'smooth' }), 100);
+                        }}
+                        className="mt-1.5 rounded bg-rose-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-rose-700"
+                      >
+                        ✏ Edit and resubmit
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -329,23 +445,27 @@ export default function SubjectMarks() {
         </div>
       )}
 
-      {/* ── Per-subject sponsor feedback banner ── */}
+      {/* ── Per-subject sponsor feedback banner (when a specific subject is selected) ── */}
       {subject && isRevisionRequired && currentSubmission?.sponsor_feedback && (
         <div className="rounded-xl border-2 border-rose-300 bg-rose-50 p-4 space-y-2" id="revision-banner">
           <div className="flex items-center gap-2">
             <span className="text-lg">⚠</span>
-            <p className="text-sm font-bold text-rose-800">The class sponsor has requested a revision for <span className="underline">{subject}</span></p>
+            <p className="text-sm font-bold text-rose-800">
+              The class sponsor has requested a revision for <span className="underline">{subject}</span>
+            </p>
           </div>
           <div className="rounded-lg border-l-4 border-rose-400 bg-white px-4 py-3">
             <p className="text-xs font-semibold text-rose-600 mb-1">Sponsor's comment:</p>
-            <p className="text-sm text-slate-800">{currentSubmission.sponsor_feedback}</p>
+            <p className="text-sm text-slate-800 leading-relaxed">{currentSubmission.sponsor_feedback}</p>
           </div>
           {currentSubmission.feedback_sent_at && (
             <p className="text-[10px] text-rose-400">
-              Sent {new Date(currentSubmission.feedback_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              Sent {new Date(currentSubmission.feedback_sent_at).toLocaleDateString('en-GB', {
+                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+              })}
             </p>
           )}
-          <p className="text-xs text-rose-700 font-medium">Please correct the marks below and resubmit.</p>
+          <p className="text-xs text-rose-700 font-medium">Please correct the marks below and click "Resubmit corrected marks".</p>
         </div>
       )}
 
@@ -364,7 +484,11 @@ export default function SubjectMarks() {
             <div>
               <p className="text-sm font-bold text-slate-900">
                 {subject} — mark entry
-                {isRevisionRequired && <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">Resubmission</span>}
+                {isRevisionRequired && (
+                  <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
+                    Resubmission
+                  </span>
+                )}
               </p>
               <p className="text-xs text-slate-400 mt-0.5">Enter marks in range 50–100. Leave blank if not applicable.</p>
             </div>
