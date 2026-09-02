@@ -53,14 +53,15 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/settings', [SystemSettingsController::class, 'show']);
-    Route::get('/classes', [ClassController::class, 'index']);
+    Route::get('/classes', [ClassController::class, 'index']);  // public — needed for dropdowns (student application form etc.)
+    // NOTE: /classes is kept public (no auth) so dropdowns work on unauthenticated pages (e.g. application form)
 
     Route::middleware('auth:sanctum')->group(function () {
         // Upload endpoints (admin only)
         // Academic reference data required when teachers enter grades.
-        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
-        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
-        Route::get('/grades', [GradeController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction');
+        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress');
+        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress');
+        Route::get('/grades', [GradeController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress');
 
         Route::middleware('role:admin')->group(function () {
             Route::put('/settings', [SystemSettingsController::class, 'update']);
@@ -74,7 +75,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/my-salary', [TeacherPayrollController::class, 'mySalary'])->middleware('role:teacher|class-sponsor|subject-teacher');
         Route::get('/my-teacher-attendance', [TeacherAttendanceController::class, 'mine'])->middleware('role:teacher|class-sponsor|subject-teacher');
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->middleware('role:admin');
-        Route::put('/profile', [UserController::class, 'updateSelf'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|student|finance|finance-staff');
+        Route::put('/profile', [UserController::class, 'updateSelf'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|student|finance|finance-staff|principal|vice-principal-instruction|proprietor|proprietress');
 
         // Next sequential student ID — must be before apiResource to avoid {student} capture
         Route::get('/students/next-id', function() {
@@ -111,8 +112,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/fee-structures/{feeStructure}', [FeeStructureController::class, 'show']);
         Route::get('/students/{student}/clearance', [FeeStructureController::class, 'checkClearance']);
 
-        // Salary structures - viewable by admin and principal, manageable by admin only
-        Route::get('/salary-structures', [TeacherPayrollController::class, 'structures'])->middleware('role:admin|principal');
+        // Salary structures - viewable by admin, principal, proprietor, and proprietress
+        Route::get('/salary-structures', [TeacherPayrollController::class, 'structures'])->middleware('role:admin|principal|proprietor|proprietress');
 
         Route::middleware('role:admin')->group(function () {
             Route::post('/salary-structures', [TeacherPayrollController::class, 'storeStructure']);
@@ -149,8 +150,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
         Route::post('/announcements/read-all', [AnnouncementController::class, 'markAllRead']);
 
-        // Announcements — admin and VPI management
-        Route::middleware('role:admin|vice-principal-instruction')->group(function () {
+        // Announcements — admin, VPI, proprietor, and proprietress management
+        Route::middleware('role:admin|vice-principal-instruction|proprietor|proprietress')->group(function () {
             Route::get('/announcements', [AnnouncementController::class, 'index']);
             Route::post('/announcements', [AnnouncementController::class, 'store']);
             Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update']);
@@ -160,9 +161,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/test/teacher', [TestController::class, 'teacherOnly'])->middleware('role:teacher');
         Route::get('/test/student', [TestController::class, 'studentOnly'])->middleware('role:student');
 
-        // Users - viewable by admin and VPI, manageable by admin only
-        Route::get('/users', [UserController::class, 'index'])->middleware('role:admin|vice-principal-instruction');
-        Route::get('/roles', [UserController::class, 'roles'])->middleware('role:admin|vice-principal-instruction');
+        // Users - viewable by admin, VPI, proprietor, and proprietress
+        Route::get('/users', [UserController::class, 'index'])->middleware('role:admin|vice-principal-instruction|proprietor|proprietress');
+        Route::get('/roles', [UserController::class, 'roles'])->middleware('role:admin|vice-principal-instruction|proprietor|proprietress');
 
         Route::middleware('role:admin')->group(function () {
             Route::get('/search', GlobalSearchController::class);
@@ -194,25 +195,33 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('students', StudentController::class)->only(['update', 'destroy']);
         });
 
-        // Divisions, classes, and subjects - viewable by admin and principal
-        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
-        Route::get('/classes', [ClassController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
-        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
+        // Divisions, classes, and subjects - viewable by admin, principal, and management roles
+        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|teacher|class-sponsor|subject-teacher|finance|finance-staff|parent|student');
+        // /classes is registered publicly above (needed for dropdowns everywhere)
+        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|teacher|class-sponsor|subject-teacher');
 
-        // Teachers - viewable by admin, VPI, and principal, manageable by admin only
-        Route::get('/teachers', [TeacherController::class, 'index'])->middleware('role:admin|vice-principal-instruction|principal');
+        // Teachers - viewable by admin, VPI, principal, proprietor, and proprietress
+        Route::get('/teachers', [TeacherController::class, 'index'])->middleware('role:admin|vice-principal-instruction|principal|proprietor|proprietress');
         Route::middleware('role:admin')->group(function () {
             Route::apiResource('teachers', TeacherController::class)->except(['index']);
         });
 
-        // Report cards - accessible by admin, VPI, class-sponsor, and principal
-        Route::get('/report-cards', [ReportCardController::class, 'index'])->middleware('role:admin|vice-principal-instruction|class-sponsor|principal');
-        Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval']);
+        // Report cards - accessible by admin, VPI, class-sponsor, principal, proprietor, and proprietress
+        Route::get('/report-cards', [ReportCardController::class, 'index'])->middleware('role:admin|vice-principal-instruction|class-sponsor|principal|proprietor|proprietress');
+        // Create and delete report cards — admin only
+        Route::post('/report-cards', [ReportCardController::class, 'store'])->middleware('role:admin|class-sponsor');
+        Route::delete('/report-cards/{id}', [ReportCardController::class, 'destroy'])->middleware('role:admin');
+        Route::put('/report-cards/{id}', [ReportCardController::class, 'update'])->middleware('role:admin|class-sponsor');
+        // Submit for approval — class-sponsor and teacher roles only
+        Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval'])->middleware('role:class-sponsor|admin');
         Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:class-sponsor|admin');
         Route::post('/report-cards/{id}/vpi-approve', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
+        // Comments on report cards — principal, VPI, proprietor, proprietress can add
+        Route::post('/report-cards/{id}/comment', [ReportCardController::class, 'addComment'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
+        Route::get('/report-cards/{id}/comments', [ReportCardController::class, 'getComments'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|class-sponsor');
 
-        // Teachers, admins, VPI, and principal can view students
-        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal')->group(function () {
+        // Teachers, admins, VPI, principal, proprietor, and proprietress can view students
+        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress')->group(function () {
             Route::get('/students', [StudentController::class, 'index']);
             Route::get('/students/{student}', [StudentController::class, 'show']);
         });
@@ -284,13 +293,20 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('payments', PaymentController::class);
             Route::apiResource('receipts', ReceiptController::class)->except(['update']);
             Route::get('payments/student/{studentId}', [PaymentController::class, 'studentPayments']);
+        });
 
-            Route::prefix('financial-reports')->group(function () {
-                Route::post('/management-report', [FinancialReportController::class, 'sendManagementReport']);
-                Route::get('/daily', [FinancialReportController::class, 'dailyPayments']);
-                Route::get('/monthly', [FinancialReportController::class, 'monthlyPayments']);
-                Route::get('/class', [FinancialReportController::class, 'classReport']);
-                Route::get('/outstanding', [FinancialReportController::class, 'outstandingBalances']);
+        // Financial reports — finance/admin can send reports; principal/proprietor/proprietress can VIEW only
+        // Send (POST) — finance, admin only
+        Route::prefix('financial-reports')->group(function () {
+            Route::post('/management-report', [FinancialReportController::class, 'sendManagementReport'])
+                ->middleware('role:admin|finance|finance-staff');
+
+            // View (GET) — finance, admin, principal, proprietor, proprietress (read-only, no edit/delete)
+            Route::middleware('role:admin|finance|finance-staff|principal|proprietor|proprietress')->group(function () {
+                Route::get('/daily',             [FinancialReportController::class, 'dailyPayments']);
+                Route::get('/monthly',           [FinancialReportController::class, 'monthlyPayments']);
+                Route::get('/class',             [FinancialReportController::class, 'classReport']);
+                Route::get('/outstanding',       [FinancialReportController::class, 'outstandingBalances']);
                 Route::get('/student/{studentId}', [FinancialReportController::class, 'studentFinancialHistory']);
             });
         });

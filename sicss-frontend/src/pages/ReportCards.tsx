@@ -29,8 +29,12 @@ export default function ReportCards() {
   const { user } = useAuthStore();
   const role = user?.role?.slug || '';
   const isClassSponsor = role === 'class-sponsor';
-  const isVPI = role === 'vice-principal-instruction';
-  const isAdmin = role === 'admin';
+  const isVPI          = role === 'vice-principal-instruction';
+  const isAdmin        = role === 'admin';
+  // Viewer roles: can view, comment, print — cannot create, edit, or delete
+  const isViewer       = ['principal', 'proprietor', 'proprietress'].includes(role);
+  const canCreate      = isAdmin || isClassSponsor;   // can create / edit report cards
+  const canDelete      = isAdmin;                      // only admin can delete
   
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -57,6 +61,11 @@ export default function ReportCards() {
   const [closingDate, setClosingDate] = useState('');
   const [previewMode, setPreviewMode] = useState(false);
   const [approvalFilter, setApprovalFilter] = useState('');
+  // Comments / review notes (viewer roles)
+  const [commentingId, setCommentingId]   = useState<number | null>(null);
+  const [commentText, setCommentText]     = useState('');
+  const [comments, setComments]           = useState<any[]>([]);
+  const [commentLoading, setCommentLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -309,6 +318,28 @@ export default function ReportCards() {
     } catch { setError('Failed to delete report card'); }
   };
 
+  const openComments = async (id: number) => {
+    setCommentingId(id);
+    setCommentText('');
+    setCommentLoading(true);
+    try {
+      const res = await api.get(`/report-cards/${id}/comments`);
+      setComments(res.data.comments || []);
+    } catch { setComments([]); }
+    finally { setCommentLoading(false); }
+  };
+
+  const submitComment = async () => {
+    if (!commentText.trim() || !commentingId) return;
+    setCommentLoading(true);
+    try {
+      const res = await api.post(`/report-cards/${commentingId}/comment`, { comment: commentText.trim() });
+      setComments(res.data.comments || []);
+      setCommentText('');
+    } catch { setError('Failed to add comment.'); }
+    finally { setCommentLoading(false); }
+  };
+
   const selectedStudentData = students.find(s => s.id === selectedStudent);
   const selectedClassData = classes.find(c => c.id === selectedClass);
   const selectedTeacherData = teachers.find(t => t.id === selectedTeacher);
@@ -321,6 +352,7 @@ export default function ReportCards() {
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Report Cards</h1>
           <p className="mt-1 text-sm text-slate-500">{reportCards.length} report card{reportCards.length !== 1 ? 's' : ''} generated.</p>
         </div>
+        {canCreate && (
         <button 
           onClick={() => { 
             setPreviewMode(true); 
@@ -346,9 +378,73 @@ export default function ReportCards() {
         >
           + New Report Card
         </button>
+        )}
       </div>
 
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+
+      {/* ── Comments panel (viewer roles) ── */}
+      {commentingId !== null && (
+        <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 p-4 pt-16 sm:pt-20">
+          <div className="flex h-[calc(100vh-6rem)] w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-amber-700">Review notes</p>
+                <h3 className="text-base font-bold text-slate-950">Comments on report card</h3>
+              </div>
+              <button onClick={() => setCommentingId(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl">×</button>
+            </div>
+
+            {/* Existing comments */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 px-1">
+              {commentLoading && comments.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">Loading comments…</p>
+              ) : comments.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-2xl mb-2">💬</p>
+                  <p className="text-sm text-slate-400">No comments yet. Be the first to add a review note.</p>
+                </div>
+              ) : comments.map((c: any) => (
+                <div key={c.id} className="px-4 py-3.5">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
+                      {c.user_name?.charAt(0)}
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-slate-900">{c.user_name}</span>
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{c.role}</span>
+                    </div>
+                    <span className="ml-auto text-xs text-slate-400">{new Date(c.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm text-slate-700 leading-relaxed pl-9">{c.comment}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Add comment box */}
+            <div className="border-t border-slate-200 p-4 space-y-3">
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="input-field"
+                rows={3}
+                placeholder="Write your review note or comment…"
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setCommentingId(null)}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                  Close
+                </button>
+                <button onClick={submitComment} disabled={commentLoading || !commentText.trim()}
+                  className="rounded-lg bg-slate-950 px-4 py-1.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-40">
+                  {commentLoading ? 'Saving…' : '💬 Add comment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!previewMode ? (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -426,7 +522,14 @@ export default function ReportCards() {
                                 }} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Reject</button>
                               </>
                             )}
-                            <button onClick={() => handleDelete(rc.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
+                            {/* Comment button for viewers (principal, proprietor, proprietress, VPI) */}
+                            {(isViewer || isVPI) && (
+                              <button onClick={() => openComments(rc.id)} className="text-xs font-semibold text-amber-700 hover:underline whitespace-nowrap">💬 Comment</button>
+                            )}
+                            {/* Delete — admin only */}
+                            {canDelete && (
+                              <button onClick={() => handleDelete(rc.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
+                            )}
                           </div>
                         </td>
                       </tr>

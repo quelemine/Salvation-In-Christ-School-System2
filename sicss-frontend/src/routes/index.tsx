@@ -78,6 +78,7 @@ const router = createBrowserRouter([
       { path: 'student-profile', element: <StudentProfile /> },
       { path: 'teachers', element: <Teachers /> },
       { path: 'teacher-payroll', element: <TeacherPayroll /> },
+      { path: 'salary-structures', element: <TeacherPayroll /> },
       { path: 'teacher-attendance', element: <TeacherAttendance /> },
       { path: 'admin-staff', element: <AdminStaffUsers /> },
       // User account setup — opened after approving a student application

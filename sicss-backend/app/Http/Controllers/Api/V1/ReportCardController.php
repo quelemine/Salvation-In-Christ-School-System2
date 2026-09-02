@@ -113,6 +113,48 @@ class ReportCardController extends Controller
         return response()->json(['message' => 'Report card deleted successfully']);
     }
 
+    /**
+     * Add a comment / review note to a report card.
+     * Available to principal, VPI, proprietor, and proprietress.
+     */
+    public function addComment(Request $request, $id)
+    {
+        $reportCard = ReportCard::find($id);
+        if (!$reportCard) {
+            return response()->json(['message' => 'Report card not found'], 404);
+        }
+
+        $data = $request->validate([
+            'comment' => 'required|string|max:2000',
+        ]);
+
+        $comments = $reportCard->comments ?? [];
+        $comments[] = [
+            'id'         => \Illuminate\Support\Str::uuid(),
+            'user_id'    => $request->user()->id,
+            'user_name'  => $request->user()->first_name . ' ' . $request->user()->last_name,
+            'role'       => $request->user()->role->name ?? '',
+            'comment'    => $data['comment'],
+            'created_at' => now()->toDateTimeString(),
+        ];
+
+        $reportCard->update(['comments' => $comments]);
+
+        return response()->json(['message' => 'Comment added.', 'comments' => $comments], 201);
+    }
+
+    /**
+     * Get all comments for a report card.
+     */
+    public function getComments(Request $request, $id)
+    {
+        $reportCard = ReportCard::find($id);
+        if (!$reportCard) {
+            return response()->json(['message' => 'Report card not found'], 404);
+        }
+        return response()->json(['comments' => $reportCard->comments ?? []]);
+    }
+
     public function mine(Request $request)
     {
         $student = \App\Models\Student::where('user_id', $request->user()->id)->first();
