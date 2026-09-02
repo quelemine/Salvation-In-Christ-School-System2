@@ -12,9 +12,11 @@ import { useAuthStore } from '../store/authStore';
 
 export type NotifKind =
   | 'announcement'
+  | 'marks_submitted'     // class sponsor sees: teacher submitted marks
+  | 'revision_requested'  // subject teacher sees: sponsor wants revision
   | 'ticket_reply'
-  | 'ticket_new'        // admin sees new user ticket
-  | 'ticket_status';    // user sees status change
+  | 'ticket_new'          // admin sees new user ticket
+  | 'ticket_status';      // user sees status change
 
 export interface NotifItem {
   id: string;
@@ -55,13 +57,25 @@ export function useNotifications() {
         const annRes = await api.get('/announcements/feed');
         console.log('Notifications hook - announcements loaded:', annRes.data);
         for (const ann of annRes.data as any[]) {
+          // Detect marks-submission and revision-request notifications by title prefix
+          let kind: NotifKind = 'announcement';
+          let href = '/dashboard';
+
+          if (ann.category === 'academic' && ann.title?.startsWith('📝 Marks submitted')) {
+            kind = 'marks_submitted';
+            href = '/class-sponsor-portal';
+          } else if (ann.category === 'academic' && ann.title?.startsWith('↩ Revision needed')) {
+            kind = 'revision_requested';
+            href = '/subject-marks';
+          }
+
           notifs.push({
             id:        `ann-${ann.id}`,
-            kind:      'announcement',
+            kind,
             title:     ann.title,
-            body:      ann.body?.slice(0, 90) + (ann.body?.length > 90 ? '…' : ''),
+            body:      ann.body?.slice(0, 120) + (ann.body?.length > 120 ? '…' : ''),
             isRead:    ann.is_read,
-            href:      '/dashboard',
+            href,
             createdAt: ann.created_at,
             meta:      ann.category,
             priority:  ann.priority,

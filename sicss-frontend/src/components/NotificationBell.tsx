@@ -10,10 +10,12 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 
 const KIND_ICON: Record<string, string> = {
-  announcement: '📢',
-  ticket_reply: '💬',
-  ticket_new:   '🎫',
-  ticket_status:'🔔',
+  announcement:       '📢',
+  marks_submitted:    '📝',
+  revision_requested: '↩',
+  ticket_reply:       '💬',
+  ticket_new:         '🎫',
+  ticket_status:      '🔔',
 };
 
 const PRIORITY_DOT: Record<string, string> = {
@@ -65,8 +67,8 @@ export default function NotificationBell() {
   const displayed = tab === 'unread' ? items.filter((i) => !i.isRead) : items;
 
   const handleClick = async (item: NotifItem) => {
-    // Mark announcement as read in backend
-    if (item.kind === 'announcement') {
+    // Mark announcement-backed items as read in backend
+    if (['announcement', 'marks_submitted', 'revision_requested'].includes(item.kind)) {
       const annId = item.id.replace('ann-', '');
       api.post(`/announcements/${annId}/read`).catch(() => {});
     }
@@ -189,12 +191,14 @@ export default function NotificationBell() {
                     >
                       {/* Icon / avatar */}
                       <div className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base ${
-                        item.kind === 'ticket_reply'  ? 'bg-cyan-100'  :
-                        item.kind === 'ticket_new'    ? 'bg-rose-100'  :
-                        item.kind === 'ticket_status' ? 'bg-emerald-100' :
+                        item.kind === 'marks_submitted'    ? 'bg-cyan-100'    :
+                        item.kind === 'revision_requested' ? 'bg-rose-100'    :
+                        item.kind === 'ticket_reply'       ? 'bg-cyan-100'    :
+                        item.kind === 'ticket_new'         ? 'bg-rose-100'    :
+                        item.kind === 'ticket_status'      ? 'bg-emerald-100' :
                         'bg-slate-100'
                       }`}>
-                        {KIND_ICON[item.kind]}
+                        {KIND_ICON[item.kind] ?? '📢'}
                         {/* Priority dot */}
                         {item.priority && (
                           <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${PRIORITY_DOT[item.priority] ?? 'bg-slate-400'}`} />
@@ -214,14 +218,18 @@ export default function NotificationBell() {
                         </p>
                         {/* Kind label */}
                         <span className={`mt-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-                          item.kind === 'ticket_reply'  ? 'bg-cyan-100 text-cyan-800'     :
-                          item.kind === 'ticket_new'    ? 'bg-rose-100 text-rose-700'     :
-                          item.kind === 'ticket_status' ? 'bg-emerald-100 text-emerald-800' :
+                          item.kind === 'marks_submitted'    ? 'bg-cyan-100 text-cyan-800'       :
+                          item.kind === 'revision_requested' ? 'bg-rose-100 text-rose-700'       :
+                          item.kind === 'ticket_reply'       ? 'bg-cyan-100 text-cyan-800'       :
+                          item.kind === 'ticket_new'         ? 'bg-rose-100 text-rose-700'       :
+                          item.kind === 'ticket_status'      ? 'bg-emerald-100 text-emerald-800' :
                           'bg-slate-100 text-slate-600'
                         }`}>
-                          {item.kind === 'ticket_reply'  ? '💬 Support reply'   :
-                           item.kind === 'ticket_new'    ? '🎫 New ticket'      :
-                           item.kind === 'ticket_status' ? '🔔 Status update'   :
+                          {item.kind === 'marks_submitted'    ? '📝 Marks submitted'   :
+                           item.kind === 'revision_requested' ? '↩ Revision needed'    :
+                           item.kind === 'ticket_reply'       ? '💬 Support reply'     :
+                           item.kind === 'ticket_new'         ? '🎫 New ticket'        :
+                           item.kind === 'ticket_status'      ? '🔔 Status update'     :
                            '📢 Announcement'}
                         </span>
                       </div>

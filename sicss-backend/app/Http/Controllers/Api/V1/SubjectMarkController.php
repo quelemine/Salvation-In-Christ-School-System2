@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
+use App\Models\ClassModel;
 use App\Models\ReportCard;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
@@ -66,6 +68,11 @@ class SubjectMarkController extends Controller
             );
             $reportCard->update(['subject_marks' => $current]);
         });
+
+        // Notify the class sponsor that marks have been submitted / resubmitted
+        // Fresh-load student for the notification body
+        $reportCard->loadMissing('student');
+        $this->notifySponsorMarksSubmitted($reportCard, $teacher, $data['subject']);
 
         return response()->json([
             'message'     => "Marks for {$data['subject']} submitted successfully.",
@@ -156,6 +163,10 @@ class SubjectMarkController extends Controller
                 'feedback_sent_at'  => now(),
                 'updated_at'        => now(),
             ]);
+
+        // Notify the subject teacher that the sponsor wants a revision
+        $reportCard->loadMissing('student');
+        $this->notifyTeacherRevisionRequested($reportCard, $submission, $data['feedback'], $request->user());
 
         return response()->json([
             'message'           => "Revision requested for {$submission->subject}.",
@@ -253,5 +264,81 @@ class SubjectMarkController extends Controller
             'message'     => 'Report card compiled and submitted to VPI for review.',
             'report_card' => $reportCard->fresh(['student.class', 'class', 'teacher']),
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Private helpers — in-app notifications via the Announcements mechanism
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Notify the class sponsor of their class when a subject teacher submits marks.
+     * Uses a targeted Announcement (audience = sponsor's user_id) so the bell
+     * updates within the next poll cycle (≤ 20 s) without any extra infrastructure.
+     */
+    private function notifySponsorMarksSubmitted(ReportCard $reportCard, Teacher $teacher, string $subject): void
+    {
+        try {
+            $class = ClassModel::with('sponsor.user')->find($reportCard->class_id);
+            if (!$class || !$class->sponsor || !$class->sponsor->user_id) {
+                return; // No class sponsor linked — nothing to notify
+            }
+
+            $sponsorUserId   = $class->sponsor->user_id;
+            $teacherFullName = "{$teacher->first_name} {$teacher->last_name}";
+            $studentName     = $reportCard->student
+                ? $reportCard->student->first_name . ' ' . $reportCard->student->last_name
+                : "Report Card #{$reportCard->id}";
+
+            Announcement::create([
+                'created_by' => $teacher->user_id,
+                'title'      => "📝 Marks submitted — {$subject}",
+                'body'       => "{$teacherFullName} has submitted {$subject} marks for {$studentName} ({$reportCard->academic_year}). Please review them in the Mark Sheet Compilation page.",
+                'priority'   => 'normal',
+                'category'   => 'academic',
+                'audience'   => (string) $sponsorUserId,
+                'is_active'  => true,
+                'publish_at' => null,
+                'expires_at' => now()->addDays(14),
+            ]);
+        } catch (\Throwable $e) {
+            // Notification failure must never break the marks submission itself
+            \Log::warning('Failed to create mark-submission notification: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notify the subject teacher that the class sponsor wants them to revise their marks.
+     */
+    private function notifyTeacherRevisionRequested(ReportCard $reportCard, object $submission, string $feedback, $sponsorUser): void
+    {
+        try {
+            // Resolve the teacher's user_id from the submission
+            $teacher = DB::table('teachers')
+                ->where('id', $submission->teacher_id)
+                ->first(['user_id', 'first_name', 'last_name']);
+
+            if (!$teacher || !$teacher->user_id) {
+                return;
+            }
+
+            $sponsorName = $sponsorUser->first_name . ' ' . $sponsorUser->last_name;
+            $studentName = $reportCard->student
+                ? $reportCard->student->first_name . ' ' . $reportCard->student->last_name
+                : "Report Card #{$reportCard->id}";
+
+            Announcement::create([
+                'created_by' => $sponsorUser->id,
+                'title'      => "↩ Revision needed — {$submission->subject}",
+                'body'       => "{$sponsorName} (class sponsor) has requested a revision for your {$submission->subject} marks for {$studentName} ({$reportCard->academic_year}). Feedback: {$feedback}",
+                'priority'   => 'important',
+                'category'   => 'academic',
+                'audience'   => (string) $teacher->user_id,
+                'is_active'  => true,
+                'publish_at' => null,
+                'expires_at' => now()->addDays(14),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to create revision-request notification: ' . $e->getMessage());
+        }
     }
 }
