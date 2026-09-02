@@ -37,6 +37,8 @@ import TeacherAttendance from '../pages/TeacherAttendance';
 import AdminStaffUsers from '../pages/AdminStaffUsers';
 import UserAccountPage from '../pages/UserAccountPage';
 import ParentPortal from '../pages/ParentPortal';
+import SubjectMarks from '../pages/SubjectMarks';
+import ClassSponsorPortal from '../pages/ClassSponsorPortal';
 
 function RouteError() {
   const error = useRouteError() as { statusText?: string; status?: number };
@@ -86,6 +88,10 @@ const router = createBrowserRouter([
       { path: 'users/account/student/:studentId', element: <UserAccountPage /> },
       // Parent portal — children's academic records
       { path: 'parent-portal', element: <ParentPortal /> },
+      // Subject teacher marks submission
+      { path: 'subject-marks', element: <SubjectMarks /> },
+      // Class sponsor mark sheet compilation
+      { path: 'class-sponsor-portal', element: <ClassSponsorPortal /> },
       // Academic work
       { path: 'grades', element: <Grades /> },
       { path: 'my-grade-sheet', element: <StudentPortal view="report-card" /> },

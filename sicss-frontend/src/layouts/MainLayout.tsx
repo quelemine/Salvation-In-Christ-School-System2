@@ -109,8 +109,8 @@ export default function MainLayout() {
     ];
 
     if (role === 'admin')                              return [...adminCommonItems, ...adminItems];
-    if (role === 'class-teacher')                      return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/comments', label: 'Comments', icon: '💬' }];
-    if (role === 'subject-teacher')                    return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }];
+    if (role === 'class-teacher' || role === 'class-sponsor') return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/comments', label: 'Comments', icon: '💬' }, { path: '/class-sponsor-portal', label: '📋 Mark sheet', icon: '📝' }, { path: '/report-cards', label: 'Report cards', icon: '🎓' }];
+    if (role === 'subject-teacher')                    return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }, { path: '/subject-marks', label: 'Submit marks', icon: '✏️' }];
     if (role === 'student')                            return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/my-grade-sheet', label: 'My grade sheet', icon: '📝' }, { path: '/my-attendance', label: 'My attendance', icon: '📋' }, { path: '/my-assignments', label: 'My assignments', icon: '📄' }, { path: '/my-financial-records', label: 'My finance', icon: '💳' }];
     if (role === 'parent')                             return [...commonItems, { path: '/parent-portal', label: 'My children', icon: '👨‍👩‍👧' }, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }];
     if (role === 'vice-principal-instruction')         return [...commonItems, { path: '/divisions', label: 'Divisions', icon: '🏢' }, { path: '/classes', label: 'Classes', icon: '🏫' }, { path: '/subjects', label: 'Subjects', icon: '📚' }, { path: '/teachers', label: 'Teachers', icon: '👨‍🏫' }, { path: '/students', label: 'Students', icon: '👨‍🎓' }, { path: '/grades', label: 'Academic records', icon: '📝' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }, { path: '/announcements', label: 'Announcements', icon: '📢' }];
@@ -125,8 +125,9 @@ export default function MainLayout() {
   const allowedPaths: Record<string, string[]> = {
     admin:          [...menuItems.map((item) => item.path), '/settings', '/security', '/change-password', '/announcements', '/helpdesk', '/helpdesk-admin', '/users/account/student'],
     teacher:        ['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/grades', '/assignments', '/comments'],
-    'class-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments'],
-    'subject-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/grades', '/assignments'],
+    'class-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards'],
+    'class-sponsor':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards'],
+    'subject-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/grades', '/assignments', '/subject-marks'],
     finance:        ['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
     'finance-staff':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
     'vice-principal-instruction': ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/teachers', '/students', '/grades', '/attendance', '/teacher-attendance', '/announcements'],
