@@ -20,6 +20,7 @@ class ClassModel extends Model
         'capacity',
         'order',
         'is_active',
+        'sponsor_teacher_id',
     ];
 
     protected $casts = [
