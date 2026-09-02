@@ -24,6 +24,7 @@ type FormData = {
   specialization: string;
   status: string;
   sponsor_class_id: string;
+  class_ids: number[];                                // classes this teacher is assigned to teach
   subject_assignments: { class_id: string; subject_id: string }[];
   salary_structure_id: string;
 };
@@ -44,6 +45,7 @@ const emptyForm: FormData = {
   specialization: '',
   status: 'active',
   sponsor_class_id: '',
+  class_ids: [],
   subject_assignments: [],
   salary_structure_id: '',
 };
@@ -113,6 +115,7 @@ export default function Teachers() {
       specialization: (t as any).specialization || t.subject_specialization || '',
       status: (t as any).status || 'active',
       sponsor_class_id: String((t as any).sponsored_class?.id || ''),
+      class_ids: ((t as any).classes || []).map((c: any) => c.id),
       subject_assignments: ((t as any).subject_class_assignments || []).map((a: any) => ({ class_id: String(a.class_id), subject_id: String(a.subject_id) })),
       salary_structure_id: String(t.salary_structure_id || ''),
     });
@@ -122,7 +125,14 @@ export default function Teachers() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const payload = { ...formData, user_id: formData.user_id ? Number(formData.user_id) : undefined, salary_structure_id: formData.salary_structure_id ? Number(formData.salary_structure_id) : null, sponsor_class_id: formData.sponsor_class_id ? Number(formData.sponsor_class_id) : null, subject_assignments: formData.subject_assignments.filter((a) => a.class_id && a.subject_id).map((a) => ({ class_id: Number(a.class_id), subject_id: Number(a.subject_id) })) };
+      const payload = {
+        ...formData,
+        user_id: formData.user_id ? Number(formData.user_id) : undefined,
+        salary_structure_id: formData.salary_structure_id ? Number(formData.salary_structure_id) : null,
+        sponsor_class_id: formData.sponsor_class_id ? Number(formData.sponsor_class_id) : null,
+        class_ids: formData.class_ids,
+        subject_assignments: formData.subject_assignments.filter((a) => a.class_id && a.subject_id).map((a) => ({ class_id: Number(a.class_id), subject_id: Number(a.subject_id) })),
+      };
       if (editingId) {
         const updated = await teacherService.update(editingId, payload as any);
         setTeachers((c) => c.map((t) => (t.id === editingId ? (updated as any) : t)));
@@ -172,6 +182,21 @@ export default function Teachers() {
 
   const selectedUser = users.find((u) => u.id === Number(formData.user_id));
   const teachingRole = selectedUser?.role?.slug;
+
+  // Toggle a class in the class_ids list
+  const toggleClass = (id: number) => {
+    setFormData((f) => ({
+      ...f,
+      class_ids: f.class_ids.includes(id)
+        ? f.class_ids.filter((c) => c !== id)
+        : [...f.class_ids, id],
+    }));
+  };
+
+  // A class-sponsor or class-teacher role qualifies for the sponsored class field
+  const isSponsorRole = teachingRole === 'class-teacher' || teachingRole === 'class-sponsor';
+  // Subject-teacher gets the subject+class assignment builder
+  const isSubjectRole = teachingRole === 'subject-teacher';
 
   return (
     <div className="space-y-5">
@@ -229,15 +254,15 @@ export default function Teachers() {
                   <th className="px-3 sm:px-5 py-3 text-left hidden sm:table-cell">Salary structure</th>
                   <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Email</th>
                   <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Phone</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Class(es)</th>
                   <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Specialization</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Hire date</th>
-                  <th className="px-3 sm:px-5 py-3 text-left">Status</th>
+                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Hire date</th>                  <th className="px-3 sm:px-5 py-3 text-left">Status</th>
                   <th className="px-3 sm:px-5 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-slate-400">No teachers found.</td></tr>
+                  <tr><td colSpan={11} className="py-10 text-center text-slate-400">No teachers found.</td></tr>
                 ) : filtered.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50">
                     <td className="px-3 sm:px-5 py-3">
@@ -250,6 +275,13 @@ export default function Teachers() {
                     <td className="px-3 sm:px-5 py-3 text-slate-600 hidden sm:table-cell">{t.salary_structure?.name || '—'}</td>
                     <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{t.email}</td>
                     <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{t.phone || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">
+                      {((t as any).classes || []).length > 0
+                        ? ((t as any).classes as any[]).map((c: any) => c.name + (c.section ? ` ${c.section}` : '')).join(', ')
+                        : (t as any).sponsored_class?.name
+                          ? `${(t as any).sponsored_class.name}${(t as any).sponsored_class.section ? ` ${(t as any).sponsored_class.section}` : ''}`
+                          : '—'}
+                    </td>
                     <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{t.subject_specialization || (t as any).specialization || '—'}</td>
                     <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{(t as any).hire_date || '—'}</td>
                     <td className="px-3 sm:px-5 py-3">
@@ -341,14 +373,77 @@ export default function Teachers() {
             <select value={formData.salary_structure_id} onChange={field('salary_structure_id')} className="input-field"><option value="">No structure assigned</option>{salaryStructures.filter((structure) => structure.is_active).map((structure) => <option key={structure.id} value={structure.id}>{structure.name} — {structure.currency} {structure.monthly_salary}/month</option>)}</select>
             <p className="mt-1 text-xs text-slate-500">Payroll uses this as the default monthly salary. It can be adjusted when a monthly payroll is created.</p>
           </div>
-          {teachingRole === 'class-teacher' && <div className="sm:col-span-2"><label className="mb-1 block text-sm font-medium text-slate-700">Sponsored class</label>
-            <select value={formData.sponsor_class_id} onChange={field('sponsor_class_id')} className="input-field"><option value="">No sponsored class</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` — ${c.section}` : ''}</option>)}</select>
-            <p className="mt-1 text-xs text-slate-500">A class teacher can sponsor one class and manage every student assigned to it.</p>
-          </div>}
-          {teachingRole === 'subject-teacher' && <div className="sm:col-span-2 space-y-2"><label className="block text-sm font-medium text-slate-700">Subject and class assignments</label>
-            {formData.subject_assignments.map((assignment, index) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><select value={assignment.class_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, class_id: e.target.value } : a) }))} className="input-field"><option value="">Class</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` — ${c.section}` : ''}</option>)}</select><select value={assignment.subject_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, subject_id: e.target.value } : a) }))} className="input-field"><option value="">Subject</option>{subjects.map((s) => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}</select><button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.filter((_, i) => i !== index) }))} className="px-2 text-sm font-semibold text-rose-600">Remove</button></div>)}
-            <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: [...f.subject_assignments, { class_id: '', subject_id: '' }] }))} className="text-sm font-semibold text-cyan-700">+ Assign a subject to a class</button>
-          </div>}
+
+          {/* ── Classes assigned to this teacher (all roles) ── */}
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Classes assigned to this teacher</label>
+            {classes.length === 0 ? (
+              <p className="text-xs text-slate-400">No classes found. Add classes first.</p>
+            ) : (
+              <div className="max-h-44 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+                {classes.map((c) => (
+                  <label key={c.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 accent-cyan-600"
+                      checked={formData.class_ids.includes(c.id)}
+                      onChange={() => toggleClass(c.id)}
+                    />
+                    <span className="text-sm text-slate-700">
+                      {c.name}{c.section ? ` — ${c.section}` : ''}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {formData.class_ids.length > 0 && (
+              <p className="mt-1 text-xs text-slate-500">{formData.class_ids.length} class{formData.class_ids.length !== 1 ? 'es' : ''} selected</p>
+            )}
+          </div>
+
+          {/* ── Sponsored class — class-sponsor / class-teacher roles ── */}
+          {isSponsorRole && (
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-slate-700">Sponsored class (home class)</label>
+              <select value={formData.sponsor_class_id} onChange={field('sponsor_class_id')} className="input-field">
+                <option value="">No sponsored class</option>
+                {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` — ${c.section}` : ''}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">The sponsored class is the teacher's home class. They compile the mark sheet and send it to the VPI for approval.</p>
+            </div>
+          )}
+
+          {/* ── Subject + class assignments — subject-teacher role ── */}
+          {isSubjectRole && (
+            <div className="sm:col-span-2 space-y-2">
+              <label className="block text-sm font-medium text-slate-700">Subject and class assignments</label>
+              <p className="text-xs text-slate-500">Assign this teacher to specific subjects within specific classes.</p>
+              {formData.subject_assignments.map((assignment, index) => (
+                <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                  <select value={assignment.class_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, class_id: e.target.value } : a) }))} className="input-field">
+                    <option value="">Class</option>
+                    {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` — ${c.section}` : ''}</option>)}
+                  </select>
+                  <select value={assignment.subject_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, subject_id: e.target.value } : a) }))} className="input-field">
+                    <option value="">Subject</option>
+                    {subjects.map((s) => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+                  </select>
+                  <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.filter((_, i) => i !== index) }))} className="px-2 text-sm font-semibold text-rose-600">Remove</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: [...f.subject_assignments, { class_id: '', subject_id: '' }] }))} className="text-sm font-semibold text-cyan-700">
+                + Assign a subject to a class
+              </button>
+            </div>
+          )}
+
+          {/* ── If no user account is linked yet, show a note about assigning roles ── */}
+          {!formData.user_id && (
+            <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-semibold text-amber-800">Tip — link a user account to unlock role-specific fields</p>
+              <p className="text-xs text-amber-700 mt-0.5">Select a user account above. If the linked user has the <strong>class-sponsor</strong> role, the sponsored class field appears. If they have <strong>subject-teacher</strong>, the subject assignment builder appears.</p>
+            </div>
+          )}
         </div>
       </FormModal>
     </div>
