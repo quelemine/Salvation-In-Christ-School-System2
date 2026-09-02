@@ -14,6 +14,8 @@ export type NotifKind =
   | 'announcement'
   | 'marks_submitted'     // class sponsor sees: teacher submitted marks
   | 'revision_requested'  // subject teacher sees: sponsor wants revision
+  | 'vpi_review_request'  // class sponsor sees: VPI wants them to review
+  | 'sponsor_replied'     // VPI sees: sponsor replied to review request
   | 'ticket_reply'
   | 'ticket_new'          // admin sees new user ticket
   | 'ticket_status';      // user sees status change
@@ -67,6 +69,12 @@ export function useNotifications() {
           } else if (ann.category === 'academic' && ann.title?.startsWith('↩ Revision needed')) {
             kind = 'revision_requested';
             href = '/subject-marks';
+          } else if (ann.category === 'academic' && ann.title?.startsWith('📋 VPI review request')) {
+            kind = 'vpi_review_request';
+            href = '/report-cards';
+          } else if (ann.category === 'academic' && ann.title?.startsWith('↩ Sponsor replied')) {
+            kind = 'sponsor_replied';
+            href = '/report-cards';
           }
 
           notifs.push({

@@ -12,6 +12,7 @@ class ReportCard extends Model
         'aggregate', 'average', 'rank', 'total_in_class', 'conduct', 'promotion_status',
         'conditional_subjects', 'promoted_to', 'class_sponsor', 'principal', 'closing_date',
         'approval_status', 'sponsor_approved_by', 'sponsor_approved_at', 'vpi_approved_by', 'vpi_approved_at', 'rejection_reason',
+        'vpi_review_status', 'vpi_feedback', 'vpi_feedback_sent_at',
         'comments',
     ];
 

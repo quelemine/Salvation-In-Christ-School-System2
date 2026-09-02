@@ -67,6 +67,17 @@ export default function ReportCards() {
   const [comments, setComments]           = useState<any[]>([]);
   const [commentLoading, setCommentLoading] = useState(false);
 
+  // VPI: full mark-sheet review panel
+  const [vpiReviewRC, setVpiReviewRC]           = useState<ReportCard | null>(null);
+  const [vpiReviewLoading, setVpiReviewLoading] = useState(false);
+  const [reviewComments, setReviewComments]     = useState<any[]>([]);
+  const [reviewReqText, setReviewReqText]       = useState('');
+  const [reviewReqSending, setReviewReqSending] = useState(false);
+  const [reviewReplyText, setReviewReplyText]   = useState('');
+  const [replyingTo, setReplyingTo]             = useState<string | null>(null);   // parent comment id
+  const [reviewMsg, setReviewMsg]               = useState<{ ok: boolean; text: string } | null>(null);
+  const [vpiReviewStatus, setVpiReviewStatus]   = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -209,12 +220,12 @@ export default function ReportCards() {
 
   const approvalStatusColor = (status?: string) => {
     switch (status) {
-      case 'draft': return 'bg-slate-100 text-slate-600';
-      case 'pending_sponsor': return 'bg-amber-100 text-amber-700';
-      case 'pending_vpi': return 'bg-blue-100 text-blue-700';
-      case 'approved': return 'bg-emerald-100 text-emerald-700';
-      case 'rejected': return 'bg-rose-100 text-rose-700';
-      default: return 'bg-slate-100 text-slate-600';
+      case 'draft':            return 'bg-slate-100 text-slate-600';
+      case 'pending_sponsor':  return 'bg-amber-100 text-amber-700';
+      case 'pending_vpi':      return 'bg-blue-100 text-blue-700';
+      case 'approved':         return 'bg-emerald-100 text-emerald-700';
+      case 'rejected':         return 'bg-rose-100 text-rose-700';
+      default:                 return 'bg-slate-100 text-slate-600';
     }
   };
 
@@ -340,6 +351,67 @@ export default function ReportCards() {
     finally { setCommentLoading(false); }
   };
 
+  const openVPIReview = async (rc: ReportCard) => {
+    setVpiReviewLoading(true);
+    setVpiReviewRC(rc);
+    setReviewMsg(null);
+    setReviewReqText('');
+    setReviewReplyText('');
+    setReplyingTo(null);
+    try {
+      // Fetch full report card with marks
+      const fullRC = await api.get(`/report-cards/${rc.id}`);
+      setVpiReviewRC(fullRC.data);
+      // Fetch comments/messages
+      const commRes = await api.get(`/report-cards/${rc.id}/comments`);
+      setReviewComments(commRes.data.comments || []);
+      setVpiReviewStatus(commRes.data.vpi_review_status || null);
+    } catch { /* use what we have */ }
+    finally { setVpiReviewLoading(false); }
+  };
+
+  const sendVPIReviewRequest = async () => {
+    if (!reviewReqText.trim() || !vpiReviewRC) return;
+    setReviewReqSending(true); setReviewMsg(null);
+    try {
+      const res = await api.post(`/report-cards/${vpiReviewRC.id}/comment`, {
+        comment: reviewReqText.trim(),
+        type: 'review_request',
+      });
+      setReviewComments(res.data.comments || []);
+      setVpiReviewStatus('pending_sponsor_reply');
+      setReviewReqText('');
+      setReviewMsg({ ok: true, text: 'Review request sent to the class sponsor. They will be notified.' });
+    } catch (err: any) {
+      setReviewMsg({ ok: false, text: err.response?.data?.message || 'Failed to send review request.' });
+    } finally { setReviewReqSending(false); }
+  };
+
+  const sendSponsorReply = async () => {
+    if (!reviewReplyText.trim() || !vpiReviewRC) return;
+    setReviewReqSending(true); setReviewMsg(null);
+    try {
+      const res = await api.post(`/report-cards/${vpiReviewRC.id}/comment`, {
+        comment: reviewReplyText.trim(),
+        type: 'sponsor_reply',
+        parent_id: replyingTo,
+      });
+      setReviewComments(res.data.comments || []);
+      setVpiReviewStatus('sponsor_replied');
+      setReviewReplyText('');
+      setReplyingTo(null);
+      setReviewMsg({ ok: true, text: 'Your reply has been sent. The VPI will be notified.' });
+    } catch (err: any) {
+      setReviewMsg({ ok: false, text: err.response?.data?.message || 'Failed to send reply.' });
+    } finally { setReviewReqSending(false); }
+  };
+
+  const handleVPIApproveFromReview = async (action: 'approve' | 'reject', reason?: string) => {
+    if (!vpiReviewRC) return;
+    await handleVPIApprove(vpiReviewRC.id, action, reason);
+    setVpiReviewRC(null);
+  };
+
   const selectedStudentData = students.find(s => s.id === selectedStudent);
   const selectedClassData = classes.find(c => c.id === selectedClass);
   const selectedTeacherData = teachers.find(t => t.id === selectedTeacher);
@@ -351,8 +423,7 @@ export default function ReportCards() {
           <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic work</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Report Cards</h1>
           <p className="mt-1 text-sm text-slate-500">{reportCards.length} report card{reportCards.length !== 1 ? 's' : ''} generated.</p>
-        </div>
-        {canCreate && (
+        </div>        {canCreate && (
         <button 
           onClick={() => { 
             setPreviewMode(true); 
@@ -382,6 +453,222 @@ export default function ReportCards() {
       </div>
 
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+
+      {/* ── VPI Full Report Card Review Panel ── */}
+      {vpiReviewRC && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 overflow-y-auto p-4 pt-6">
+          <div className="w-full max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-700">VPI Review</p>
+                <h3 className="text-base font-bold text-slate-950">
+                  {(vpiReviewRC as any).student?.first_name} {(vpiReviewRC as any).student?.last_name}
+                  <span className="ml-2 text-sm font-normal text-slate-500">
+                    · {(vpiReviewRC as any).class?.name} · {vpiReviewRC.academic_year}
+                  </span>
+                </h3>
+              </div>
+              <button onClick={() => setVpiReviewRC(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl">×</button>
+            </div>
+
+            {vpiReviewLoading ? (
+              <div className="py-20 text-center text-slate-500">Loading report card…</div>
+            ) : (
+              <div className="p-6 space-y-6">
+
+                {/* Status bar */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${approvalStatusColor((vpiReviewRC as any).approval_status)}`}>
+                    {(vpiReviewRC as any).approval_status?.replace(/_/g, ' ')}
+                  </span>
+                  {vpiReviewStatus === 'pending_sponsor_reply' && (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">⏳ Awaiting sponsor reply</span>
+                  )}
+                  {vpiReviewStatus === 'sponsor_replied' && (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">✓ Sponsor replied</span>
+                  )}
+                  <div className="ml-auto flex gap-2">
+                    {(isVPI || isAdmin) && (vpiReviewRC as any).approval_status === 'pending_vpi' && (
+                      <>
+                        <button
+                          onClick={() => handleVPIApproveFromReview('approve')}
+                          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                        >✓ Approve</button>
+                        <button
+                          onClick={() => {
+                            const reason = prompt('Rejection reason:');
+                            if (reason) handleVPIApproveFromReview('reject', reason);
+                          }}
+                          className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700"
+                        >✕ Reject</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {reviewMsg && (
+                  <div className={`flex items-start gap-2 rounded-lg px-4 py-3 text-sm font-medium ${
+                    reviewMsg.ok ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                                 : 'border border-rose-200 bg-rose-50 text-rose-700'
+                  }`}>
+                    <span>{reviewMsg.ok ? '✓' : '⚠'}</span> {reviewMsg.text}
+                  </div>
+                )}
+
+                {/* Summary fields */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  {[
+                    ['Student', `${(vpiReviewRC as any).student?.first_name || ''} ${(vpiReviewRC as any).student?.last_name || ''}`],
+                    ['Class', (vpiReviewRC as any).class?.name || '—'],
+                    ['Academic Year', vpiReviewRC.academic_year],
+                    ['Grade Level', vpiReviewRC.grade_level],
+                    ['Aggregate', vpiReviewRC.aggregate ?? '—'],
+                    ['Average', vpiReviewRC.average ?? '—'],
+                    ['Rank', vpiReviewRC.rank ? `${vpiReviewRC.rank} / ${vpiReviewRC.total_in_class ?? '?'}` : '—'],
+                    ['Conduct', vpiReviewRC.conduct || '—'],
+                    ['Class Sponsor', vpiReviewRC.class_sponsor || '—'],
+                    ['Promoted To', vpiReviewRC.promoted_to || '—'],
+                    ['Closing Date', vpiReviewRC.closing_date || '—'],
+                    ['Conditional', vpiReviewRC.conditional_subjects || '—'],
+                  ].map(([label, val]) => (
+                    <div key={label as string}>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">{label}</p>
+                      <p className="text-sm font-semibold text-slate-800">{val as string}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Full mark sheet read-only */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <p className="px-4 py-3 text-sm font-bold text-slate-800 border-b border-slate-100">Subject Marks</p>
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] font-semibold uppercase text-slate-500">
+                        <th className="border border-slate-200 px-3 py-2 text-left">Subject</th>
+                        {SEM1_PERIODS.map(p => <th key={p} className="border border-slate-200 px-2 py-2">{p}</th>)}
+                        <th className="border border-slate-200 px-2 py-2">Exam 1</th>
+                        {SEM2_PERIODS.map(p => <th key={p} className="border border-slate-200 px-2 py-2">{p}</th>)}
+                        <th className="border border-slate-200 px-2 py-2">Exam 2</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportCardSubjects.map((subj) => (
+                        <tr key={subj} className="hover:bg-slate-50">
+                          <td className="border border-slate-200 px-3 py-2 font-medium text-slate-800">{subj}</td>
+                          {[...SEM1_PERIODS, 'Exam 1', ...SEM2_PERIODS, 'Exam 2'].map((period) => {
+                            const val = vpiReviewRC.subject_marks?.[subj]?.[period] || '';
+                            const n = parseMark(val);
+                            return (
+                              <td key={period} className="border border-slate-200 px-2 py-2 text-center font-bold"
+                                style={{ color: n !== null ? scoreColor(n) : '#94a3b8' }}>
+                                {val || '—'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── Messages / Review thread ── */}
+                <div className="rounded-xl border border-slate-200 bg-white">
+                  <div className="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+                    <p className="text-sm font-bold text-slate-900">Review messages</p>
+                    <span className="text-xs text-slate-400">{reviewComments.filter((c: any) => c.type === 'review_request' || c.type === 'sponsor_reply').length} message{reviewComments.filter((c: any) => c.type === 'review_request' || c.type === 'sponsor_reply').length !== 1 ? 's' : ''}</span>
+                  </div>
+
+                  {/* Thread */}
+                  <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                    {reviewComments.filter((c: any) => c.type === 'review_request' || c.type === 'sponsor_reply').length === 0 ? (
+                      <p className="py-6 text-center text-sm text-slate-400">No review messages yet.</p>
+                    ) : reviewComments
+                      .filter((c: any) => c.type === 'review_request' || c.type === 'sponsor_reply')
+                      .map((c: any) => (
+                        <div key={c.id} className={`px-5 py-3 ${c.type === 'sponsor_reply' ? 'bg-emerald-50/40' : 'bg-blue-50/30'}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${c.type === 'sponsor_reply' ? 'bg-emerald-200 text-emerald-800' : 'bg-blue-200 text-blue-800'}`}>
+                              {c.user_name?.charAt(0)}
+                            </div>
+                            <span className="text-sm font-semibold text-slate-900">{c.user_name}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.type === 'sponsor_reply' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
+                              {c.type === 'sponsor_reply' ? '↩ Class sponsor reply' : '📋 VPI review request'}
+                            </span>
+                            <span className="ml-auto text-[10px] text-slate-400">{new Date(c.created_at).toLocaleString()}</span>
+                          </div>
+                          <p className="text-sm text-slate-700 pl-9 leading-relaxed">{c.comment}</p>
+                          {/* Class sponsor can reply to VPI review requests */}
+                          {c.type === 'review_request' && isClassSponsor && (
+                            <button
+                              onClick={() => setReplyingTo(c.id)}
+                              className="mt-1 ml-9 text-xs font-semibold text-emerald-700 hover:underline"
+                            >
+                              ↩ Reply
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* Reply input for class sponsor */}
+                  {isClassSponsor && replyingTo && (
+                    <div className="border-t border-slate-100 bg-emerald-50 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-emerald-700">Replying to VPI review request:</p>
+                      <textarea
+                        rows={3}
+                        value={reviewReplyText}
+                        onChange={(e) => setReviewReplyText(e.target.value)}
+                        placeholder="Write your reply to the VPI…"
+                        className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => { setReplyingTo(null); setReviewReplyText(''); }}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                          Cancel
+                        </button>
+                        <button
+                          onClick={sendSponsorReply}
+                          disabled={reviewReqSending || !reviewReplyText.trim()}
+                          className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+                        >
+                          {reviewReqSending ? 'Sending…' : '↩ Send reply'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* VPI: send a review request */}
+                  {(isVPI || isAdmin) && (vpiReviewRC as any).approval_status === 'pending_vpi' && (
+                    <div className="border-t border-slate-100 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-blue-700">📋 Request a review / edit from the class sponsor</p>
+                      <textarea
+                        rows={3}
+                        value={reviewReqText}
+                        onChange={(e) => setReviewReqText(e.target.value)}
+                        placeholder="Describe what needs to be corrected or reviewed before you approve…"
+                        className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] text-slate-400">The class sponsor will receive this message and can reply before you approve.</p>
+                        <button
+                          onClick={sendVPIReviewRequest}
+                          disabled={reviewReqSending || !reviewReqText.trim()}
+                          className="rounded-lg bg-blue-700 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-800 disabled:opacity-40"
+                        >
+                          {reviewReqSending ? 'Sending…' : '📋 Send review request'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Comments panel (viewer roles) ── */}
       {commentingId !== null && (
@@ -498,12 +785,27 @@ export default function ReportCards() {
                         <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{rc.rank ?? '—'}</td>
                         <td className="px-3 sm:px-5 py-3">
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${approvalStatusColor((rc as any).approval_status)}`}>
-                            {(rc as any).approval_status?.replace('_', ' ') || 'draft'}
+                            {(rc as any).approval_status?.replace(/_/g, ' ') || 'draft'}
                           </span>
+                          {isClassSponsor && (rc as any).vpi_review_status === 'pending_sponsor_reply' && (
+                            <span className="ml-1 inline-flex rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">⚠ VPI</span>
+                          )}
                         </td>
                         <td className="px-3 sm:px-5 py-3">
                           <div className="flex gap-2 flex-wrap">
                             <button onClick={() => loadReportCard(rc)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">View</button>
+                            {/* VPI: full review panel with mark sheet + messaging */}
+                            {(isVPI || isAdmin) && (
+                              <button onClick={() => openVPIReview(rc)} className="text-xs font-semibold text-blue-700 hover:underline whitespace-nowrap">
+                                {(rc as any).approval_status === 'pending_vpi' ? '🔍 Review' : '📋 Open'}
+                              </button>
+                            )}
+                            {/* Class sponsor: open messages panel for report cards with VPI feedback */}
+                            {isClassSponsor && (rc as any).vpi_review_status && (
+                              <button onClick={() => openVPIReview(rc)} className={`text-xs font-semibold hover:underline whitespace-nowrap ${(rc as any).vpi_review_status === 'pending_sponsor_reply' ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                {(rc as any).vpi_review_status === 'pending_sponsor_reply' ? '⚠ VPI message' : '💬 Messages'}
+                              </button>
+                            )}
                             {(isClassSponsor || isAdmin) && (rc as any).approval_status === 'pending_sponsor' && (
                               <>
                                 <button onClick={() => handleSponsorApprove(rc.id, 'approve')} className="text-xs font-semibold text-emerald-600 hover:underline whitespace-nowrap">Approve</button>
@@ -522,8 +824,8 @@ export default function ReportCards() {
                                 }} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Reject</button>
                               </>
                             )}
-                            {/* Comment button for viewers (principal, proprietor, proprietress, VPI) */}
-                            {(isViewer || isVPI) && (
+                            {/* Comment button for viewers (principal, proprietor, proprietress) */}
+                            {isViewer && (
                               <button onClick={() => openComments(rc.id)} className="text-xs font-semibold text-amber-700 hover:underline whitespace-nowrap">💬 Comment</button>
                             )}
                             {/* Delete — admin only */}

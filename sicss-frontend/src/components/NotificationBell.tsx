@@ -13,6 +13,8 @@ const KIND_ICON: Record<string, string> = {
   announcement:       '📢',
   marks_submitted:    '📝',
   revision_requested: '↩',
+  vpi_review_request: '📋',
+  sponsor_replied:    '↩',
   ticket_reply:       '💬',
   ticket_new:         '🎫',
   ticket_status:      '🔔',
@@ -193,6 +195,8 @@ export default function NotificationBell() {
                       <div className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base ${
                         item.kind === 'marks_submitted'    ? 'bg-cyan-100'    :
                         item.kind === 'revision_requested' ? 'bg-rose-100'    :
+                        item.kind === 'vpi_review_request' ? 'bg-amber-100'   :
+                        item.kind === 'sponsor_replied'    ? 'bg-emerald-100' :
                         item.kind === 'ticket_reply'       ? 'bg-cyan-100'    :
                         item.kind === 'ticket_new'         ? 'bg-rose-100'    :
                         item.kind === 'ticket_status'      ? 'bg-emerald-100' :
@@ -220,16 +224,20 @@ export default function NotificationBell() {
                         <span className={`mt-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
                           item.kind === 'marks_submitted'    ? 'bg-cyan-100 text-cyan-800'       :
                           item.kind === 'revision_requested' ? 'bg-rose-100 text-rose-700'       :
+                          item.kind === 'vpi_review_request' ? 'bg-amber-100 text-amber-800'     :
+                          item.kind === 'sponsor_replied'    ? 'bg-emerald-100 text-emerald-800' :
                           item.kind === 'ticket_reply'       ? 'bg-cyan-100 text-cyan-800'       :
                           item.kind === 'ticket_new'         ? 'bg-rose-100 text-rose-700'       :
                           item.kind === 'ticket_status'      ? 'bg-emerald-100 text-emerald-800' :
                           'bg-slate-100 text-slate-600'
                         }`}>
-                          {item.kind === 'marks_submitted'    ? '📝 Marks submitted'   :
-                           item.kind === 'revision_requested' ? '↩ Revision needed'    :
-                           item.kind === 'ticket_reply'       ? '💬 Support reply'     :
-                           item.kind === 'ticket_new'         ? '🎫 New ticket'        :
-                           item.kind === 'ticket_status'      ? '🔔 Status update'     :
+                          {item.kind === 'marks_submitted'    ? '📝 Marks submitted'    :
+                           item.kind === 'revision_requested' ? '↩ Revision needed'     :
+                           item.kind === 'vpi_review_request' ? '📋 VPI review request' :
+                           item.kind === 'sponsor_replied'    ? '↩ Sponsor replied'     :
+                           item.kind === 'ticket_reply'       ? '💬 Support reply'      :
+                           item.kind === 'ticket_new'         ? '🎫 New ticket'         :
+                           item.kind === 'ticket_status'      ? '🔔 Status update'      :
                            '📢 Announcement'}
                         </span>
                       </div>

@@ -208,6 +208,7 @@ Route::prefix('v1')->group(function () {
 
         // Report cards - accessible by admin, VPI, class-sponsor, principal, proprietor, and proprietress
         Route::get('/report-cards', [ReportCardController::class, 'index'])->middleware('role:admin|vice-principal-instruction|class-sponsor|subject-teacher|principal|proprietor|proprietress');
+        Route::get('/report-cards/{id}', [ReportCardController::class, 'show'])->middleware('role:admin|vice-principal-instruction|class-sponsor|principal|proprietor|proprietress');
         // Create and delete report cards — admin only
         Route::post('/report-cards', [ReportCardController::class, 'store'])->middleware('role:admin|class-sponsor');
         Route::delete('/report-cards/{id}', [ReportCardController::class, 'destroy'])->middleware('role:admin');
@@ -216,8 +217,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval'])->middleware('role:class-sponsor|admin');
         Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:class-sponsor|admin');
         Route::post('/report-cards/{id}/vpi-approve', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
-        // Comments on report cards — principal, VPI, proprietor, proprietress can add
-        Route::post('/report-cards/{id}/comment', [ReportCardController::class, 'addComment'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress');
+        // Comments on report cards — principal, VPI, proprietor, proprietress can add; class-sponsor can add replies
+        Route::post('/report-cards/{id}/comment', [ReportCardController::class, 'addComment'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|class-sponsor');
         Route::get('/report-cards/{id}/comments', [ReportCardController::class, 'getComments'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|class-sponsor');
 
         // Subject marks workflow:
