@@ -3,10 +3,11 @@
  *
  * Class sponsors use this page to:
  *   1. See all report cards for their class with subject submission status
- *   2. View which subjects have been submitted by subject teachers
- *   3. Add any missing marks directly
- *   4. Complete the final fields (aggregate, average, rank, conduct, promotion)
- *   5. Submit the completed mark sheet to the VPI for review
+ *   2. View which subjects have been submitted by subject teachers (with teacher names)
+ *   3. Request a revision on any subject (with a comment to the teacher)
+ *   4. Accept marks that look correct
+ *   5. Complete the final fields (aggregate, average, rank, conduct, promotion)
+ *   6. Submit the completed mark sheet to the VPI for review
  */
 import { useEffect, useState } from 'react';
 import api from '../services/api';
@@ -32,14 +33,31 @@ type RC = {
   class?: { name: string; section?: string };
 };
 
-type Submission = { subject: string; teacher_name: string; submitted_at: string; subject_marks: Record<string, string> };
+type Submission = {
+  id: number;
+  subject: string;
+  teacher_name: string;
+  employee_id: string;
+  teacher_email?: string;
+  submitted_at: string;
+  submission_status: 'submitted' | 'revision_requested' | 'accepted';
+  sponsor_feedback?: string | null;
+  feedback_sent_at?: string | null;
+  subject_marks: Record<string, string>;
+};
 
 const STATUS_COLORS: Record<string, string> = {
-  draft:          'bg-slate-100 text-slate-700',
-  pending_sponsor:'bg-amber-100 text-amber-800',
-  pending_vpi:    'bg-blue-100 text-blue-800',
-  approved:       'bg-emerald-100 text-emerald-800',
-  rejected:       'bg-rose-100 text-rose-700',
+  draft:           'bg-slate-100 text-slate-700',
+  pending_sponsor: 'bg-amber-100 text-amber-800',
+  pending_vpi:     'bg-blue-100 text-blue-800',
+  approved:        'bg-emerald-100 text-emerald-800',
+  rejected:        'bg-rose-100 text-rose-700',
+};
+
+const SUB_STATUS: Record<string, { label: string; cls: string }> = {
+  submitted:          { label: 'Submitted',         cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+  revision_requested: { label: 'Revision requested', cls: 'bg-rose-100 text-rose-700 border-rose-200' },
+  accepted:           { label: 'Accepted',           cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
 };
 
 const ALL_PERIODS = [...SEM1_PERIODS, 'Exam 1', ...SEM2_PERIODS, 'Exam 2'];
@@ -59,13 +77,19 @@ function ScoreCell({ value }: { value: string }) {
 export default function ClassSponsorPortal() {
   const { user } = useAuthStore();
 
-  const [reportCards, setReportCards] = useState<RC[]>([]);
-  const [selected, setSelected]       = useState<RC | null>(null);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [compiling, setCompiling]     = useState(false);
-  const [msg, setMsg]                 = useState<{ ok: boolean; text: string } | null>(null);
-  const [filterYear, setFilterYear]   = useState(new Date().getFullYear().toString());
+  const [reportCards, setReportCards]   = useState<RC[]>([]);
+  const [selected, setSelected]         = useState<RC | null>(null);
+  const [submissions, setSubmissions]   = useState<Submission[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [compiling, setCompiling]       = useState(false);
+  const [msg, setMsg]                   = useState<{ ok: boolean; text: string } | null>(null);
+  const [filterYear, setFilterYear]     = useState(new Date().getFullYear().toString());
+
+  // Feedback panel state
+  const [feedbackSubId, setFeedbackSubId]   = useState<number | null>(null);
+  const [feedbackText, setFeedbackText]     = useState('');
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+  const [feedbackMsg, setFeedbackMsg]       = useState<{ ok: boolean; text: string } | null>(null);
 
   // Compile form fields
   const [compileForm, setCompileForm] = useState({
@@ -88,6 +112,9 @@ export default function ClassSponsorPortal() {
   const selectCard = async (rc: RC) => {
     setSelected(rc);
     setMsg(null);
+    setFeedbackSubId(null);
+    setFeedbackText('');
+    setFeedbackMsg(null);
     setCompileForm({
       aggregate:            rc.aggregate != null ? String(rc.aggregate) : '',
       average:              rc.average   != null ? String(rc.average)   : '',
@@ -105,7 +132,37 @@ export default function ClassSponsorPortal() {
     } catch { setSubmissions([]); }
   };
 
-  // Auto-calculate aggregate and average from subject_marks
+  const refreshSubmissions = async () => {
+    if (!selected) return;
+    try {
+      const subRes = await api.get(`/report-cards/${selected.id}/subject-submissions`);
+      setSubmissions(subRes.data.submissions || []);
+    } catch { /* silent */ }
+  };
+
+  const handleRequestRevision = async (sub: Submission) => {
+    if (!feedbackText.trim()) { setFeedbackMsg({ ok: false, text: 'Please enter feedback for the teacher.' }); return; }
+    setSendingFeedback(true); setFeedbackMsg(null);
+    try {
+      await api.post(`/report-cards/${selected!.id}/subject-submissions/${sub.id}/request-revision`, {
+        feedback: feedbackText.trim(),
+      });
+      setFeedbackMsg({ ok: true, text: `Revision requested for ${sub.subject}. The teacher will see your feedback.` });
+      setFeedbackSubId(null);
+      setFeedbackText('');
+      await refreshSubmissions();
+    } catch (err: any) {
+      setFeedbackMsg({ ok: false, text: err.response?.data?.message || 'Failed to send feedback.' });
+    } finally { setSendingFeedback(false); }
+  };
+
+  const handleAccept = async (sub: Submission) => {
+    try {
+      await api.post(`/report-cards/${selected!.id}/subject-submissions/${sub.id}/accept`);
+      await refreshSubmissions();
+    } catch { /* silent */ }
+  };
+
   const autoCalculate = () => {
     if (!selected) return;
     const allScores: number[] = [];
@@ -132,6 +189,14 @@ export default function ClassSponsorPortal() {
       const proceed = confirm(`${unanswered.length} subject(s) have no marks yet:\n${unanswered.join(', ')}\n\nSend to VPI anyway?`);
       if (!proceed) return;
     }
+    // Warn if any subjects still have revision requested
+    const pendingRevisions = submissions.filter((s) => s.submission_status === 'revision_requested');
+    if (pendingRevisions.length > 0) {
+      const proceed = confirm(
+        `${pendingRevisions.length} subject(s) still have pending revision requests:\n${pendingRevisions.map((s) => s.subject).join(', ')}\n\nSend to VPI anyway?`
+      );
+      if (!proceed) return;
+    }
 
     setCompiling(true); setMsg(null);
     try {
@@ -146,7 +211,7 @@ export default function ClassSponsorPortal() {
         conditional_subjects: compileForm.conditional_subjects || undefined,
         closing_date:         compileForm.closing_date         || undefined,
       });
-      setMsg({ ok: true, text: `✓ Report card compiled and sent to VPI for review.` });
+      setMsg({ ok: true, text: '✓ Report card compiled and sent to VPI for review.' });
       await load();
       setSelected(null);
     } catch (err: any) {
@@ -154,8 +219,12 @@ export default function ClassSponsorPortal() {
     } finally { setCompiling(false); }
   };
 
-  const submittedCount = submissions.length;
-  const totalSubjects  = reportCardSubjects.length;
+  const submittedCount     = submissions.length;
+  const totalSubjects      = reportCardSubjects.length;
+  const revisionCount      = submissions.filter((s) => s.submission_status === 'revision_requested').length;
+  const acceptedCount      = submissions.filter((s) => s.submission_status === 'accepted').length;
+
+  const canEdit = selected && ['draft', 'rejected'].includes(selected.approval_status);
 
   return (
     <div className="space-y-5">
@@ -163,7 +232,7 @@ export default function ClassSponsorPortal() {
         <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Class sponsor</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Mark sheet compilation</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Collect subject marks from teachers, complete the mark sheet, and submit to the VPI for approval.
+          Collect subject marks from teachers, review each submission, request revisions if needed, then submit to the VPI.
         </p>
       </div>
 
@@ -176,8 +245,8 @@ export default function ClassSponsorPortal() {
         </div>
       )}
 
-      {/* Filter + card list */}
       <div className="flex gap-5 flex-col lg:flex-row">
+        {/* ─── Card list ─── */}
         <div className="lg:w-80 shrink-0 space-y-3">
           <div className="flex gap-2 items-center">
             <input value={filterYear} onChange={(e) => setFilterYear(e.target.value)}
@@ -210,7 +279,7 @@ export default function ClassSponsorPortal() {
                         <p className="text-[10px] font-mono text-slate-400 mt-0.5">{rc.student?.student_id}</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${STATUS_COLORS[rc.approval_status]}`}>
-                        {rc.approval_status?.replace('_', ' ')}
+                        {rc.approval_status?.replace(/_/g, ' ')}
                       </span>
                     </div>
                     {rc.rejection_reason && (
@@ -223,16 +292,20 @@ export default function ClassSponsorPortal() {
               })}
         </div>
 
-        {/* Detail panel */}
+        {/* ─── Detail panel ─── */}
         {selected ? (
           <div className="flex-1 min-w-0 space-y-4">
 
-            {/* Subject submissions tracker */}
+            {/* ── Subject submissions tracker ── */}
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+              <div className="border-b border-slate-100 px-5 py-4 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-bold text-slate-900">Subject marks received</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{submittedCount} of {totalSubjects} subjects submitted by teachers</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {submittedCount} of {totalSubjects} subjects submitted
+                    {revisionCount > 0 && <span className="ml-2 font-semibold text-rose-600">· {revisionCount} revision{revisionCount !== 1 ? 's' : ''} pending</span>}
+                    {acceptedCount > 0 && <span className="ml-2 font-semibold text-emerald-600">· {acceptedCount} accepted</span>}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="h-2 w-32 rounded-full bg-slate-200 overflow-hidden">
@@ -244,22 +317,127 @@ export default function ClassSponsorPortal() {
                   </span>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 p-4">
-                {reportCardSubjects.map((s) => {
-                  const sub = submissions.find((x) => x.subject === s);
+
+              {feedbackMsg && (
+                <div className={`mx-5 mt-4 flex items-start gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                  feedbackMsg.ok ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                                 : 'border border-rose-200 bg-rose-50 text-rose-700'
+                }`}>
+                  <span className="shrink-0">{feedbackMsg.ok ? '✓' : '⚠'}</span> {feedbackMsg.text}
+                </div>
+              )}
+
+              {/* Per-subject rows */}
+              <div className="divide-y divide-slate-100">
+                {reportCardSubjects.map((subjectName) => {
+                  const sub = submissions.find((x) => x.subject === subjectName);
+                  const statusInfo = sub ? SUB_STATUS[sub.submission_status] ?? SUB_STATUS.submitted : null;
+                  const isFeedbackOpen = sub && feedbackSubId === sub.id;
+
                   return (
-                    <div key={s} className={`rounded-lg border px-3 py-1.5 text-xs ${
-                      sub ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'
-                    }`}>
-                      <span className={sub ? 'font-semibold text-emerald-800' : 'text-slate-500'}>{s}</span>
-                      {sub && <span className="ml-1 text-emerald-600 text-[10px]">· {sub.teacher_name}</span>}
+                    <div key={subjectName} className="px-5 py-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        {/* Subject + teacher info */}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-slate-900">{subjectName}</span>
+                            {sub && (
+                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusInfo!.cls}`}>
+                                {statusInfo!.label}
+                              </span>
+                            )}
+                            {!sub && (
+                              <span className="text-xs text-slate-400 italic">Not yet submitted</span>
+                            )}
+                          </div>
+                          {sub && (
+                            <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-medium text-slate-700">👤 {sub.teacher_name}</span>
+                              <span className="text-[10px] font-mono text-slate-400">{sub.employee_id}</span>
+                              <span className="text-[10px] text-slate-400">
+                                Submitted {new Date(sub.submitted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                          {/* Existing feedback shown */}
+                          {sub?.submission_status === 'revision_requested' && sub.sponsor_feedback && (
+                            <div className="mt-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-800">
+                              <span className="font-semibold">Your feedback:</span> {sub.sponsor_feedback}
+                              {sub.feedback_sent_at && (
+                                <span className="ml-2 text-rose-400">
+                                  · {new Date(sub.feedback_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action buttons — only available while card is editable */}
+                        {sub && canEdit && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            {sub.submission_status !== 'accepted' && (
+                              <button
+                                onClick={() => handleAccept(sub)}
+                                className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                              >
+                                ✓ Accept
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (isFeedbackOpen) {
+                                  setFeedbackSubId(null);
+                                  setFeedbackText('');
+                                } else {
+                                  setFeedbackSubId(sub.id);
+                                  setFeedbackText(sub.sponsor_feedback || '');
+                                  setFeedbackMsg(null);
+                                }
+                              }}
+                              className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                                isFeedbackOpen
+                                  ? 'border-slate-300 bg-slate-100 text-slate-700'
+                                  : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                              }`}
+                            >
+                              {isFeedbackOpen ? '✕ Cancel' : '↩ Request revision'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Inline feedback form */}
+                      {isFeedbackOpen && sub && (
+                        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 space-y-2">
+                          <p className="text-xs font-semibold text-rose-800">
+                            Tell <span className="underline">{sub.teacher_name}</span> what needs to be corrected for {subjectName}:
+                          </p>
+                          <textarea
+                            rows={3}
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            placeholder="e.g. The 3rd period mark appears too high. Please recheck and resubmit."
+                            className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-rose-400"
+                          />
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-rose-500">The teacher will see this message when they open this subject.</p>
+                            <button
+                              disabled={sendingFeedback || !feedbackText.trim()}
+                              onClick={() => handleRequestRevision(sub)}
+                              className="rounded-lg bg-rose-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+                            >
+                              {sendingFeedback ? 'Sending…' : '↩ Send revision request'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Full marks preview */}
+            {/* ── Full mark sheet preview ── */}
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
               <div className="border-b border-slate-100 px-5 py-3 text-sm font-bold text-slate-900">
                 Mark sheet — {selected.student?.first_name} {selected.student?.last_name}
@@ -268,26 +446,38 @@ export default function ClassSponsorPortal() {
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
                     <th style={{ border: '1px solid #e2e8f0', padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 11 }}>SUBJECT</th>
+                    <th style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'left', fontWeight: 700, fontSize: 10, whiteSpace: 'nowrap' }}>TEACHER</th>
                     {ALL_PERIODS.map((p) => (
                       <th key={p} style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'center', fontWeight: 700, fontSize: 10, whiteSpace: 'nowrap' }}>{p}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {reportCardSubjects.map((subj) => (
-                    <tr key={subj}>
-                      <td style={{ border: '1px solid #e2e8f0', padding: '4px 10px', fontWeight: 600, whiteSpace: 'nowrap' }}>{subj}</td>
-                      {ALL_PERIODS.map((period) => (
-                        <ScoreCell key={period} value={(selected.subject_marks?.[subj]?.[period] || '')} />
-                      ))}
-                    </tr>
-                  ))}
+                  {reportCardSubjects.map((subj) => {
+                    const sub = submissions.find((x) => x.subject === subj);
+                    return (
+                      <tr key={subj} style={{ background: sub?.submission_status === 'revision_requested' ? '#fff5f5' : undefined }}>
+                        <td style={{ border: '1px solid #e2e8f0', padding: '4px 10px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {subj}
+                          {sub?.submission_status === 'revision_requested' && (
+                            <span style={{ marginLeft: 6, fontSize: 9, color: '#dc2626', fontWeight: 700, background: '#fee2e2', padding: '1px 5px', borderRadius: 4 }}>REVISION</span>
+                          )}
+                        </td>
+                        <td style={{ border: '1px solid #e2e8f0', padding: '4px 8px', fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {sub?.teacher_name || '—'}
+                        </td>
+                        {ALL_PERIODS.map((period) => (
+                          <ScoreCell key={period} value={(selected.subject_marks?.[subj]?.[period] || '')} />
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Compile form — only for draft/rejected cards */}
-            {['draft', 'rejected'].includes(selected.approval_status) && (
+            {/* ── Compile form ── */}
+            {canEdit && (
               <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-slate-950">Complete mark sheet details</p>
@@ -297,15 +487,15 @@ export default function ClassSponsorPortal() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   {([
-                    ['aggregate',      'Aggregate'],
-                    ['average',        'Average'],
-                    ['rank',           'Rank in class'],
-                    ['total_in_class', 'Total in class'],
-                    ['conduct',        'Conduct'],
-                    ['class_sponsor',  'Class sponsor name'],
-                    ['promoted_to',    'Promoted to grade'],
+                    ['aggregate',            'Aggregate'],
+                    ['average',              'Average'],
+                    ['rank',                 'Rank in class'],
+                    ['total_in_class',       'Total in class'],
+                    ['conduct',              'Conduct'],
+                    ['class_sponsor',        'Class sponsor name'],
+                    ['promoted_to',          'Promoted to grade'],
                     ['conditional_subjects', 'Conditional subjects'],
-                    ['closing_date',   'Closing date'],
+                    ['closing_date',         'Closing date'],
                   ] as [keyof typeof compileForm, string][]).map(([k, label]) => (
                     <div key={k}>
                       <label className="mb-1 block text-xs font-semibold text-slate-600">{label}</label>
@@ -330,7 +520,6 @@ export default function ClassSponsorPortal() {
               </div>
             )}
 
-            {/* Status message for cards already submitted */}
             {selected.approval_status === 'pending_vpi' && (
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-800 space-y-1">
                 <p className="font-bold">⏳ Awaiting VPI review</p>
@@ -349,7 +538,7 @@ export default function ClassSponsorPortal() {
             <div className="text-center">
               <p className="text-3xl mb-2">📋</p>
               <p className="text-sm font-semibold text-slate-600">Select a report card to compile</p>
-              <p className="text-xs text-slate-400 mt-1">Choose a student from the list to view and complete their mark sheet.</p>
+              <p className="text-xs text-slate-400 mt-1">Choose a student from the list to view and manage their mark sheet.</p>
             </div>
           </div>
         )}

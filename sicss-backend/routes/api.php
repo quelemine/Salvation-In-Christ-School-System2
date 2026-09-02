@@ -223,9 +223,12 @@ Route::prefix('v1')->group(function () {
         // Subject marks workflow:
         //   Subject teachers submit marks per subject
         //   Class sponsor views all submissions, compiles, and sends to VPI
-        Route::get('/report-cards/{id}/subject-submissions',   [SubjectMarkController::class, 'index'])->middleware('role:admin|class-sponsor|subject-teacher');
-        Route::post('/report-cards/{id}/subject-marks',        [SubjectMarkController::class, 'submit'])->middleware('role:subject-teacher|class-sponsor|admin');
-        Route::post('/report-cards/{id}/compile-and-submit',   [SubjectMarkController::class, 'compile'])->middleware('role:class-sponsor|admin');
+        Route::get('/report-cards/{id}/subject-submissions',                                        [SubjectMarkController::class, 'index'])->middleware('role:admin|class-sponsor|subject-teacher');
+        Route::post('/report-cards/{id}/subject-marks',                                             [SubjectMarkController::class, 'submit'])->middleware('role:subject-teacher|class-sponsor|admin');
+        Route::post('/report-cards/{id}/compile-and-submit',                                        [SubjectMarkController::class, 'compile'])->middleware('role:class-sponsor|admin');
+        // Sponsor feedback on individual subject submissions
+        Route::post('/report-cards/{id}/subject-submissions/{submissionId}/request-revision',       [SubjectMarkController::class, 'requestRevision'])->middleware('role:class-sponsor|admin');
+        Route::post('/report-cards/{id}/subject-submissions/{submissionId}/accept',                 [SubjectMarkController::class, 'acceptSubmission'])->middleware('role:class-sponsor|admin');
 
         // VPI: approve/reject compiled report card
         Route::post('/report-cards/{id}/vpi-review', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
