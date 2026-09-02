@@ -53,14 +53,13 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/settings', [SystemSettingsController::class, 'show']);
-    Route::get('/classes', [ClassController::class, 'index']);  // public — needed for dropdowns (student application form etc.)
+    Route::get('/classes', [ClassController::class, 'index']);    // public — needed for unauthenticated dropdowns
+    Route::get('/teachers', [TeacherController::class, 'index']); // accessible to all authenticated users for dropdowns
     // NOTE: /classes is kept public (no auth) so dropdowns work on unauthenticated pages (e.g. application form)
 
     Route::middleware('auth:sanctum')->group(function () {
         // Upload endpoints (admin only)
-        // Academic reference data required when teachers enter grades.
-        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress');
-        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress');
+        // Academic reference data (divisions, grades) — open to all authenticated users for dropdowns
         Route::get('/grades', [GradeController::class, 'index'])->middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress');
 
         Route::middleware('role:admin')->group(function () {
@@ -195,13 +194,12 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('students', StudentController::class)->only(['update', 'destroy']);
         });
 
-        // Divisions, classes, and subjects - viewable by admin, principal, and management roles
-        Route::get('/divisions', [DivisionController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|teacher|class-sponsor|subject-teacher|finance|finance-staff|parent|student');
-        // /classes is registered publicly above (needed for dropdowns everywhere)
-        Route::get('/subjects', [SubjectController::class, 'index'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|teacher|class-sponsor|subject-teacher');
+        // Divisions - index registered here for all authenticated users; CRUD admin-only above
+        Route::get('/divisions', [DivisionController::class, 'index']);
+        // /classes and /subjects are registered publicly above
+        // /teachers index is registered publicly above
 
-        // Teachers - viewable by admin, VPI, principal, proprietor, and proprietress
-        Route::get('/teachers', [TeacherController::class, 'index'])->middleware('role:admin|vice-principal-instruction|principal|proprietor|proprietress');
+        // Teachers - index registered publicly above; CRUD admin-only
         Route::middleware('role:admin')->group(function () {
             Route::apiResource('teachers', TeacherController::class)->except(['index']);
         });
