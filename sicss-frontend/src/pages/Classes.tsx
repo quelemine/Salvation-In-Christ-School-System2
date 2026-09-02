@@ -105,7 +105,8 @@ export default function Classes() {
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setError('Class name is required.'); return; }
+    if (!form.division_id) { setError('Please select a division.'); return; }
+    if (!form.name.trim() || form.name === 'custom') { setError('Class name is required.'); return; }
     setSaving(true); setError('');
     const payload = {
       division_id:         form.division_id ? Number(form.division_id) : undefined,

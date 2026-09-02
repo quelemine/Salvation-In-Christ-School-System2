@@ -55,8 +55,9 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/settings', [SystemSettingsController::class, 'show']);
     Route::get('/classes', [ClassController::class, 'index']);    // public — needed for unauthenticated dropdowns
+    Route::get('/subjects', [SubjectController::class, 'index']); // public — needed for dropdowns across all roles
     Route::get('/teachers', [TeacherController::class, 'index']); // accessible to all authenticated users for dropdowns
-    // NOTE: /classes is kept public (no auth) so dropdowns work on unauthenticated pages (e.g. application form)
+    // NOTE: /classes and /subjects are kept public (no auth) so dropdowns work on unauthenticated pages (e.g. application form)
 
     Route::middleware('auth:sanctum')->group(function () {
         // Upload endpoints (admin only)
