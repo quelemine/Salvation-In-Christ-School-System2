@@ -52,12 +52,14 @@ class TeacherController extends Controller
             'qualifications' => 'nullable|string',
             'specialization' => 'nullable|string',
             'status' => 'in:active,inactive,on_leave',
+            'role' => 'nullable|in:TEACHER,STAFF',
         ]);
 
         // Auto-generate employee ID if not provided
-        $data = $request->except(['sponsor_class_id', 'subject_assignments', 'class_ids']);
+        $data = $request->except(['sponsor_class_id', 'subject_assignments', 'class_ids', 'role']);
         if (empty($data['employee_id'])) {
-            $data['employee_id'] = $this->generateEmployeeId();
+            $role = $request->input('role', 'TEACHER');
+            $data['employee_id'] = $this->generateEmployeeId($role);
         }
 
         $teacher = Teacher::create($data);
@@ -153,9 +155,9 @@ class TeacherController extends Controller
         return $teacher->fresh(['user.role', 'salaryStructure', 'sponsoredClass', 'classes', 'subjectClassAssignments.subject', 'subjectClassAssignments.class']);
     }
 
-    private function generateEmployeeId(): string
+    private function generateEmployeeId(string $role = 'TEACHER'): string
     {
-        $prefix = 'EMP';
+        $prefix = $role === 'STAFF' ? 'STF' : 'TCH';
         $year = date('Y');
         
         // Get the last teacher with an auto-generated employee ID for this year
@@ -174,6 +176,13 @@ class TeacherController extends Controller
             $employeeId = "{$prefix}-{$year}-{$newNumber}";
             $lastNumber++;
         } while (Teacher::where('employee_id', $employeeId)->exists());
+
+        // Ensure employee_id doesn't conflict with user_codes in users table
+        while (\App\Models\User::where('user_code', $employeeId)->exists()) {
+            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+            $employeeId = "{$prefix}-{$year}-{$newNumber}";
+            $lastNumber++;
+        }
         
         return $employeeId;
     }

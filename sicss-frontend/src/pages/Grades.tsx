@@ -7,6 +7,7 @@ import { gradeService, type GradeRecord } from '../services/gradeService';
 import { FormModal } from '../components/FormModal';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, Card, CardContent } from '../components/ui';
 
 type StudentOption = { id: number; first_name: string; last_name: string; student_id: string; class_id?: number; class?: { name: string }; user?: { user_code?: string } };
 type ReportCard = { id: number; student: { id: number; first_name: string; last_name: string; class?: { name: string } }; class?: { name: string }; academic_year: string; approval_status: string; average?: number; rank?: number };
@@ -82,8 +83,8 @@ export default function Grades() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-semibold text-cyan-700">Academic performance</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+          <p className="text-sm font-semibold text-blue-700">Academic performance</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             {isApprover ? 'Grade Approvals' : 'Grades'}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
@@ -91,163 +92,230 @@ export default function Grades() {
           </p>
         </div>
         {!isApprover && (
-          <button onClick={() => setIsOpen(true)} className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
+          <Button onClick={() => setIsOpen(true)}>
             + Add grade
-          </button>
+          </Button>
         )}
       </div>
-      {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={() => setError('')} variant="secondary">Dismiss</Button>
+        </div>
+      )}
 
       {isApprover ? (
         // VPI/Principal Report Card View
         <div className="space-y-4">
           {reportCards.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <p className="text-slate-500">{isVPI ? 'No report cards pending VPI approval.' : 'No report cards found.'}</p>
-            </div>
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-slate-500">{isVPI ? 'No report cards pending VPI approval.' : 'No report cards found.'}</p>
+              </CardContent>
+            </Card>
           ) : (
             reportCards.map((rc) => (
-              <div key={rc.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      {rc.student.first_name} {rc.student.last_name}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {rc.student.class?.name || 'No class'} · {rc.academic_year}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      <span className="font-semibold">Status:</span> {rc.approval_status || 'Unknown'}
-                    </p>
-                    {typeof rc.average === 'number' && (
-                      <p className="mt-2 text-sm">
-                        <span className="font-semibold text-slate-700">Average:</span> {rc.average.toFixed(2)}
-                        {typeof rc.rank === 'number' && (
-                          <>
-                            <span className="ml-3 font-semibold text-slate-700">Rank:</span> {rc.rank}
-                          </>
-                        )}
+              <Card key={rc.id}>
+                <CardContent className="p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">
+                        {rc.student.first_name} {rc.student.last_name}
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {rc.student.class?.name || 'No class'} · {rc.academic_year}
                       </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        <span className="font-semibold">Status:</span> {rc.approval_status || 'Unknown'}
+                      </p>
+                      {typeof rc.average === 'number' && (
+                        <p className="mt-2 text-sm">
+                          <span className="font-semibold text-slate-700">Average:</span> {rc.average.toFixed(2)}
+                          {typeof rc.rank === 'number' && (
+                            <>
+                              <span className="ml-3 font-semibold text-slate-700">Rank:</span> {rc.rank}
+                            </>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                    {canApprove && (
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleReportCardAction(rc.id, 'approve')}
+                          disabled={saving}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleReportCardAction(rc.id, 'reject')}
+                          disabled={saving}
+                          variant="danger"
+                        >
+                          Return to Sponsor
+                        </Button>
+                      </div>
                     )}
                   </div>
-                  {canApprove && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleReportCardAction(rc.id, 'approve')}
-                        disabled={saving}
-                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleReportCardAction(rc.id, 'reject')}
-                        disabled={saving}
-                        className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
-                      >
-                        Return to Sponsor
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))
           )}
         </div>
       ) : (
         // Teacher Grades View
         <>
-          <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Division</label>
-              <select value={divisionId} onChange={(event) => { setDivisionId(event.target.value); setClassId(''); }} className="input-field">
-                <option value="">All divisions</option>
-                {divisions.map((division) => <option key={division.id} value={division.id}>{division.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
-              <select value={classId} onChange={(event) => setClassId(event.target.value)} className="input-field">
-                <option value="">All classes</option>
-                {filteredClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.section ? `- ${item.section}` : ''}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-[700px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-3 sm:px-6 py-3">Student</th>
-                  <th className="px-3 sm:px-6 py-3 hidden sm:table-cell">Class</th>
-                  <th className="px-3 sm:px-6 py-3">Subject</th>
-                  <th className="px-3 sm:px-6 py-3">Score</th>
-                  <th className="px-3 sm:px-6 py-3">Grade</th>
-                  <th className="px-3 sm:px-6 py-3">Status</th>
-                  <th className="px-3 sm:px-6 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {grades.filter((item) => !classId || item.student?.class?.id === Number(classId)).map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 font-semibold text-slate-800">{item.student?.first_name} {item.student?.last_name}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-slate-500 hidden sm:table-cell">{item.student?.class?.name || '-'}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-slate-500">{item.subject?.name || '-'}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-slate-500">{item.score}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 font-bold text-cyan-700">{item.grade}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 capitalize text-slate-600">{item.approval_status || 'draft'}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                      {isTeacher && item.approval_status === 'draft' && (
-                        <button onClick={() => submitGrade(item.id)} className="text-xs sm:text-sm font-semibold text-cyan-700 hover:text-cyan-900">Submit</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <Select
+                    label="Division"
+                    value={divisionId}
+                    onChange={(event) => { setDivisionId(event.target.value); setClassId(''); }}
+                    options={[
+                      { value: '', label: 'All divisions' },
+                      ...divisions.map((division) => ({ 
+                        value: String(division.id), 
+                        label: division.description ? `${division.name} - ${division.description}` : division.name 
+                      }))
+                    ]}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label="Class"
+                    value={classId}
+                    onChange={(event) => setClassId(event.target.value)}
+                    options={[
+                      { value: '', label: 'All classes' },
+                      ...filteredClasses.map((item) => ({ value: String(item.id), label: `${item.name} ${item.section ? `- ${item.section}` : ''}` }))
+                    ]}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead className="hidden sm:table-cell">Class</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Grade</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {grades.filter((item) => !classId || item.student?.class?.id === Number(classId)).map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-semibold text-slate-800">{item.student?.first_name} {item.student?.last_name}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-slate-500">{item.student?.class?.name || '-'}</TableCell>
+                        <TableCell className="text-slate-500">{item.subject?.name || '-'}</TableCell>
+                        <TableCell className="text-slate-500">{item.score}</TableCell>
+                        <TableCell className="font-bold text-blue-600">{item.grade}</TableCell>
+                        <TableCell className="capitalize text-slate-600">
+                          <Badge variant={item.approval_status === 'draft' ? 'default' : 'success'}>
+                            {item.approval_status || 'draft'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {isTeacher && item.approval_status === 'draft' && (
+                            <Button onClick={() => submitGrade(item.id)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                              Submit
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
       <FormModal isOpen={isOpen} title="Add grade" onClose={() => setIsOpen(false)} onSubmit={createGrade} submitText="Save grade" isLoading={saving}>
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Division</label>
-            <select required value={divisionId} onChange={(event) => { setDivisionId(event.target.value); setClassId(''); setForm({ ...form, student_id: '' }); }} className="input-field">
-              <option value="">Select a division</option>
-              {divisions.map((division) => <option key={division.id} value={division.id}>{division.name}</option>)}
-            </select>
+            <Select
+              label="Division"
+              value={divisionId}
+              onChange={(event) => { setDivisionId(event.target.value); setClassId(''); setForm({ ...form, student_id: '' }); }}
+              options={[
+                { value: '', label: 'Select a division' },
+                ...divisions.map((division) => ({ 
+                  value: String(division.id), 
+                  label: division.description ? `${division.name} - ${division.description}` : division.name 
+                }))
+              ]}
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
-            <select required value={classId} onChange={(event) => { setClassId(event.target.value); setForm({ ...form, student_id: '' }); }} className="input-field">
-              <option value="">Select a class</option>
-              {filteredClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.section ? `- ${item.section}` : ''}</option>)}
-            </select>
+            <Select
+              label="Class"
+              value={classId}
+              onChange={(event) => { setClassId(event.target.value); setForm({ ...form, student_id: '' }); }}
+              options={[
+                { value: '', label: 'Select a class' },
+                ...filteredClasses.map((item) => ({ value: String(item.id), label: `${item.name} ${item.section ? `- ${item.section}` : ''}` }))
+              ]}
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
-            <select required value={form.student_id} onChange={(event) => setForm({ ...form, student_id: event.target.value })} className="input-field">
-              <option value="">Select a student</option>
-              {students.map((student) => <option key={student.id} value={student.id}>{student.user?.user_code || student.student_id} - {student.first_name} {student.last_name}</option>)}
-            </select>
+            <Select
+              label="Student"
+              value={form.student_id}
+              onChange={(event) => setForm({ ...form, student_id: event.target.value })}
+              options={[
+                { value: '', label: 'Select a student' },
+                ...students.map((student) => ({ value: String(student.id), label: `${student.user?.user_code || student.student_id} - ${student.first_name} ${student.last_name}` }))
+              ]}
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Subject</label>
-            <select required value={form.subject_id} onChange={(event) => setForm({ ...form, subject_id: event.target.value })} className="input-field">
-              <option value="">Select a subject</option>
-              {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.code} - {subject.name}</option>)}
-            </select>
+            <Select
+              label="Subject"
+              value={form.subject_id}
+              onChange={(event) => setForm({ ...form, subject_id: event.target.value })}
+              options={[
+                { value: '', label: 'Select a subject' },
+                ...subjects.map((subject) => ({ value: String(subject.id), label: `${subject.code} - ${subject.name}` }))
+              ]}
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Score</label>
-              <input required min="0" max="100" type="number" value={form.score} onChange={(event) => setForm({ ...form, score: event.target.value })} className="input-field" />
+              <Input
+                label="Score"
+                type="number"
+                value={form.score}
+                onChange={(event) => setForm({ ...form, score: event.target.value })}
+                min={0}
+                max={100}
+                required
+              />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Term</label>
-              <select value={form.term} onChange={(event) => setForm({ ...form, term: event.target.value })} className="input-field">
-                <option>Term 1</option>
-                <option>Term 2</option>
-                <option>Term 3</option>
-              </select>
+              <Select
+                label="Term"
+                value={form.term}
+                onChange={(event) => setForm({ ...form, term: event.target.value })}
+                options={[
+                  { value: 'Term 1', label: 'Term 1' },
+                  { value: 'Term 2', label: 'Term 2' },
+                  { value: 'Term 3', label: 'Term 3' },
+                ]}
+              />
             </div>
           </div>
         </div>

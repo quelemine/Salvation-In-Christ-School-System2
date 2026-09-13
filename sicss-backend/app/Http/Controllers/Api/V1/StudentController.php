@@ -65,7 +65,6 @@ class StudentController extends Controller
             'nationality'            => 'nullable|string|max:255',
             'county'                 => 'nullable|string|max:255',
             'previous_school'        => 'nullable|string|max:255',
-            'grade_applying_for'     => 'nullable|string|max:100',
             'father_name'            => 'nullable|string|max:255',
             'mother_name'            => 'nullable|string|max:255',
             'father_occupation'      => 'nullable|string|max:255',
@@ -113,6 +112,12 @@ class StudentController extends Controller
 
             // Ensure unique student_id (avoid collision by incrementing)
             while (\App\Models\Student::where('student_id', $data['student_id'])->exists()) {
+                $next++;
+                $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
+            }
+
+            // Ensure student_id doesn't conflict with user_codes in users table
+            while (\App\Models\User::where('user_code', $data['student_id'])->exists()) {
                 $next++;
                 $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
@@ -167,7 +172,6 @@ class StudentController extends Controller
             'nationality'            => 'nullable|string|max:255',
             'county'                 => 'nullable|string|max:255',
             'previous_school'        => 'nullable|string|max:255',
-            'grade_applying_for'     => 'nullable|string|max:100',
             'father_name'            => 'nullable|string|max:255',
             'mother_name'            => 'nullable|string|max:255',
             'father_occupation'      => 'nullable|string|max:255',
