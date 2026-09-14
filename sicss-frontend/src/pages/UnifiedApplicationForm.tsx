@@ -411,7 +411,7 @@ export default function UnifiedApplicationForm() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <div>
             {/* Step 1: Personal Information */}
             {currentStep === 1 && (
               <div className="space-y-6">
@@ -438,8 +438,8 @@ export default function UnifiedApplicationForm() {
                       onChange={(e) => set('gender', e.target.value)}
                       options={[
                         { value: '', label: 'Select gender' },
-                        { value: 'male', label: 'Male' },
-                        { value: 'female', label: 'Female' },
+                        { value: 'Male', label: 'Male' },
+                        { value: 'Female', label: 'Female' },
                       ]}
                       className={missingFields.includes('gender') ? 'border-red-500' : ''}
                     />
@@ -1177,12 +1177,12 @@ Status: ${accountActive ? 'Active' : 'Inactive'}
                   Next →
                 </Button>
               ) : (
-                <Button type="submit" disabled={saving} className="bg-blue-600 text-white hover:bg-blue-700">
+                <Button type="button" onClick={handleSubmit} disabled={saving} className="bg-blue-600 text-white hover:bg-blue-700">
                   {saving ? 'Submitting...' : editId ? 'Update Application' : 'Submit Application'}
                 </Button>
               )}
             </div>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </div>

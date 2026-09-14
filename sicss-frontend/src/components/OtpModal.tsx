@@ -336,14 +336,16 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-2xl text-slate-400 hover:text-slate-600"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
         >
-          ×
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
 
         {/* Phone Number Step */}
@@ -351,35 +353,53 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
           <>
             {/* Illustration */}
             <div className="mb-6 flex justify-center">
-              <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-4xl">📱</span>
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 opacity-20 blur-xl" />
+                <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-cyan-50 to-blue-100 flex items-center justify-center shadow-lg ring-4 ring-white">
+                  <span className="text-4xl">📱</span>
+                </div>
               </div>
             </div>
 
             {/* Delivery Method Tabs */}
-            <div className="mb-6 flex rounded-lg bg-slate-100 p-1">
+            <div className="mb-6 flex rounded-xl bg-slate-100 p-1.5">
               <button
                 onClick={() => setDeliveryMethod('email')}
-                className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                  deliveryMethod === 'email' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600'
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+                  deliveryMethod === 'email' 
+                    ? 'bg-white text-blue-600 shadow-md' 
+                    : 'text-slate-600 hover:bg-white/50'
                 }`}
               >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
                 Email
               </button>
               <button
                 onClick={() => setDeliveryMethod('sms')}
-                className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                  deliveryMethod === 'sms' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600'
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+                  deliveryMethod === 'sms' 
+                    ? 'bg-white text-blue-600 shadow-md' 
+                    : 'text-slate-600 hover:bg-white/50'
                 }`}
               >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
                 SMS
               </button>
               <button
                 onClick={() => setDeliveryMethod('whatsapp')}
-                className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                  deliveryMethod === 'whatsapp' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600'
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+                  deliveryMethod === 'whatsapp' 
+                    ? 'bg-white text-blue-600 shadow-md' 
+                    : 'text-slate-600 hover:bg-white/50'
                 }`}
               >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
                 WhatsApp
               </button>
             </div>
@@ -387,7 +407,7 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
             <h2 className="mb-2 text-2xl font-bold text-slate-900">
               {deliveryMethod === 'email' ? 'Send to Email' : 'Enter Phone Number'}
             </h2>
-            <p className="mb-6 text-sm text-slate-600">
+            <p className="mb-6 text-sm text-slate-500 leading-relaxed">
               {deliveryMethod === 'email' 
                 ? `We will send a verification code to ${email}`
                 : 'We will send a verification code to your phone number'
@@ -402,24 +422,35 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
                   <button
                     type="button"
                     onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                    className="w-32 rounded-lg border border-slate-300 px-3 py-3 text-left text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-32 rounded-xl border border-slate-300 bg-white px-3 py-3 text-left text-sm font-medium text-slate-700 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
                   >
-                    {countries.find(c => c.code === selectedCountryCode)?.flag} {selectedCountryCode}
+                    <span className="flex items-center gap-2">
+                      <span className="text-lg">{countries.find(c => c.code === selectedCountryCode)?.flag}</span>
+                      <span>{selectedCountryCode}</span>
+                      <svg className={`ml-auto h-4 w-4 text-slate-400 transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
                   </button>
 
                   {showCountryDropdown && (
-                    <div className="absolute top-full left-0 z-10 mt-1 w-72 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                      <div className="sticky top-0 bg-white p-2 border-b border-slate-200">
-                        <input
-                          type="text"
-                          placeholder="Search country..."
-                          value={countrySearch}
-                          onChange={(e) => setCountrySearch(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                    <div className="absolute top-full left-0 z-10 mt-2 w-80 max-h-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+                      <div className="sticky top-0 bg-white p-3 border-b border-slate-100">
+                        <div className="relative">
+                          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Search country..."
+                            value={countrySearch}
+                            onChange={(e) => setCountrySearch(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
                       </div>
-                      <div className="max-h-48 overflow-y-auto">
+                      <div className="max-h-60 overflow-y-auto">
                         {filteredCountries.map((country) => (
                           <button
                             key={country.code}
@@ -429,16 +460,19 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
                               setShowCountryDropdown(false);
                               setCountrySearch('');
                             }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-100 transition-colors"
+                            className="flex w-full items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                           >
-                            <span>{country.flag}</span>
-                            <span className="flex-1 text-left">{country.name}</span>
-                            <span className="text-slate-500">{country.code}</span>
+                            <span className="text-xl">{country.flag}</span>
+                            <span className="flex-1 text-left font-medium text-slate-700">{country.name}</span>
+                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{country.code}</span>
                           </button>
                         ))}
                         {filteredCountries.length === 0 && (
-                          <div className="px-3 py-4 text-sm text-slate-500 text-center">
-                            No countries found
+                          <div className="px-4 py-8 text-center">
+                            <svg className="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="mt-2 text-sm text-slate-500">No countries found</p>
                           </div>
                         )}
                       </div>
@@ -452,25 +486,36 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="Phone number"
-                  className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
                 />
               </div>
             </div>
           )}
 
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">{error}</span>
               </div>
             )}
 
             <button
               onClick={handleSendCode}
               disabled={loading}
-              className="w-full rounded-xl py-3 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-xl py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               style={{ backgroundColor: 'var(--accent, #0891b2)' }}
             >
-              {loading ? 'Sending...' : 'Send Code'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Sending...
+                </span>
+              ) : 'Send Code'}
             </button>
           </>
         )}
@@ -480,8 +525,11 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
           <>
             {/* Illustration */}
             <div className="mb-6 flex justify-center">
-              <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-4xl">🔒</span>
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 opacity-20 blur-xl" />
+                <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-cyan-50 to-blue-100 flex items-center justify-center shadow-lg ring-4 ring-white">
+                  <span className="text-4xl">🔒</span>
+                </div>
               </div>
             </div>
 
@@ -494,14 +542,19 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
             </p>
 
             {devMode && devOtpCode && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-                <p className="font-semibold text-amber-800">⚠️ Development Mode</p>
-                <p className="mt-1 text-amber-700">Your OTP code: <span className="font-mono font-bold text-lg">{devOtpCode}</span></p>
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="font-semibold text-amber-800">Development Mode</p>
+                  <p className="mt-1 text-amber-700">Your OTP code: <span className="font-mono font-bold text-lg">{devOtpCode}</span></p>
+                </div>
               </div>
             )}
 
             {/* 6 OTP Input Boxes */}
-            <div className="mb-6 flex justify-center gap-2">
+            <div className="mb-6 flex justify-center gap-3">
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -515,26 +568,31 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(index, e)}
                   onPaste={handleOtpPaste}
-                  className="h-14 w-12 rounded-lg border-2 border-slate-300 text-center text-2xl font-bold focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:h-16 sm:w-14"
+                  className="h-16 w-12 rounded-xl border-2 border-slate-200 bg-white text-center text-2xl font-bold text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:shadow-md sm:h-18 sm:w-14"
                 />
               ))}
             </div>
 
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">{error}</span>
               </div>
             )}
 
             {/* Resend */}
             <div className="mb-6 text-center">
               {resendTimer > 0 ? (
-                <p className="text-sm text-slate-500">Resend code in {resendTimer}s</p>
+                <p className="text-sm text-slate-500">
+                  Resend code in <span className="font-semibold text-blue-600">{resendTimer}s</span>
+                </p>
               ) : (
                 <button
                   onClick={handleResend}
                   disabled={loading}
-                  className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50"
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Resend Code
                 </button>
@@ -544,18 +602,29 @@ export default function OtpModal({ isOpen, onClose, onSuccess, userId, email, ph
             <button
               onClick={handleVerify}
               disabled={loading}
-              className="w-full rounded-xl py-3 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-xl py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               style={{ backgroundColor: 'var(--accent, #0891b2)' }}
             >
-              {loading ? 'Verifying...' : 'Verify Code'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Verifying...
+                </span>
+              ) : 'Verify Code'}
             </button>
 
             {/* Back to phone */}
             <button
               onClick={() => setStep('phone')}
-              className="mt-4 w-full text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+              className="mt-4 w-full text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors flex items-center justify-center gap-2"
             >
-              ← Change phone number
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Change phone number
             </button>
           </>
         )}

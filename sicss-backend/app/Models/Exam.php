@@ -36,22 +36,22 @@ class Exam extends Model
 
     public function subject()
     {
-        return $this->belongsTo(Subject::class);
+        return $this->belongsTo(\App\Models\Subject::class);
     }
 
     public function class()
     {
-        return $this->belongsTo(ClassModel::class, 'class_id');
+        return $this->belongsTo(\App\Models\ClassModel::class, 'class_id');
     }
 
     public function division()
     {
-        return $this->belongsTo(Division::class);
+        return $this->belongsTo(\App\Models\Division::class);
     }
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
     public function scopePublished($query)

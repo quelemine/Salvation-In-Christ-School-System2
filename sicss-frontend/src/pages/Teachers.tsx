@@ -203,7 +203,7 @@ export default function Teachers() {
   const isSubjectRole = teachingRole === 'subject-teacher';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -217,16 +217,16 @@ export default function Teachers() {
       `}</style>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Staff management</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Teachers</h1>
-          <p className="mt-1 text-sm text-slate-500">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Staff management</p>
+          <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Teachers</h1>
+          <p className="mt-2 text-base text-slate-500">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => window.print()} variant="secondary">
+          <Button onClick={() => window.print()} variant="secondary" className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:bg-slate-100">
             🖨️ Print
           </Button>
           {isAdmin && (
-            <Button onClick={() => navigate('/application')} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => navigate('/application')} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-xl">
               📝 Add Teacher
             </Button>
           )}
@@ -234,22 +234,32 @@ export default function Teachers() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
-          <p className="text-sm text-rose-800 mb-4">{error}</p>
-          <Button onClick={load} variant="secondary">Try Again</Button>
+        <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-rose-800">{error}</p>
+            <Button onClick={load} variant="secondary" className="mt-2 text-xs">Try Again</Button>
+          </div>
         </div>
       )}
 
-      <Card>
+      <Card className="shadow-lg shadow-slate-200/50">
         <CardContent className="p-0">
-          <div className="border-b border-slate-200 px-4 py-4 sm:px-5 no-print">
-            <Input
-              type="search"
-              placeholder="Search teachers…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-xs"
-            />
+          <div className="border-b border-slate-200 px-6 py-4 sm:px-6 no-print">
+            <div className="relative max-w-xs">
+              <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <Input
+                type="search"
+                placeholder="Search teachers…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 max-w-xs rounded-xl border-slate-300 bg-white shadow-sm transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
+              />
+            </div>
           </div>
           {loading ? (
             <LoadingState message="Loading teachers…" />
@@ -262,22 +272,22 @@ export default function Teachers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Photo</TableHead>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Salary structure</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden lg:table-cell">Class(es)</TableHead>
-                  <TableHead className="hidden lg:table-cell">Specialization</TableHead>
-                  <TableHead className="hidden lg:table-cell">Hire date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="no-print">Actions</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Photo</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Employee ID</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Name</TableHead>
+                  <TableHead className="hidden sm:table-cell font-semibold text-slate-700">Salary structure</TableHead>
+                  <TableHead className="hidden md:table-cell font-semibold text-slate-700">Email</TableHead>
+                  <TableHead className="hidden md:table-cell font-semibold text-slate-700">Phone</TableHead>
+                  <TableHead className="hidden lg:table-cell font-semibold text-slate-700">Class(es)</TableHead>
+                  <TableHead className="hidden lg:table-cell font-semibold text-slate-700">Specialization</TableHead>
+                  <TableHead className="hidden lg:table-cell font-semibold text-slate-700">Hire date</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                  <TableHead className="no-print font-semibold text-slate-700">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((t) => (
-                  <TableRow key={t.id}>
+                  <TableRow key={t.id} className="hover:bg-slate-50 transition-colors">
                     <TableCell>
                       {(t as any).photo
                         ? <img src={(t as any).photo} alt={`${t.first_name} ${t.last_name}`} className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-slate-200 object-cover" />
@@ -304,11 +314,11 @@ export default function Teachers() {
                     </TableCell>
                     <TableCell className="no-print">
                       {isAdmin ? (
-                        <div className="flex gap-2 flex-wrap">
-                          <Button onClick={() => openEdit(t)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                        <div className="flex gap-2">
+                          <Button onClick={() => openEdit(t)} variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                             Edit
                           </Button>
-                          <Button onClick={() => handleDelete(t.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">
+                          <Button onClick={() => handleDelete(t.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                             Delete
                           </Button>
                         </div>
@@ -321,14 +331,14 @@ export default function Teachers() {
               </TableBody>
             </Table>
           )}
-          <div className="border-t border-slate-200 px-4 py-3 sm:px-5 text-xs text-slate-400">
+          <div className="border-t border-slate-200 px-6 py-4 text-xs text-slate-500 font-medium">
             {filtered.length} of {teachers.length} teacher{teachers.length !== 1 ? 's' : ''}
           </div>
         </CardContent>
       </Card>
 
       <FormModal isOpen={isModalOpen} title={editingId ? 'Edit teacher' : 'Add teacher'} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit} submitText={editingId ? 'Save changes' : 'Add teacher'} isLoading={isSubmitting}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Select
               label="User account"
@@ -419,7 +429,7 @@ export default function Teachers() {
               placeholder="B.Ed, M.Ed…"
             />
           </div>
-          <div className="sm:col-span-2 grid grid-cols-1 gap-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 sm:grid-cols-2">
+          <div className="sm:col-span-2 grid grid-cols-1 gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:grid-cols-2">
             <input ref={profileImageRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => uploadTeacherImage('profile', event.target.files?.[0])} />
             <input ref={credentialImageRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => uploadTeacherImage('credential', event.target.files?.[0])} />
             <div>
@@ -479,16 +489,16 @@ export default function Teachers() {
 
           {/* ── Classes assigned to this teacher (all roles) ── */}
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Classes assigned to this teacher</label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Classes assigned to this teacher</label>
             {classes.length === 0 ? (
               <p className="text-xs text-slate-400">No classes found. Add classes first.</p>
             ) : (
-              <div className="max-h-44 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 shadow-sm">
                 {classes.map((c) => (
-                  <label key={c.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
+                  <label key={c.id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 accent-blue-600"
+                      className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-2 focus:ring-blue-500/20"
                       checked={formData.class_ids.includes(c.id)}
                       onChange={() => toggleClass(c.id)}
                     />
@@ -500,7 +510,7 @@ export default function Teachers() {
               </div>
             )}
             {formData.class_ids.length > 0 && (
-              <p className="mt-1 text-xs text-slate-500">{formData.class_ids.length} class{formData.class_ids.length !== 1 ? 'es' : ''} selected</p>
+              <p className="mt-2 text-xs text-slate-500">{formData.class_ids.length} class{formData.class_ids.length !== 1 ? 'es' : ''} selected</p>
             )}
           </div>
 
@@ -546,7 +556,7 @@ export default function Teachers() {
 
           {/* ── If no user account is linked yet, show a note about assigning roles ── */}
           {!formData.user_id && (
-            <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
               <p className="text-xs font-semibold text-amber-800">Tip — link a user account to unlock role-specific fields</p>
               <p className="text-xs text-amber-700 mt-0.5">Select a user account above. If the linked user has the <strong>class-sponsor</strong> role, the sponsored class field appears. If they have <strong>subject-teacher</strong>, the subject assignment builder appears.</p>
             </div>

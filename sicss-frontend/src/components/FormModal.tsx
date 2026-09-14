@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+
 interface FormModalProps {
   isOpen: boolean;
   title: string;
@@ -21,9 +23,14 @@ export const FormModal = ({
 }: FormModalProps) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit();
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]" onClick={onClose}>
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button
@@ -42,7 +49,7 @@ export const FormModal = ({
           </button>
         </div>
         
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+        <form onSubmit={handleSubmit}>
           <div className="mb-6">{children}</div>
           
           <div className="flex justify-end space-x-3">
@@ -74,6 +81,7 @@ export const FormModal = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

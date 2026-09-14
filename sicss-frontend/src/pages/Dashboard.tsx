@@ -340,51 +340,54 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-sicss-text-primary">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
             {getTimeBasedGreeting()}, {greeting}
           </h1>
-          <p className="mt-1 text-sm text-sicss-text-secondary">
+          <p className="mt-2 text-base text-slate-500">
             Welcome to SICSS — Salvation In Christ School System
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs font-semibold text-sicss-text-primary">Academic Year: {system.academicYear || '2026/2027'}</p>
-            <p className="text-xs text-sicss-text-muted">Term: {system.currentTerm || 'Term 1'}</p>
+          <div className="rounded-xl bg-white border border-slate-200 px-4 py-2.5 shadow-sm">
+            <p className="text-xs font-semibold text-slate-700">Academic Year: {system.academicYear || '2026/2027'}</p>
+            <p className="text-xs text-slate-500">Term: {system.currentTerm || 'Term 1'}</p>
           </div>
-          <span className="flex items-center gap-2 text-xs font-medium text-sicss-text-secondary">
-            <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-sicss-success' : 'bg-sicss-warning'}`} />
+          <span className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600">
+            <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {isOnline ? 'Online' : 'Offline mode'}
           </span>
           <button onClick={handleSync} disabled={!isOnline}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none">
             Sync data
           </button>
         </div>
       </div>
 
       {isAdmin && (
-        <section className="rounded-xl border border-sicss-border bg-white p-6 shadow-sm">
-          <label htmlFor="dashboard-search" className="text-sm font-semibold text-sicss-text-primary">Find a record</label>
-          <p className="mt-1 text-sm text-sicss-text-secondary">Search students, teachers, and staff by name, ID, email, or phone number.</p>
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50">
+          <label htmlFor="dashboard-search" className="text-sm font-semibold text-slate-700">Find a record</label>
+          <p className="mt-1 text-sm text-slate-500">Search students, teachers, and staff by name, ID, email, or phone number.</p>
           <div className="relative mt-4">
+            <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
               id="dashboard-search"
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Start typing a name, student ID, employee ID, email, or phone…"
-              className="w-full rounded-lg border border-sicss-border px-4 py-2.5 text-sm focus:border-sicss-primary focus:outline-none focus:ring-2 focus:ring-sicss-primary/20"
+              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm font-medium text-slate-700 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
               autoComplete="off"
             />
-            {searching && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-sicss-text-muted">Searching…</span>}
+            {searching && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">Searching…</span>}
           </div>
           {searchQuery.trim().length >= 2 && !searching && (
-            <div className="mt-3 overflow-hidden rounded-lg border border-sicss-border bg-white">
-              {searchResults.length === 0 ? <p className="px-4 py-3 text-sm text-sicss-text-secondary">No matching records found.</p> : searchResults.map((result, index) => (
-                <Link key={`${result.type}-${result.title}-${index}`} to={result.path} className="flex items-center justify-between gap-4 border-b border-sicss-border px-4 py-3 last:border-b-0 hover:bg-slate-50">
-                  <span><span className="block text-xs font-bold uppercase tracking-wide text-sicss-primary">{result.type}</span><span className="mt-0.5 block font-semibold text-sicss-text-primary">{result.title}</span><span className="mt-0.5 block text-xs text-sicss-text-secondary">{result.subtitle}</span></span>
-                  <span className="text-sm font-semibold text-sicss-primary">Open →</span>
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+              {searchResults.length === 0 ? <p className="px-4 py-3 text-sm text-slate-500">No matching records found.</p> : searchResults.map((result, index) => (
+                <Link key={`${result.type}-${result.title}-${index}`} to={result.path} className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50 transition-colors">
+                  <span><span className="block text-xs font-bold uppercase tracking-wide text-blue-600">{result.type}</span><span className="mt-0.5 block font-semibold text-slate-900">{result.title}</span><span className="mt-0.5 block text-xs text-slate-500">{result.subtitle}</span></span>
+                  <span className="text-sm font-semibold text-blue-600">Open →</span>
                 </Link>
               ))}
             </div>
@@ -393,77 +396,77 @@ export default function Dashboard() {
       )}
 
       {/* Metric cards */}
-      <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${displayMetrics.length >= 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-2'}`}>
+      <section className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${displayMetrics.length >= 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-2'}`}>
         {displayMetrics.map((metric) => (
           <StatCard key={metric.label} {...metric} />
         ))}
       </section>
 
       {isTeacher && salary && (
-        <section className="rounded-xl border border-sicss-border bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div><p className="text-xs font-bold uppercase tracking-widest text-sicss-primary">My salary</p><h2 className="mt-1 text-base sm:text-lg font-bold text-sicss-text-primary">Academic-year salary summary</h2><p className="mt-1 text-xs sm:text-sm text-sicss-text-secondary">Recorded payroll this year: {formatCurrency(salary.annual_salary, salary.currency || 'LRD')}{salary.annual_salary_estimate !== null ? ` · Annual estimate: ${formatCurrency(salary.annual_salary_estimate, salary.currency || 'LRD')}` : ''}</p></div>
-            <span className={`self-start rounded-full px-3 py-1 text-xs font-bold ${salary.status === 'paid' ? 'bg-sicss-success/10 text-sicss-success' : 'bg-sicss-warning/10 text-sicss-warning'}`}>{salary.status === 'paid' ? 'This month paid' : 'This month pending'}</span>
+            <div><p className="text-xs font-bold uppercase tracking-widest text-blue-600">My salary</p><h2 className="mt-1 text-base sm:text-lg font-bold text-slate-900">Academic-year salary summary</h2><p className="mt-1 text-xs sm:text-sm text-slate-500">Recorded payroll this year: {formatCurrency(salary.annual_salary, salary.currency || 'LRD')}{salary.annual_salary_estimate !== null ? ` · Annual estimate: ${formatCurrency(salary.annual_salary_estimate, salary.currency || 'LRD')}` : ''}</p></div>
+            <span className={`self-start rounded-full px-4 py-1.5 text-xs font-bold ${salary.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{salary.status === 'paid' ? 'This month paid' : 'This month pending'}</span>
           </div>
         </section>
       )}
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         {/* Attendance snapshot */}
-        <div className="rounded-xl border border-sicss-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-sicss-primary">Today</p>
-              <h2 className="mt-1 text-lg sm:text-xl font-bold text-sicss-text-primary">{isStudent ? 'My attendance' : 'Attendance snapshot'}</h2>
-              <p className="mt-1 text-sm text-sicss-text-secondary">{isStudent ? 'Your recorded attendance rate.' : 'Monitor participation across your classes.'}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Today</p>
+              <h2 className="mt-1 text-lg sm:text-xl font-bold text-slate-900">{isStudent ? 'My attendance' : 'Attendance snapshot'}</h2>
+              <p className="mt-1 text-sm text-slate-500">{isStudent ? 'Your recorded attendance rate.' : 'Monitor participation across your classes.'}</p>
             </div>
-            <Link to={isStudent ? '/my-attendance' : '/attendance'} className="text-xs sm:text-sm font-semibold text-sicss-primary hover:text-sicss-active">View attendance</Link>
+            <Link to={isStudent ? '/my-attendance' : '/attendance'} className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">View attendance</Link>
           </div>
           {isStudent ? (
-            <div className="mt-6 sm:mt-8 text-center"><p className="text-2xl sm:text-3xl font-bold text-sicss-text-primary">{summary.attendance_rate ?? 0}%</p><p className="mt-1 text-xs text-sicss-text-muted">My attendance rate</p></div>
+            <div className="mt-6 sm:mt-8 text-center"><p className="text-2xl sm:text-3xl font-bold text-slate-900">{summary.attendance_rate ?? 0}%</p><p className="mt-1 text-xs text-slate-500">My attendance rate</p></div>
           ) : (
             <div className="mt-6 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-4 text-center">
-              <div><p className="text-2xl sm:text-3xl font-bold text-sicss-text-primary">{summary.attendance_present ?? 0}</p><p className="mt-1 text-xs text-sicss-text-muted">Present</p></div>
-              <div><p className="text-2xl sm:text-3xl font-bold text-sicss-text-primary">{summary.attendance_absent  ?? 0}</p><p className="mt-1 text-xs text-sicss-text-muted">Absent</p></div>
-              <div><p className="text-2xl sm:text-3xl font-bold text-sicss-text-primary">{summary.attendance_rate    ?? 0}%</p><p className="mt-1 text-xs text-sicss-text-muted">Rate</p></div>
+              <div><p className="text-2xl sm:text-3xl font-bold text-slate-900">{summary.attendance_present ?? 0}</p><p className="mt-1 text-xs text-slate-500">Present</p></div>
+              <div><p className="text-2xl sm:text-3xl font-bold text-slate-900">{summary.attendance_absent  ?? 0}</p><p className="mt-1 text-xs text-slate-500">Absent</p></div>
+              <div><p className="text-2xl sm:text-3xl font-bold text-slate-900">{summary.attendance_rate    ?? 0}%</p><p className="mt-1 text-xs text-slate-500">Rate</p></div>
             </div>
           )}
-          <div className="mt-5 sm:mt-7 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-sicss-primary" style={{ width: `${summary.attendance_rate ?? 0}%` }} />
+          <div className="mt-5 sm:mt-7 h-2.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${summary.attendance_rate ?? 0}%` }} />
           </div>
         </div>
 
         {/* Finance — admin and finance staff only */}
         {(isAdmin || isFinance) && (
-          <div className="rounded-xl border border-sicss-border bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-sicss-warning">Finance</p>
-                <h2 className="mt-1 text-lg sm:text-xl font-bold text-sicss-text-primary">Collections</h2>
+                <p className="text-xs font-bold uppercase tracking-widest text-amber-600">Finance</p>
+                <h2 className="mt-1 text-lg sm:text-xl font-bold text-slate-900">Collections</h2>
               </div>
-              <Link to="/payments" className="text-xs sm:text-sm font-semibold text-sicss-primary hover:text-sicss-active">Open finance</Link>
+              <Link to="/payments" className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">Open finance</Link>
             </div>
-            <p className="mt-6 sm:mt-8 text-2xl sm:text-3xl font-bold tracking-tight text-sicss-text-primary">
+            <p className="mt-6 sm:mt-8 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
               {formatCurrency(summary.annual_income?.LRD ?? summary.fees_collected?.LRD, 'LRD')}
             </p>
-            <p className="mt-1 text-sm font-medium text-sicss-text-muted">
+            <p className="mt-1 text-sm font-medium text-slate-500">
               {formatCurrency(summary.annual_income?.USD ?? summary.fees_collected?.USD, 'USD')}
             </p>
-            <p className="mt-2 text-xs sm:text-sm text-sicss-text-secondary">Completed income this academic year</p>
-            <div className="mt-5 sm:mt-7 flex items-center justify-between border-t border-sicss-border pt-4 text-xs sm:text-sm">
-              <span className="text-sicss-text-secondary">Pending payments</span>
-              <span className="font-semibold text-sicss-text-primary">{summary.pending_payments ?? 0}</span>
+            <p className="mt-2 text-xs sm:text-sm text-slate-500">Completed income this academic year</p>
+            <div className="mt-5 sm:mt-7 flex items-center justify-between border-t border-slate-100 pt-4 text-xs sm:text-sm">
+              <span className="text-slate-500">Pending payments</span>
+              <span className="font-semibold text-slate-900">{summary.pending_payments ?? 0}</span>
             </div>
           </div>
         )}
       </section>
 
       {/* Quick actions */}
-      <section className="rounded-xl border border-sicss-border bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-sicss-text-primary">Quick actions</h2>
-            <p className="mt-1 text-xs sm:text-sm text-sicss-text-secondary">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">Quick actions</h2>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500">
               {isAdmin ? 'Common administration tasks.' : isTeacher ? 'Teaching shortcuts.' : isParent ? 'View child information.' : 'Finance shortcuts.'}
             </p>
           </div>
@@ -471,7 +474,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {quickActions.map(([path, label]) => (
             <Link key={path} to={path}
-              className="rounded-lg border border-sicss-border px-3 py-2.5 text-sm font-semibold text-sicss-text-primary transition hover:border-sicss-primary hover:bg-sicss-primary/5 hover:text-sicss-primary">
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600">
               {label}
             </Link>
           ))}
@@ -482,10 +485,10 @@ export default function Dashboard() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-sicss-primary text-white shadow-lg transition hover:bg-sicss-active"
+          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl shadow-blue-500/30 transition-all hover:bg-blue-700 hover:shadow-2xl hover:shadow-blue-500/40"
           title="Scroll to top"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
           </svg>
         </button>

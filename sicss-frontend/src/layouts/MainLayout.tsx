@@ -354,7 +354,7 @@ export default function MainLayout() {
     <li>
       <Link
         to={item.path}
-        className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-colors ${
+        className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all ${
           isActive(item.path) ? activeItemCls : inactiveItemCls
         }`}
       >
@@ -424,7 +424,7 @@ export default function MainLayout() {
         </nav>
       </div>
       {!isSidebarCollapsed && (
-        <div className="mx-4 mb-5 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">
+        <div className="mx-4 mb-5 rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-white/70 shadow-lg">
           <p className="font-semibold text-white/90">{system.systemName}</p>
           <p className="mt-0.5 leading-4">Year {system.academicYear} · {system.country}</p>
         </div>
@@ -439,14 +439,14 @@ export default function MainLayout() {
 
         {/* ── Desktop sidebar - dark navy ─────────────────────── */}
         <aside
-          className={`hidden shrink-0 lg:flex lg:flex-col h-full bg-sicss-navy text-white transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-[250px]'}`}
+          className={`hidden shrink-0 lg:flex lg:flex-col h-full bg-sicss-navy text-white transition-all duration-300 shadow-xl ${isSidebarCollapsed ? 'w-16' : 'w-[250px]'}`}
           style={sidebarColorStyle}
         >
           <div className="flex items-center justify-between border-b border-white/10 px-6 py-6">
             <div className="flex items-center gap-3">
               {branding.logoUrl
-                ? <img src={branding.logoUrl} alt="Logo" className="h-10 w-10 rounded-xl object-contain" />
-                : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black" style={logoBadgeStyle}>S</div>
+                ? <img src={branding.logoUrl} alt="Logo" className="h-10 w-10 rounded-xl object-contain shadow-lg" />
+                : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black shadow-lg" style={logoBadgeStyle}>S</div>
               }
               {!isSidebarCollapsed && (
                 <div className="min-w-0">
@@ -457,7 +457,7 @@ export default function MainLayout() {
             </div>
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-all"
             >
               {isSidebarCollapsed ? '→' : '←'}
             </button>
@@ -482,8 +482,8 @@ export default function MainLayout() {
           <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
             <div className="flex items-center gap-3">
               {branding.logoUrl
-                ? <img src={branding.logoUrl} alt="Logo" className="h-9 w-9 rounded-xl object-contain" />
-                : <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base font-black" style={logoBadgeStyle}>S</div>
+                ? <img src={branding.logoUrl} alt="Logo" className="h-9 w-9 rounded-xl object-contain shadow-lg" />
+                : <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base font-black shadow-lg" style={logoBadgeStyle}>S</div>
               }
               <div>
                 <h1 className="text-sm font-bold text-white">SICSS</h1>
@@ -493,7 +493,7 @@ export default function MainLayout() {
             <button
               aria-label="Close navigation menu"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-xl text-white/60 hover:bg-white/10"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-xl text-white/60 hover:bg-white/10 transition-colors"
             >×</button>
           </div>
           <SidebarContent />
@@ -501,13 +501,13 @@ export default function MainLayout() {
 
         {/* ── Main content ────────────────────────────────── */}
         <main className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-sicss-border bg-white shadow-sm">
+          <header className="border-b border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">
                 <button
                   aria-label="Toggle sidebar"
                   onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                  className="hidden lg:flex h-9 w-9 items-center justify-center rounded-lg border border-sicss-border text-sicss-text-primary hover:border-sicss-primary hover:bg-slate-50"
+                  className="hidden lg:flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-blue-500 hover:bg-slate-50 transition-colors"
                 >
                   {isSidebarCollapsed ? '→' : '←'}
                 </button>
@@ -515,7 +515,7 @@ export default function MainLayout() {
                   aria-label="Open navigation menu"
                   aria-expanded={isMobileMenuOpen}
                   onClick={() => setIsMobileMenuOpen(true)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-sicss-border text-sicss-text-primary hover:border-sicss-primary hover:bg-slate-50 lg:hidden"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-blue-500 hover:bg-slate-50 transition-colors lg:hidden"
                 >
                   <span className="flex w-4 flex-col gap-[3px]">
                     <span className="h-0.5 w-full rounded bg-current" />
@@ -526,11 +526,11 @@ export default function MainLayout() {
                 <nav className="flex items-center gap-2 text-sm">
                   {getBreadcrumb().map((item, index) => (
                     <span key={item.path} className="flex items-center gap-2">
-                      {index > 0 && <span className="text-sicss-text-muted">/</span>}
+                      {index > 0 && <span className="text-slate-400">/</span>}
                       {index === getBreadcrumb().length - 1 ? (
-                        <span className="font-semibold text-sicss-text-primary">{item.label}</span>
+                        <span className="font-semibold text-slate-900">{item.label}</span>
                       ) : (
-                        <Link to={item.path} className="text-sicss-text-secondary hover:text-sicss-primary transition-colors">
+                        <Link to={item.path} className="text-slate-600 hover:text-blue-600 transition-colors">
                           {item.label}
                         </Link>
                       )}
@@ -541,17 +541,17 @@ export default function MainLayout() {
               <div className="flex items-center gap-4">
                 <NotificationBell />
                 <div className="hidden sm:flex sm:items-center sm:gap-3">
-                  <div className="h-9 w-9 flex items-center justify-center rounded-full bg-sicss-primary/10 text-sicss-primary text-sm font-semibold">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/25">
                     {user?.first_name?.charAt(0) || 'U'}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-sicss-text-primary">{user?.first_name} {user?.last_name}</p>
-                    <p className="text-xs capitalize text-sicss-text-secondary">{user?.role?.name || 'User'}</p>
+                    <p className="text-sm font-semibold text-slate-900">{user?.first_name} {user?.last_name}</p>
+                    <p className="text-xs capitalize text-slate-500">{user?.role?.name || 'User'}</p>
                   </div>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="text-sm font-medium text-sicss-text-secondary hover:text-sicss-text-primary transition-colors"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Logout
                 </button>

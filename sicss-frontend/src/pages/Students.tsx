@@ -290,21 +290,28 @@ export default function Students() {
       {isStudent ? (
         <>
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">My Application</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">My Application Record</h1>
-            <p className="mt-1 text-sm text-slate-500">View your student application details</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-600">My Application</p>
+            <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">My Application Record</h1>
+            <p className="mt-2 text-base text-slate-500">View your student application details</p>
           </div>
 
-          {approvalError && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{approvalError}</p>}
+          {approvalError && (
+            <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
+              <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-medium text-rose-800">{approvalError}</p>
+            </div>
+          )}
 
           {loading ? (
             <p className="py-12 text-center text-sm text-slate-500">Loading your application record…</p>
           ) : !studentProfile ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 shadow-sm">
               No application record found. Please contact the school administration.
             </div>
           ) : (
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50 space-y-6">
               {/* Personal Information */}
               <div>
                 <h3 className="mb-3 text-sm font-bold text-slate-950">Personal Information</h3>
@@ -400,40 +407,40 @@ export default function Students() {
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between no-print">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-blue-700">People management</p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Students</h1>
-              <p className="mt-1 text-sm text-slate-500">{students.length} enrolled student{students.length !== 1 ? 's' : ''}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-blue-600">People management</p>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Students</h1>
+              <p className="mt-2 text-base text-slate-500">{students.length} enrolled student{students.length !== 1 ? 's' : ''}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleSync} disabled={!isOnline} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSync} disabled={!isOnline} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-xl disabled:opacity-50 disabled:shadow-none">
                 ↻ Sync
               </Button>
               {isAdmin && (
-                <Button onClick={() => setShowExportModal(true)} variant="secondary">
+                <Button onClick={() => setShowExportModal(true)} variant="secondary" className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:bg-slate-100">
                   📊 Export to Excel
                 </Button>
               )}
               {isAdmin && (
-                <Button onClick={() => window.print()} variant="secondary">
+                <Button onClick={() => window.print()} variant="secondary" className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:bg-slate-100">
                   🖨️ Print PDF
                 </Button>
               )}
               {isAdmin && <a href="/application"
-                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
+                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-xl">
                 + Add student
               </a>}
             </div>
           </div>
 
       {/* Summary Card */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Total Students</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Total Students</p>
             <p className="mt-2 text-4xl font-bold tracking-tight text-slate-900">{students.length}</p>
             <p className="mt-1 text-sm text-slate-500">Enrolled students</p>
           </div>
-          <div className="flex gap-4 text-center">
+          <div className="flex gap-6 text-center">
             <div>
               <p className="text-2xl font-bold text-emerald-600">{students.filter(s => s.status === 'active').length}</p>
               <p className="text-xs text-slate-500">Active</p>
@@ -455,15 +462,20 @@ export default function Students() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm no-print">
-        <div className="flex flex-wrap gap-3 border-b border-slate-100 px-4 py-4 sm:px-5 no-print">
-          <Input 
-            type="search" 
-            placeholder="Search by name or ID…" 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)} 
-            className="w-full max-w-xs text-sm" 
-          />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 no-print">
+        <div className="flex flex-wrap gap-3 border-b border-slate-100 px-6 py-4 sm:px-6 no-print">
+          <div className="relative max-w-xs">
+            <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <Input 
+              type="search" 
+              placeholder="Search by name or ID…" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)} 
+              className="pl-10 w-full max-w-xs text-sm rounded-xl border-slate-300 bg-white shadow-sm transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
+            />
+          </div>
           <Select 
             value={filterStatus} 
             onChange={(e) => setFilterStatus(e.target.value)} 
@@ -508,9 +520,14 @@ export default function Students() {
         {loading ? (
           <LoadingState message="Loading students…" />
         ) : error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
-            <p className="text-sm text-rose-800 mb-4">{error}</p>
-            <Button onClick={loadStudents} variant="secondary">Try Again</Button>
+          <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-6">
+            <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-rose-800 mb-4">{error}</p>
+              <Button onClick={loadStudents} variant="secondary" className="text-xs">Try Again</Button>
+            </div>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
@@ -521,19 +538,19 @@ export default function Students() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Student ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden sm:table-cell">Gender</TableHead>
-                <TableHead className="hidden md:table-cell">Grade</TableHead>
-                <TableHead className="hidden md:table-cell">Class</TableHead>
-                <TableHead>Application</TableHead>
-                <TableHead className="hidden sm:table-cell">Status</TableHead>
-                <TableHead className="no-print">Actions</TableHead>
+                <TableHead className="font-semibold text-slate-700">Student ID</TableHead>
+                <TableHead className="font-semibold text-slate-700">Name</TableHead>
+                <TableHead className="hidden sm:table-cell font-semibold text-slate-700">Gender</TableHead>
+                <TableHead className="hidden md:table-cell font-semibold text-slate-700">Grade</TableHead>
+                <TableHead className="hidden md:table-cell font-semibold text-slate-700">Class</TableHead>
+                <TableHead className="font-semibold text-slate-700">Application</TableHead>
+                <TableHead className="hidden sm:table-cell font-semibold text-slate-700">Status</TableHead>
+                <TableHead className="no-print font-semibold text-slate-700">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((student) => (
-                <TableRow key={student.id} onClick={() => navigate(`/students/${student.id}`)}>
+                <TableRow key={student.id} onClick={() => navigate(`/students/${student.id}`)} className="hover:bg-slate-50 transition-colors cursor-pointer">
                   <TableCell className="font-mono text-xs text-slate-500">{student.user?.user_code || student.student_id}</TableCell>
                   <TableCell className="font-semibold text-slate-900">{student.first_name} {student.last_name}</TableCell>
                   <TableCell className="hidden sm:table-cell capitalize text-slate-600">{student.gender || '—'}</TableCell>
@@ -549,21 +566,21 @@ export default function Students() {
                   </TableCell>
                   <TableCell className="no-print" onClick={(e: React.MouseEvent<HTMLTableCellElement>) => e.stopPropagation()}>
                     {isAdmin ? (
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex gap-2">
                         {(student as any).application_status === 'pending' && (
-                          <Button onClick={() => handleApprove(student.id)} disabled={approvingId === student.id} variant="ghost" className="text-emerald-600 hover:text-emerald-700 text-xs">
+                          <Button onClick={() => handleApprove(student.id)} disabled={approvingId === student.id} variant="ghost" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                             {approvingId === student.id ? 'Approving…' : 'Approve'}
                           </Button>
                         )}
                         {(student as any).application_status === 'approved' && !student.user && (
-                          <Button onClick={() => handleCreateLogin(student)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs">
+                          <Button onClick={() => handleCreateLogin(student)} variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                             Create Login
                           </Button>
                         )}
-                        <a href={`/application?id=${student.id}&type=student`} className="text-xs font-semibold text-blue-700 hover:text-blue-900">
+                        <a href={`/application?id=${student.id}&type=student`} className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
                           Edit
                         </a>
-                        <Button onClick={() => handleDelete(student.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs">
+                        <Button onClick={() => handleDelete(student.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                           Delete
                         </Button>
                       </div>
@@ -625,39 +642,41 @@ export default function Students() {
 
       {/* Export Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-900">Export Students to Excel</h2>
               <button onClick={() => setShowExportModal(false)}
-                className="text-slate-400 hover:text-slate-600">
-                ✕
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
             <p className="mb-4 text-sm text-slate-600">
               Select the fields you want to include in the Excel export. Only the selected fields will be exported.
             </p>
-            <div className="mb-4 max-h-80 overflow-y-auto rounded-lg border border-slate-200 p-4">
+            <div className="mb-4 max-h-80 overflow-y-auto rounded-xl border border-slate-200 p-4 shadow-sm">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {availableFields.map((field) => (
-                  <label key={field.key} className="flex items-center gap-2 text-sm">
+                  <label key={field.key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedFields.includes(field.key)}
                       onChange={() => toggleField(field.key)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-2 focus:ring-blue-500/20"
                     />
                     <span className="text-slate-700">{field.label}</span>
                   </label>
                 ))}
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setShowExportModal(false)} variant="secondary">
+            <div className="flex justify-end gap-3">
+              <Button onClick={() => setShowExportModal(false)} variant="secondary" className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:bg-slate-100">
                 Cancel
               </Button>
-              <Button onClick={handleExport} disabled={selectedFields.length === 0}>
-                Export ({selectedFields.length} fields)
+              <Button onClick={handleExport} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-xl">
+                Export
               </Button>
             </div>
           </div>

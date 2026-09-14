@@ -11,6 +11,7 @@ export default function Exams() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [formData, setFormData] = useState<Partial<Exam>>({});
   const [error, setError] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [academicYear, setAcademicYear] = useState<string>('2024-2025');
@@ -36,8 +37,25 @@ export default function Exams() {
     }
   };
 
-  const handleSave = async (examData: Omit<Exam, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleSave = async () => {
     try {
+      const examData = {
+        name: formData.name || '',
+        description: formData.description || '',
+        type: formData.type || 'quiz',
+        exam_date: formData.exam_date || '',
+        start_time: formData.start_time || '',
+        end_time: formData.end_time || '',
+        duration_minutes: Number(formData.duration_minutes) || 60,
+        total_marks: Number(formData.total_marks) || 100,
+        passing_marks: Number(formData.passing_marks) || 40,
+        is_published: Boolean(formData.is_published),
+        academic_year: formData.academic_year || academicYear,
+        subject_id: formData.subject_id ? Number(formData.subject_id) : undefined,
+        class_id: formData.class_id ? Number(formData.class_id) : undefined,
+        division_id: formData.division_id ? Number(formData.division_id) : undefined,
+      };
+      
       if (editingExam?.id) {
         await examService.update(editingExam.id, examData);
       } else {
@@ -46,6 +64,7 @@ export default function Exams() {
       await loadExams();
       setIsOpen(false);
       setEditingExam(null);
+      setFormData({});
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to save exam.');
     }
@@ -53,6 +72,25 @@ export default function Exams() {
 
   const handleEdit = (exam: Exam) => {
     setEditingExam(exam);
+    setFormData(exam);
+    setIsOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingExam(null);
+    setFormData({
+      name: '',
+      description: '',
+      type: 'quiz',
+      exam_date: '',
+      start_time: '',
+      end_time: '',
+      duration_minutes: 60,
+      total_marks: 100,
+      passing_marks: 40,
+      is_published: false,
+      academic_year: academicYear,
+    });
     setIsOpen(true);
   };
 
@@ -136,10 +174,7 @@ export default function Exams() {
           {isAdmin && (
             <div className="flex items-end">
               <Button
-                onClick={() => {
-                  setEditingExam(null);
-                  setIsOpen(true);
-                }}
+                onClick={handleAdd}
                 className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-md"
               >
                 + Add Exam
@@ -200,7 +235,7 @@ export default function Exams() {
                           📅 {new Date(exam.exam_date).toLocaleDateString()}
                         </span>
                         <span className="flex items-center gap-1">
-                          ⏰ {exam.start_time} - {exam.end_time}
+                          ⏰ {new Date(exam.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(exam.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span className="flex items-center gap-1">
                           ⏱️ {exam.duration_minutes} mins
@@ -255,37 +290,22 @@ export default function Exams() {
         onClose={() => {
           setIsOpen(false);
           setEditingExam(null);
+          setFormData({});
         }}
-        onSubmit={() => editingExam && handleSave(editingExam)}
+        onSubmit={handleSave}
         submitText={editingExam?.id ? 'Update' : 'Create'}
         isLoading={false}
       >
-        <ExamForm exam={editingExam} academicYear={academicYear} onChange={setEditingExam} />
+        <ExamForm exam={formData} academicYear={academicYear} onChange={setFormData} />
       </FormModal>
     </div>
   );
 }
 
 function ExamForm({ exam, academicYear, onChange }: any) {
-  const [formData, setFormData] = useState<Partial<Exam>>(
-    exam || {
-      name: '',
-      description: '',
-      type: 'quiz',
-      exam_date: '',
-      start_time: '',
-      end_time: '',
-      duration_minutes: 60,
-      total_marks: 100,
-      passing_marks: 40,
-      is_published: false,
-      academic_year: academicYear,
-    }
-  );
-
-  useEffect(() => {
-    onChange(formData);
-  }, [formData]);
+  const handleChange = (field: string, value: any) => {
+    onChange({ ...exam, [field]: value });
+  };
 
   return (
     <div className="space-y-4">
@@ -293,8 +313,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
         <label className="mb-1 block text-sm font-medium text-slate-700">Exam Name</label>
         <input
           type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          value={exam.name || ''}
+          onChange={(e) => handleChange('name', e.target.value)}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
@@ -302,8 +322,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
         <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          value={exam.description || ''}
+          onChange={(e) => handleChange('description', e.target.value)}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={3}
         />
@@ -311,8 +331,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Type</label>
         <select
-          value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+          value={exam.type || 'quiz'}
+          onChange={(e) => handleChange('type', e.target.value)}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         >
@@ -328,8 +348,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
           <label className="mb-1 block text-sm font-medium text-slate-700">Exam Date</label>
           <input
             type="date"
-            value={formData.exam_date}
-            onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
+            value={exam.exam_date || ''}
+            onChange={(e) => handleChange('exam_date', e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -338,8 +358,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
           <label className="mb-1 block text-sm font-medium text-slate-700">Duration (minutes)</label>
           <input
             type="number"
-            value={formData.duration_minutes}
-            onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) })}
+            value={exam.duration_minutes || 60}
+            onChange={(e) => handleChange('duration_minutes', parseInt(e.target.value))}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -350,8 +370,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
           <label className="mb-1 block text-sm font-medium text-slate-700">Start Time</label>
           <input
             type="time"
-            value={formData.start_time}
-            onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+            value={exam.start_time || ''}
+            onChange={(e) => handleChange('start_time', e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -360,8 +380,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
           <label className="mb-1 block text-sm font-medium text-slate-700">End Time</label>
           <input
             type="time"
-            value={formData.end_time}
-            onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+            value={exam.end_time || ''}
+            onChange={(e) => handleChange('end_time', e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -372,8 +392,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
           <label className="mb-1 block text-sm font-medium text-slate-700">Total Marks</label>
           <input
             type="number"
-            value={formData.total_marks}
-            onChange={(e) => setFormData({ ...formData, total_marks: parseInt(e.target.value) })}
+            value={exam.total_marks || 100}
+            onChange={(e) => handleChange('total_marks', parseInt(e.target.value))}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -382,8 +402,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
           <label className="mb-1 block text-sm font-medium text-slate-700">Passing Marks</label>
           <input
             type="number"
-            value={formData.passing_marks}
-            onChange={(e) => setFormData({ ...formData, passing_marks: parseInt(e.target.value) })}
+            value={exam.passing_marks || 40}
+            onChange={(e) => handleChange('passing_marks', parseInt(e.target.value))}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -393,8 +413,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
         <label className="mb-1 block text-sm font-medium text-slate-700">Academic Year</label>
         <input
           type="text"
-          value={formData.academic_year}
-          onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })}
+          value={exam.academic_year || academicYear}
+          onChange={(e) => handleChange('academic_year', e.target.value)}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
@@ -403,8 +423,8 @@ function ExamForm({ exam, academicYear, onChange }: any) {
         <input
           type="checkbox"
           id="is_published"
-          checked={formData.is_published}
-          onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
+          checked={exam.is_published || false}
+          onChange={(e) => handleChange('is_published', e.target.checked)}
           className="rounded border-slate-300"
         />
         <label htmlFor="is_published" className="text-sm font-medium text-slate-700">Publish Immediately</label>
