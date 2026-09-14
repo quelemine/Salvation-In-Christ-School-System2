@@ -134,10 +134,10 @@ export default function Comments() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Student support</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Student support</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Student comments</h1>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+        <button onClick={openAdd} className="self-start rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:self-auto">
           + Add comment
         </button>
       </div>
@@ -189,7 +189,7 @@ export default function Comments() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex gap-3">
-                        <button onClick={() => openEdit(c)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
+                        <button onClick={() => openEdit(c)} className="text-xs font-semibold text-blue-700 hover:underline">Edit</button>
                         <button onClick={() => handleDelete(c.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
                       </div>
                     </td>

@@ -30,6 +30,7 @@ class User extends Authenticatable
         'two_fa_code',
         'two_fa_expires_at',
         'two_fa_enabled',
+        'privileges',
     ];
 
     protected $hidden = [

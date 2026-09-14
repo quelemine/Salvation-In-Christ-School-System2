@@ -74,8 +74,9 @@ export function semesterAvg(marks: Record<string, string>, periods: readonly str
 
 export function yearlyAvg(s1: number | null, s2: number | null): number | null {
   if (s1 === null && s2 === null) return null;
-  const vals = [s1, s2].filter((v): v is number => v !== null);
-  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+  if (s1 === null) return s2;
+  if (s2 === null) return s1;
+  return Math.round(((s1 + s2) / 2) * 10) / 10;
 }
 
 export function gradeLetter(score: number | null): string {

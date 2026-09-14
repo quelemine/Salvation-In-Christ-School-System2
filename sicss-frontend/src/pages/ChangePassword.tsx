@@ -196,7 +196,7 @@ export default function ChangePassword() {
   return (
     <div className="mx-auto max-w-lg space-y-5">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Security</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Security</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Change password</h1>
         <p className="mt-2 text-sm text-slate-500">
           Signed in as <strong>{user?.email}</strong>.
@@ -304,8 +304,8 @@ export default function ChangePassword() {
 
           {/* Show the code prominently — in production this is sent by email */}
           {plainCode && (
-            <div className="rounded-xl border-2 border-dashed border-cyan-300 bg-cyan-50 p-5 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-cyan-600 mb-2">
+            <div className="rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 p-5 text-center">
+              <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 mb-2">
                 🔐 Your verification code
               </p>
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -318,7 +318,7 @@ export default function ChangePassword() {
               {codeExpiry && (
                 <p className="text-xs text-slate-400">Expires at {new Date(codeExpiry).toLocaleTimeString()}</p>
               )}
-              <p className="mt-2 text-[10px] text-cyan-600 font-medium">
+              <p className="mt-2 text-[10px] text-blue-600 font-medium">
                 In production, this code would be sent to your registered email address.
               </p>
             </div>
@@ -362,7 +362,7 @@ export default function ChangePassword() {
                 ← Back to passwords
               </button>
               <button type="button" onClick={handleResend} disabled={loadingCode}
-                className="font-semibold text-cyan-700 hover:underline disabled:opacity-50">
+                className="font-semibold text-blue-700 hover:underline disabled:opacity-50">
                 {loadingCode ? 'Sending…' : '↻ Resend code'}
               </button>
             </div>

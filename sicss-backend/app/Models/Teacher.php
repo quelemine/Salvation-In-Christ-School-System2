@@ -38,6 +38,33 @@ class Teacher extends Model
         'hire_date' => 'date',
     ];
 
+    public static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($teacher) {
+            if ($teacher->employee_id) {
+                if (static::where('employee_id', $teacher->employee_id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("Duplicate employee_id: {$teacher->employee_id}");
+                }
+                if (\App\Models\User::where('user_code', $teacher->employee_id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("employee_id conflicts with existing user_code: {$teacher->employee_id}");
+                }
+            }
+        });
+        
+        static::updating(function ($teacher) {
+            if ($teacher->isDirty('employee_id') && $teacher->employee_id) {
+                if (static::where('employee_id', $teacher->employee_id)->where('id', '!=', $teacher->id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("Duplicate employee_id: {$teacher->employee_id}");
+                }
+                if (\App\Models\User::where('user_code', $teacher->employee_id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("employee_id conflicts with existing user_code: {$teacher->employee_id}");
+                }
+            }
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

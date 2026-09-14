@@ -222,11 +222,11 @@ export default function NotificationBell() {
                         </p>
                         {/* Kind label */}
                         <span className={`mt-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-                          item.kind === 'marks_submitted'    ? 'bg-cyan-100 text-cyan-800'       :
+                          item.kind === 'marks_submitted'    ? 'bg-blue-100 text-blue-800'       :
                           item.kind === 'revision_requested' ? 'bg-rose-100 text-rose-700'       :
                           item.kind === 'vpi_review_request' ? 'bg-amber-100 text-amber-800'     :
                           item.kind === 'sponsor_replied'    ? 'bg-emerald-100 text-emerald-800' :
-                          item.kind === 'ticket_reply'       ? 'bg-cyan-100 text-cyan-800'       :
+                          item.kind === 'ticket_reply'       ? 'bg-blue-100 text-blue-800'       :
                           item.kind === 'ticket_new'         ? 'bg-rose-100 text-rose-700'       :
                           item.kind === 'ticket_status'      ? 'bg-emerald-100 text-emerald-800' :
                           'bg-slate-100 text-slate-600'
@@ -266,7 +266,7 @@ export default function NotificationBell() {
             </button>
             <div className="flex gap-3 text-[11px] font-semibold text-slate-400">
               <button onClick={() => { setOpen(false); navigate(isAdmin ? '/helpdesk-admin' : '/helpdesk'); }}
-                className="hover:text-cyan-700 hover:underline">Help desk</button>
+                className="hover:text-blue-700 hover:underline">Help desk</button>
               <button onClick={() => { setOpen(false); navigate('/dashboard'); }}
                 className="hover:text-slate-700 hover:underline">Dashboard</button>
             </div>

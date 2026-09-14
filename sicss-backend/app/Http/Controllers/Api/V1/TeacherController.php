@@ -157,33 +157,6 @@ class TeacherController extends Controller
 
     private function generateEmployeeId(string $role = 'TEACHER'): string
     {
-        $prefix = $role === 'STAFF' ? 'STF' : 'TCH';
-        $year = date('Y');
-        
-        // Get the last teacher with an auto-generated employee ID for this year
-        $lastTeacher = Teacher::where('employee_id', 'like', "{$prefix}-{$year}-%")
-            ->orderBy('id', 'desc')
-            ->first();
-        
-        $lastNumber = 0;
-        if ($lastTeacher && preg_match("/^{$prefix}-{$year}-(\d{4})$/", $lastTeacher->employee_id, $matches)) {
-            $lastNumber = (int) $matches[1];
-        }
-        
-        // Generate a unique ID
-        do {
-            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-            $employeeId = "{$prefix}-{$year}-{$newNumber}";
-            $lastNumber++;
-        } while (Teacher::where('employee_id', $employeeId)->exists());
-
-        // Ensure employee_id doesn't conflict with user_codes in users table
-        while (\App\Models\User::where('user_code', $employeeId)->exists()) {
-            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-            $employeeId = "{$prefix}-{$year}-{$newNumber}";
-            $lastNumber++;
-        }
-        
-        return $employeeId;
+        return \App\Services\IdGeneratorService::generateEmployeeId($role);
     }
 }

@@ -119,11 +119,71 @@ export default function ReportCardSheet(props: ReportCardSheetProps) {
     return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
   };
 
+  // Calculate semester average aggregates (sum of subject semester averages)
+  const sem1AvgAggregate = (): number | null => {
+    const avgs: number[] = [];
+    reportCardSubjects.forEach((subj) => {
+      const avg = s1Avg(subj);
+      if (avg !== null) avgs.push(avg);
+    });
+    if (avgs.length === 0) return null;
+    return Math.round(avgs.reduce((a, b) => a + b, 0));
+  };
+
+  const sem2AvgAggregate = (): number | null => {
+    const avgs: number[] = [];
+    reportCardSubjects.forEach((subj) => {
+      const avg = s2Avg(subj);
+      if (avg !== null) avgs.push(avg);
+    });
+    if (avgs.length === 0) return null;
+    return Math.round(avgs.reduce((a, b) => a + b, 0));
+  };
+
+  const yearlyAvgAggregate = (): number | null => {
+    const s1Total = sem1AvgAggregate();
+    const s2Total = sem2AvgAggregate();
+    if (s1Total === null && s2Total === null) return null;
+    if (s1Total === null) return s2Total;
+    if (s2Total === null) return s1Total;
+    return Math.round((s1Total + s2Total) / 2);
+  };
+
+  // Calculate semester average averages (mean of subject semester averages)
+  const sem1AvgAverage = (): number | null => {
+    const avgs: number[] = [];
+    reportCardSubjects.forEach((subj) => {
+      const avg = s1Avg(subj);
+      if (avg !== null) avgs.push(avg);
+    });
+    if (avgs.length === 0) return null;
+    return Math.round((avgs.reduce((a, b) => a + b, 0) / avgs.length) * 10) / 10;
+  };
+
+  const sem2AvgAverage = (): number | null => {
+    const avgs: number[] = [];
+    reportCardSubjects.forEach((subj) => {
+      const avg = s2Avg(subj);
+      if (avg !== null) avgs.push(avg);
+    });
+    if (avgs.length === 0) return null;
+    return Math.round((avgs.reduce((a, b) => a + b, 0) / avgs.length) * 10) / 10;
+  };
+
+  const yearlyAvgAverage = (): number | null => {
+    const s1AvgVal = sem1AvgAverage();
+    const s2AvgVal = sem2AvgAverage();
+    if (s1AvgVal === null && s2AvgVal === null) return null;
+    if (s1AvgVal === null) return s2AvgVal;
+    if (s2AvgVal === null) return s1AvgVal;
+    return Math.round(((s1AvgVal + s2AvgVal) / 2) * 10) / 10;
+  };
+
   return (
     <div className="bg-white p-6 max-w-4xl mx-auto shadow-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">SALVATION IN CHRIST SCHOOL SYSTEM</h1>
+        <h1 className="text-2xl font-bold text-slate-900">SICSS — Salvation In Christ School System</h1>
         <p className="text-sm text-slate-600">Student Report Card</p>
       </div>
 
@@ -244,7 +304,7 @@ export default function ReportCardSheet(props: ReportCardSheetProps) {
               </td>
               <td className="border border-slate-300 px-1 py-1">
                 <span className="block text-center font-bold" style={{ color: '#1d4ed8' }}>
-                  {periodAggregate('Sem1 Ave') ?? '—'}
+                  {sem1AvgAggregate() ?? '—'}
                 </span>
               </td>
               {SEM2_PERIODS.map(p => (
@@ -261,12 +321,12 @@ export default function ReportCardSheet(props: ReportCardSheetProps) {
               </td>
               <td className="border border-slate-300 px-1 py-1">
                 <span className="block text-center font-bold" style={{ color: '#1d4ed8' }}>
-                  {periodAggregate('Sem2 Ave') ?? '—'}
+                  {sem2AvgAggregate() ?? '—'}
                 </span>
               </td>
               <td className="border border-slate-300 px-1 py-1">
                 <span className="block text-center font-bold" style={{ color: '#1d4ed8' }}>
-                  {periodAggregate('Yearly Ave') ?? '—'}
+                  {yearlyAvgAggregate() ?? '—'}
                 </span>
               </td>
             </tr>
@@ -286,8 +346,8 @@ export default function ReportCardSheet(props: ReportCardSheetProps) {
                 </span>
               </td>
               <td className="border border-slate-300 px-1 py-1">
-                <span className="block text-center font-bold" style={{ color: scoreColor(periodAverage('Sem1 Ave')) }}>
-                  {periodAverage('Sem1 Ave') ?? '—'}
+                <span className="block text-center font-bold" style={{ color: scoreColor(sem1AvgAverage()) }}>
+                  {sem1AvgAverage() ?? '—'}
                 </span>
               </td>
               {SEM2_PERIODS.map(p => (
@@ -303,13 +363,13 @@ export default function ReportCardSheet(props: ReportCardSheetProps) {
                 </span>
               </td>
               <td className="border border-slate-300 px-1 py-1">
-                <span className="block text-center font-bold" style={{ color: scoreColor(periodAverage('Sem2 Ave')) }}>
-                  {periodAverage('Sem2 Ave') ?? '—'}
+                <span className="block text-center font-bold" style={{ color: scoreColor(sem2AvgAverage()) }}>
+                  {sem2AvgAverage() ?? '—'}
                 </span>
               </td>
               <td className="border border-slate-300 px-1 py-1">
-                <span className="block text-center font-bold" style={{ color: scoreColor(periodAverage('Yearly Ave')) }}>
-                  {periodAverage('Yearly Ave') ?? '—'}
+                <span className="block text-center font-bold" style={{ color: scoreColor(yearlyAvgAverage()) }}>
+                  {yearlyAvgAverage() ?? '—'}
                 </span>
               </td>
             </tr>
@@ -359,7 +419,7 @@ export default function ReportCardSheet(props: ReportCardSheetProps) {
       <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t text-sm">
         <div className="text-center">
           <div className="h-16 mb-2 flex items-center justify-center">
-            <OfficialStamp schoolName="Salvation in Christ School System" />
+            <OfficialStamp schoolName="SICSS — Salvation In Christ School System" />
           </div>
           <p className="font-semibold text-slate-700">Class Sponsor</p>
           <p className="text-slate-900">{classSponsor || '—'}</p>

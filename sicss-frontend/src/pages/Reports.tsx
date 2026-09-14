@@ -3,6 +3,7 @@ import { financeService } from '../services/financeService';
 import { classService, type Class } from '../services/classService';
 import { formatCurrency, type CurrencyCode } from '../utils/currency';
 import { useAuthStore } from '../store/authStore';
+import { Button, Input, Select } from '../components/ui';
 
 type DailyReport   = { date: string; total_amount: number; payment_count: number; payments: any[] };
 type MonthlyReport = { month: string; total_amount: number; payment_count: number; payments: any[] };
@@ -57,7 +58,7 @@ function PaymentTable({ payments }: { payments: any[] }) {
               <td className="px-5 py-3 text-slate-600">{p.fee?.name || '—'}</td>
               <td className="px-5 py-3 font-semibold text-slate-900">{formatCurrency(Number(p.amount), (p.currency as CurrencyCode) || 'LRD')}</td>
               <td className="px-5 py-3 capitalize text-slate-600">{p.payment_method?.replace('_', ' ') || '—'}</td>
-              <td className="px-5 py-3 text-slate-600">{p.payment_date || '—'}</td>
+              <td className="px-5 py-3 text-slate-600">{p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -145,8 +146,8 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Insights</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Financial reports</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Insights</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Financial reports</h1>
           <p className="mt-2 text-sm text-slate-500">
             {isViewer
               ? 'View, print, and download financial reports. You cannot send or modify reports.'
@@ -158,19 +159,17 @@ export default function Reports() {
         <div className="flex flex-wrap items-start gap-2">
           {/* Print / Download — available to all */}
           {hasReport && (
-            <button onClick={print}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">
+            <Button onClick={print} variant="secondary">
               🖨 Print / Download
-            </button>
+            </Button>
           )}
 
           {/* Send report — finance + admin only */}
           {canSend && (
             <div className="flex flex-col gap-1">
-              <button onClick={sendManagementReport} disabled={loading}
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50 shadow-sm">
+              <Button onClick={sendManagementReport} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
                 {loading ? 'Sending…' : `📨 Send ${monthYear} report`}
-              </button>
+              </Button>
               <span className="text-[10px] text-slate-400">Sends to Principal, Proprietor &amp; Proprietress</span>
             </div>
           )}
@@ -193,7 +192,7 @@ export default function Reports() {
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === t.key ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100'
+              tab === t.key ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
             }`}>
             {t.label}
           </button>
@@ -211,11 +210,9 @@ export default function Reports() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">Select date</label>
                 <input type="date" value={dailyDate} onChange={(e) => setDailyDate(e.target.value)} className="input-field" />
               </div>
-              <button onClick={() => run(async () => setDailyReport(await financeService.getDailyReport({ date: dailyDate })))}
-                disabled={loading}
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+              <Button onClick={() => run(async () => setDailyReport(await financeService.getDailyReport({ date: dailyDate })))} disabled={loading}>
                 {loading ? 'Loading…' : 'Run report'}
-              </button>
+              </Button>
             </div>
             {dailyReport && (
               <div className="space-y-4">
@@ -238,11 +235,9 @@ export default function Reports() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">Select month</label>
                 <input type="month" value={monthYear} onChange={(e) => setMonthYear(e.target.value)} className="input-field" />
               </div>
-              <button onClick={() => run(async () => setMonthlyReport(await financeService.getMonthlyReport({ month: monthYear })))}
-                disabled={loading}
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+              <Button onClick={() => run(async () => setMonthlyReport(await financeService.getMonthlyReport({ month: monthYear })))} disabled={loading}>
                 {loading ? 'Loading…' : 'Run report'}
-              </button>
+              </Button>
             </div>
             {monthlyReport && (
               <div className="space-y-4">
@@ -263,20 +258,17 @@ export default function Reports() {
             <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end">
               <div className="flex-1">
                 <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
-                <select value={classId} onChange={(e) => setClassId(e.target.value)} className="input-field">
-                  <option value="">Select class</option>
-                  {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>)}
-                </select>
+                <Select value={classId} onChange={(e) => setClassId(e.target.value)} options={[
+                  { value: '', label: 'Select class' },
+                  ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+                ]} />
               </div>
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Academic year</label>
-                <input value={classYear} onChange={(e) => setClassYear(e.target.value)} className="input-field" placeholder="2026" />
+                <Input label="Academic year" value={classYear} onChange={(e) => setClassYear(e.target.value)} placeholder="2026" />
               </div>
-              <button onClick={() => { if (!classId) { setError('Please select a class.'); return; } run(async () => setClassReport(await financeService.getClassReport({ class_id: classId, academic_year: classYear }))); }}
-                disabled={loading}
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+              <Button onClick={() => { if (!classId) { setError('Please select a class.'); return; } run(async () => setClassReport(await financeService.getClassReport({ class_id: classId, academic_year: classYear }))); }} disabled={loading}>
                 {loading ? 'Loading…' : 'Run report'}
-              </button>
+              </Button>
             </div>
             {classReport && (
               <SummaryCards items={[
@@ -293,14 +285,11 @@ export default function Reports() {
           <div className="space-y-4">
             <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end">
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Academic year</label>
-                <input value={outYear} onChange={(e) => setOutYear(e.target.value)} className="input-field" placeholder="2026" />
+                <Input label="Academic year" value={outYear} onChange={(e) => setOutYear(e.target.value)} placeholder="2026" />
               </div>
-              <button onClick={() => run(async () => setOutstanding(await financeService.getOutstandingBalances({ academic_year: outYear })))}
-                disabled={loading}
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+              <Button onClick={() => run(async () => setOutstanding(await financeService.getOutstandingBalances({ academic_year: outYear })))} disabled={loading}>
                 {loading ? 'Loading…' : 'Run report'}
-              </button>
+              </Button>
             </div>
             {outstanding && (
               <div className="space-y-4">

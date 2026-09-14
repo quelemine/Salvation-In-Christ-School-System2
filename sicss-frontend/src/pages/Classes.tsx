@@ -34,7 +34,7 @@ const getClassSuggestions = (divisionName: string, description: string): string[
     return ['Nursery 1', 'Nursery 2', 'Nursery 3'];
   }
   if (lowerName.includes('kindergarten division') || lowerDesc.includes('kindergarten division')) {
-    return ['KG 1', 'KG 2', 'KG 3', 'Pre-K'];
+    return ['ABC', 'K1', 'K2', 'Nursery 1', 'Nursery 2'];
   }
   if (lowerName.includes('elementary division') || lowerDesc.includes('elementary division') || lowerName.includes('primary division') || lowerDesc.includes('primary division')) {
     return ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
@@ -168,7 +168,7 @@ export default function Classes() {
           <p className="mt-1 text-sm text-slate-500">{classes.length} class{classes.length !== 1 ? 'es' : ''} configured.</p>
         </div>
         {isAdmin && (
-          <Button onClick={openAdd}>
+          <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white">
             + Add class
           </Button>
         )}

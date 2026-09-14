@@ -2,76 +2,13 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import ApplicationHeader, { FormTitle } from '../components/application/ApplicationHeader';
-import ApplicationFooter from '../components/application/ApplicationFooter';
-import StudentInfoSection, { sec, secTitle, row, lbl, fld, fullFld } from '../components/application/StudentInfoSection';
-import ParentGuardianSection from '../components/application/ParentGuardianSection';
-import OfficialUseSection from '../components/application/OfficialUseSection';
+import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Badge, LoadingState } from '../components/ui';
 
-// ── Additional info section (inline, not extracted to keep it simple) ────────
-function AdditionalInfoSection({ data, onChange, readOnly }: {
-  data: Record<string, string>; onChange: (k: string, v: string) => void; readOnly?: boolean;
-}) {
-  const f = (k: string) => data[k] ?? '';
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => onChange(k, e.target.value);
-  return (
-    <section className="application-section application-additional-info" style={sec}>
-      <div style={secTitle}>C. Additional Information</div>
-
-      <div style={row}>
-        <label style={lbl}>
-          Does your child have any illness?
-          {readOnly
-            ? <input style={fld} value={f('has_illness') === 'true' ? 'Yes' : 'No'} readOnly />
-            : <select style={fld} value={f('has_illness')} onChange={set('has_illness')}>
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-              </select>
-          }
-        </label>
-        <label style={{ ...lbl, flex: 2 }}>
-          If yes, please explain:
-          <input style={fld} value={f('illness_details')} onChange={set('illness_details')} readOnly={readOnly} />
-        </label>
-      </div>
-
-      <div style={row}>
-        <label style={lbl}>
-          Emergency Contact Name:
-          <input style={fld} value={f('emergency_contact_name')} onChange={set('emergency_contact_name')} readOnly={readOnly} />
-        </label>
-        <label style={lbl}>
-          Emergency Contact Phone:
-          <input style={fld} value={f('emergency_contact_phone')} onChange={set('emergency_contact_phone')} readOnly={readOnly} />
-        </label>
-      </div>
-
-      <label style={{ ...lbl, width: '100%', marginBottom: 10 }}>
-        Sports / Extracurricular Interests:
-        <input style={fullFld} value={f('sports_interest')} onChange={set('sports_interest')} readOnly={readOnly} />
-      </label>
-
-      <label style={{ ...lbl, width: '100%' }}>
-        Additional Notes:
-        {readOnly
-          ? <input style={fullFld} value={f('additional_notes')} readOnly />
-          : <textarea
-              style={{ ...fld, resize: 'vertical', minHeight: 52 }}
-              value={f('additional_notes')}
-              onChange={set('additional_notes')}
-            />
-        }
-      </label>
-    </section>
-  );
-}
-
-// ── Form type ─────────────────────────────────────────────────────────────────
 type FormData = Record<string, string>;
 
 const EMPTY: FormData = {
   full_name: '', gender: '', date_of_birth: '', place_of_birth: '',
-  nationality: 'Liberian', county: '', previous_school: '', grade_applying_for: '',
+  nationality: 'Liberian', county: '', previous_school: '',
   address: '',
   father_name: '', mother_name: '', father_occupation: '', mother_occupation: '',
   father_contact: '', mother_contact: '', parent_address: '',
@@ -81,35 +18,59 @@ const EMPTY: FormData = {
   approved_by_registrar: '', approved_by_principal: '', approval_date: '',
   application_status: 'pending',
   username: '', default_password: '',
+  photo_url: '',
 };
 
-function statusBadge(status: string) {
-  const m: Record<string, string> = {
-    pending:  'bg-amber-100 text-amber-800',
-    approved: 'bg-emerald-100 text-emerald-800',
-    rejected: 'bg-rose-100 text-rose-700',
-  };
-  return m[status] ?? 'bg-slate-100 text-slate-600';
+const LIBERIAN_COUNTIES = [
+  'Bomi', 'Bong', 'Gbarpolu', 'Grand Bassa', 'Grand Cape Mount',
+  'Grand Gedeh', 'Grand Kru', 'Lofa', 'Margibi', 'Maryland',
+  'Montserrado', 'Nimba', 'River Cess', 'River Gee', 'Sinoe',
+];
+
+const GRADES = [
+  'ABC', 'K1', 'K2', 'Grade 1', 'Grade 2', 'Grade 3',
+  'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
+  'Grade 9',
+];
+
+function statusBadgeVariant(status: string): 'success' | 'warning' | 'danger' | 'default' {
+  if (status === 'approved') return 'success';
+  if (status === 'rejected') return 'danger';
+  if (status === 'pending') return 'warning';
+  return 'default';
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function StudentApplicationForm() {
   const { user } = useAuthStore();
   const isAdmin = user?.role?.slug === 'admin';
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const editId = searchParams.get('id');   // ?id=42 opens existing student
+  const editId = searchParams.get('id');
 
   const [form, setForm] = useState<FormData>(EMPTY);
   const [photoUrl, setPhotoUrl] = useState('');
-  const [classId, setClassId] = useState('');   // actual class_id FK
+  const [classId, setClassId] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [missingFields, setMissingFields] = useState<string[]>([]);
-  const [showGuidelines, setShowGuidelines] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [createUserAccount, setCreateUserAccount] = useState(false);
+  const [generatedUsername, setGeneratedUsername] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [accountActive, setAccountActive] = useState(true);
+  const [userPhone, setUserPhone] = useState('');
+  const [userRole, setUserRole] = useState('STUDENT');
 
-  // Load existing student if editing
+  useEffect(() => {
+    api.get('/classes').then((res) => {
+      const raw = res.data;
+      setClasses(Array.isArray(raw) ? raw : raw.data ?? []);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!editId) return;
     setLoading(true);
@@ -124,7 +85,6 @@ export default function StudentApplicationForm() {
           nationality:             s.nationality ?? 'Liberian',
           county:                  s.county ?? '',
           previous_school:         s.previous_school ?? '',
-          grade_applying_for:      s.grade_applying_for ?? '',
           address:                 s.address ?? '',
           father_name:             s.father_name ?? '',
           mother_name:             s.mother_name ?? '',
@@ -149,6 +109,7 @@ export default function StudentApplicationForm() {
           application_status:      s.application_status ?? 'pending',
           username:               s.user?.username ?? '',
           default_password:        '',
+          photo_url:               s.photo_url || '',
         });
         if (s.photo_url) setPhotoUrl(s.photo_url);
         if (s.class_id) setClassId(String(s.class_id));
@@ -164,6 +125,76 @@ export default function StudentApplicationForm() {
 
   const notify = (ok: boolean, text: string) => {
     setMsg({ ok, text }); setTimeout(() => setMsg(null), 5000);
+  };
+
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const generateUsername = () => {
+    const nameParts = form.full_name.trim().split(' ');
+    const firstName = nameParts[0]?.toLowerCase() || 'student';
+    const lastName = nameParts[1]?.toLowerCase() || '';
+    const randomNum = Math.floor(Math.random() * 1000);
+    return `${firstName}${lastName}${randomNum}`;
+  };
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  const getPasswordStrength = (password: string): { label: string; color: string } => {
+    if (!password) return { label: 'None', color: 'text-slate-400' };
+    if (password.length < 8) return { label: 'Weak', color: 'text-red-500' };
+    if (password.length < 12) return { label: 'Medium', color: 'text-yellow-500' };
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
+      return { label: 'Strong', color: 'text-green-500' };
+    }
+    return { label: 'Medium', color: 'text-yellow-500' };
+  };
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    notify(true, 'Password copied to clipboard');
+  };
+
+  const handleGenerateCredentials = () => {
+    setGeneratedUsername(generateUsername());
+    setGeneratedPassword(generatePassword());
+    set('username', generatedUsername || generateUsername());
+    set('default_password', generatedPassword || generatePassword());
+  };
+
+  useEffect(() => {
+    if (createUserAccount && !generatedUsername) {
+      handleGenerateCredentials();
+    }
+  }, [createUserAccount]);
+
+  const nextStep = () => {
+    if (currentStep === 1) {
+      const missing = [!form.full_name && 'full_name', !form.gender && 'gender', !form.date_of_birth && 'date_of_birth'].filter(Boolean) as string[];
+      if (missing.length > 0) {
+        setMissingFields(missing);
+        notify(false, 'Please complete the required fields before proceeding.');
+        return;
+      }
+      setMissingFields([]);
+    }
+    if (currentStep < 4) setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
   const handleSave = async () => {
@@ -189,7 +220,6 @@ export default function StudentApplicationForm() {
         nationality:             form.nationality,
         county:                  form.county,
         previous_school:         form.previous_school,
-        grade_applying_for:      form.grade_applying_for,
         address:                 form.address,
         father_name:             form.father_name,
         mother_name:             form.mother_name,
@@ -219,8 +249,13 @@ export default function StudentApplicationForm() {
         payload.approved_by_principal = form.approved_by_principal;
         payload.approval_date       = form.approval_date || undefined;
         payload.application_status  = form.application_status;
-        if (form.username) payload.username = form.username;
-        if (form.default_password) payload.password = form.default_password;
+        if (createUserAccount) {
+          payload.username = generatedUsername || generateUsername();
+          payload.password = generatedPassword || generatePassword();
+          payload.phone = userPhone;
+          payload.role_id = userRole;
+          payload.is_active = accountActive;
+        }
       } else {
         payload.student_id         = undefined;  // backend auto-generates STU-YYYY-NNN
         payload.application_status = 'pending';
@@ -232,7 +267,7 @@ export default function StudentApplicationForm() {
         setForm(EMPTY);
         setPhotoUrl('');
         setClassId('');
-        navigate('/student-application');
+        navigate('/application');
       } else {
         const res = await api.post('/students', payload);
         const saved = res.data;
@@ -248,56 +283,43 @@ export default function StudentApplicationForm() {
     } finally { setSaving(false); }
   };
 
-  if (loading) return <p className="py-12 text-center text-sm text-slate-500">Loading application…</p>;
+  if (loading) return <LoadingState message="Loading application…" />;
+
+  const f = (key: string) => form[key] ?? '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50">
-      {/* Header Section */}
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <span className="inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold text-cyan-800 uppercase tracking-widest">
+                <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800 uppercase tracking-widest">
                   Registration
                 </span>
                 {editId && (
-                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadge(form.application_status)}`}>
+                  <Badge variant={statusBadgeVariant(form.application_status)}>
                     {form.application_status.charAt(0).toUpperCase() + form.application_status.slice(1)}
-                  </span>
+                  </Badge>
                 )}
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
                 Student Application Form
               </h1>
               <p className="mt-2 text-sm text-slate-600">
                 {editId 
-                  ? 'Edit the student application details below. All changes will be saved to the database.'
-                  : 'Complete all sections to submit a new student application. The administration will review and approve your application.'}
+                  ? 'Edit the student application details below.'
+                  : 'Complete all sections to submit a new student application.'}
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <button 
-                onClick={() => window.print()}
-                className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
-              >
-                🖨️ Print Form
-              </button>
-              <button 
-                onClick={handleSave} 
-                disabled={saving}
-                className="inline-flex items-center rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {saving ? (
-                  <>
-                    <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving…
-                  </>
-                ) : editId ? '💾 Save Changes' : '📤 Submit Application'}
-              </button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => window.print()} variant="secondary">
+                🖨️ Print
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : editId ? '💾 Save Changes' : '📤 Submit Application'}
+              </Button>
             </div>
           </div>
 
@@ -320,147 +342,560 @@ export default function StudentApplicationForm() {
         </div>
       </div>
 
+      {/* Progress Steps */}
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between mb-8">
+          {[1, 2, 3, 4].map((step) => (
+            <div key={step} className="flex items-center flex-1">
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm ${
+                currentStep >= step 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-slate-200 text-slate-600'
+              }`}>
+                {currentStep > step ? '✓' : step}
+              </div>
+              {step < 4 && (
+                <div className={`flex-1 h-1 mx-2 ${currentStep > step ? 'bg-blue-600' : 'bg-slate-200'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-slate-600 mb-6">
+          <span>Personal Info</span>
+          <span>Parent Info</span>
+          <span>Additional Info</span>
+          <span>Review</span>
+        </div>
+      </div>
+
       {/* Form Container */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-        <div
-          id="student-app-form"
-          className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden"
-          style={{
-            fontFamily: '"Times New Roman", serif',
-          }}
-        >
-          {/* Form Header */}
-          <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-cyan-50 px-8 py-6">
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <ApplicationHeader />
-              <FormTitle title="Student Application Form" />
-            </div>
-          </div>
-
-          {/* Form Content */}
-          <div className="px-8 py-8 space-y-8">
-            <StudentInfoSection
-              data={form} onChange={set}
-              photoUrl={photoUrl} onPhotoChange={setPhotoUrl}
-              isNewStudent={!editId}
-              missingFields={missingFields}
-            />
-
-            <ParentGuardianSection
-              data={form} onChange={set}
-            />
-
-            <AdditionalInfoSection
-              data={form} onChange={set}
-            />
-
-            <OfficialUseSection
-              data={form} onChange={set}
-              classId={classId}
-              onClassIdChange={setClassId}
-              isAdmin={isAdmin}
-            />
-          </div>
-
-          {/* Form Footer */}
-          <div className="border-t border-slate-200 bg-slate-50 px-8 py-6">
-            <ApplicationFooter />
-          </div>
-        </div>
-      </div>
-
-      {/* Help Section */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-              <span className="text-lg">💡</span>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-base font-semibold text-slate-900">Need Help?</h3>
-              <p className="mt-1 text-sm text-slate-600">
-                If you have questions about the application process, please contact the school administration office or visit our help desk.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button 
-                  onClick={() => window.location.href = '/helpdesk'}
-                  className="inline-flex items-center rounded-lg bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-700 transition-colors cursor-pointer"
-                >
-                  Contact Support
-                </button>
-                <button 
-                  onClick={() => setShowGuidelines(true)}
-                  className="inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  View Guidelines
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-xs text-slate-500">
-            © {new Date().getFullYear()} Salvation In Christ School System. All rights reserved.
-          </p>
-        </div>
-      </div>
-
-      {/* Guidelines Modal */}
-      {showGuidelines && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h3 className="text-lg font-semibold text-slate-900">Application Guidelines</h3>
-              <button 
-                onClick={() => setShowGuidelines(false)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="px-6 py-4">
-              <div className="space-y-4 text-sm text-slate-600">
-                <div>
-                  <h4 className="font-semibold text-slate-900">1. Eligibility</h4>
-                  <p>Students must meet the age requirements for the grade they are applying for. Previous school records may be required.</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900">2. Required Documents</h4>
-                  <p>Please have the following documents ready: birth certificate, previous school transcripts, parent/guardian ID, and recent passport photo.</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900">3. Parent/Guardian Information</h4>
-                  <p>Accurate contact information for at least one parent or guardian is required for communication purposes.</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900">4. Health Information</h4>
-                  <p>Any medical conditions or allergies should be disclosed to ensure proper care and emergency response.</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900">5. Application Process</h4>
-                  <p>Submit the complete application form. The school will review and contact you within 3-5 business days regarding approval status.</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900">6. Contact Information</h4>
-                  <p>For questions, contact the school administration office or visit our help desk.</p>
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pb-6">
+        <Card>
+          {/* Step 1: Personal Information */}
+          {currentStep === 1 && (
+            <CardContent className="p-6 sm:p-8">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle>Personal Information</CardTitle>
+              </CardHeader>
+              
+              {/* Photo Upload */}
+              <div className="flex justify-center mb-8">
+                <div className="relative">
+                  <div 
+                    onClick={() => document.getElementById('photo-upload')?.click()}
+                    className="w-32 h-32 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors overflow-hidden"
+                  >
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="Student" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <span className="text-3xl">📷</span>
+                        <p className="text-xs text-slate-500 mt-1">Upload Photo</p>
+                      </div>
+                    )}
+                  </div>
+                  <input 
+                    id="photo-upload" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handlePhoto} 
+                  />
                 </div>
               </div>
-            </div>
-            <div className="flex justify-end border-t border-slate-200 px-6 py-4">
-              <button 
-                onClick={() => setShowGuidelines(false)}
-                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Full Name *"
+                    type="text" 
+                    value={f('full_name')} 
+                    onChange={(e) => set('full_name', e.target.value)}
+                    placeholder="First Middle Last"
+                    error={missingFields.includes('full_name') ? 'This field is required' : undefined}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Select 
+                    label="Gender *"
+                    value={f('gender')} 
+                    onChange={(e) => set('gender', e.target.value)}
+                    options={[
+                      { value: '', label: 'Select Gender' },
+                      { value: 'Male', label: 'Male' },
+                      { value: 'Female', label: 'Female' },
+                    ]}
+                    error={missingFields.includes('gender') ? 'This field is required' : undefined}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Date of Birth *"
+                    type="date" 
+                    value={f('date_of_birth')} 
+                    onChange={(e) => set('date_of_birth', e.target.value)}
+                    error={missingFields.includes('date_of_birth') ? 'This field is required' : undefined}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Place of Birth"
+                    type="text" 
+                    value={f('place_of_birth')} 
+                    onChange={(e) => set('place_of_birth', e.target.value)}
+                    placeholder="City / Town"
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Nationality"
+                    type="text" 
+                    value={f('nationality')} 
+                    onChange={(e) => set('nationality', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Select 
+                    label="County"
+                    value={f('county')} 
+                    onChange={(e) => set('county', e.target.value)}
+                    options={[
+                      { value: '', label: 'Select County' },
+                      ...LIBERIAN_COUNTIES.map((c) => ({ value: c, label: c }))
+                    ]}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Previous School"
+                    type="text" 
+                    value={f('previous_school')} 
+                    onChange={(e) => set('previous_school', e.target.value)}
+                    placeholder="Name of last school attended"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Home Address"
+                    type="text" 
+                    value={f('address')} 
+                    onChange={(e) => set('address', e.target.value)}
+                    placeholder="Street, Community, City"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between mt-8">
+                <Button onClick={() => navigate('/students')} variant="secondary">
+                  Cancel
+                </Button>
+                <Button onClick={nextStep} variant="primary" style={{ backgroundColor: '#2563EB', color: 'white' }}>
+                  Next →
+                </Button>
+              </div>
+            </CardContent>
+          )}
+
+          {/* Step 2: Parent/Guardian Information */}
+          {currentStep === 2 && (
+            <CardContent className="p-6 sm:p-8">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle>Parent/Guardian Information</CardTitle>
+              </CardHeader>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Input 
+                    label="Father's Name"
+                    type="text" 
+                    value={f('father_name')} 
+                    onChange={(e) => set('father_name', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Father's Occupation"
+                    type="text" 
+                    value={f('father_occupation')} 
+                    onChange={(e) => set('father_occupation', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Father's Contact"
+                    type="text" 
+                    value={f('father_contact')} 
+                    onChange={(e) => set('father_contact', e.target.value)}
+                    placeholder="Phone number"
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Mother's Name"
+                    type="text" 
+                    value={f('mother_name')} 
+                    onChange={(e) => set('mother_name', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Mother's Occupation"
+                    type="text" 
+                    value={f('mother_occupation')} 
+                    onChange={(e) => set('mother_occupation', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Mother's Contact"
+                    type="text" 
+                    value={f('mother_contact')} 
+                    onChange={(e) => set('mother_contact', e.target.value)}
+                    placeholder="Phone number"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Parent Address"
+                    type="text" 
+                    value={f('parent_address')} 
+                    onChange={(e) => set('parent_address', e.target.value)}
+                    placeholder="Street, Community, City"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between mt-8 pt-4 border-t border-slate-200">
+                <Button onClick={prevStep} variant="secondary">
+                  ← Back
+                </Button>
+                <Button onClick={nextStep} variant="primary" style={{ backgroundColor: '#2563EB', color: 'white' }}>
+                  Next →
+                </Button>
+              </div>
+            </CardContent>
+          )}
+
+          {/* Step 3: Additional Information */}
+          {currentStep === 3 && (
+            <CardContent className="p-6 sm:p-8">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle>Additional Information</CardTitle>
+              </CardHeader>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Select 
+                    label="Does your child have any illness?"
+                    value={f('has_illness')} 
+                    onChange={(e) => set('has_illness', e.target.value)}
+                    options={[
+                      { value: 'false', label: 'No' },
+                      { value: 'true', label: 'Yes' },
+                    ]}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="If yes, please explain"
+                    type="text" 
+                    value={f('illness_details')} 
+                    onChange={(e) => set('illness_details', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Emergency Contact Name"
+                    type="text" 
+                    value={f('emergency_contact_name')} 
+                    onChange={(e) => set('emergency_contact_name', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input 
+                    label="Emergency Contact Phone"
+                    type="text" 
+                    value={f('emergency_contact_phone')} 
+                    onChange={(e) => set('emergency_contact_phone', e.target.value)}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Sports / Extracurricular Interests"
+                    type="text" 
+                    value={f('sports_interest')} 
+                    onChange={(e) => set('sports_interest', e.target.value)}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Additional Notes"
+                    type="textarea" 
+                    value={f('additional_notes')} 
+                    onChange={(e) => set('additional_notes', e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between mt-8 pt-4 border-t border-slate-200">
+                <Button onClick={prevStep} variant="secondary">
+                  ← Back
+                </Button>
+                <Button onClick={nextStep} variant="primary" style={{ backgroundColor: '#2563EB', color: 'white' }}>
+                  Next →
+                </Button>
+              </div>
+            </CardContent>
+          )}
+
+          {/* Step 4: Review & Submit */}
+          {currentStep === 4 && (
+            <CardContent className="p-6 sm:p-8">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle>Review & Submit</CardTitle>
+              </CardHeader>
+              
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-base">Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-slate-600">Name:</span> {f('full_name')}</div>
+                    <div><span className="text-slate-600">Gender:</span> {f('gender')}</div>
+                    <div><span className="text-slate-600">DOB:</span> {f('date_of_birth')}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-base">Parent Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-slate-600">Father:</span> {f('father_name')}</div>
+                    <div><span className="text-slate-600">Mother:</span> {f('mother_name')}</div>
+                    <div><span className="text-slate-600">Father Contact:</span> {f('father_contact')}</div>
+                    <div><span className="text-slate-600">Mother Contact:</span> {f('mother_contact')}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-base">Emergency Contact</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-slate-600">Name:</span> {f('emergency_contact_name')}</div>
+                    <div><span className="text-slate-600">Phone:</span> {f('emergency_contact_phone')}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {isAdmin && (
+                <Card className="mb-6 border-2 border-blue-200 bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-base text-blue-900 font-semibold">Admin Only Fields</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Application Status & Class */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Application Status</label>
+                          <Select 
+                            value={f('application_status')} 
+                            onChange={(e) => set('application_status', e.target.value)}
+                            options={[
+                              { value: 'pending', label: 'Pending' },
+                              { value: 'approved', label: 'Approved' },
+                              { value: 'rejected', label: 'Rejected' },
+                            ]}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Assign Class</label>
+                          <Select 
+                            value={classId} 
+                            onChange={(e) => setClassId(e.target.value)}
+                            options={[
+                              { value: '', label: 'Select Class' },
+                              ...classes.map((c) => ({ value: String(c.id), label: c.name }))
+                            ]}
+                          />
+                        </div>
+                      </div>
+
+                      {/* User Account Section */}
+                      <div className="bg-white rounded-lg border border-blue-100 overflow-hidden">
+                        <div className="flex items-center justify-between p-4 border-b border-blue-100">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              id="create-account"
+                              checked={createUserAccount}
+                              onChange={(e) => setCreateUserAccount(e.target.checked)}
+                              className="h-5 w-5 rounded border-slate-300 text-blue-600 accent-blue-600"
+                            />
+                            <label htmlFor="create-account" className="text-sm font-semibold text-slate-800 cursor-pointer">
+                              Create login account
+                            </label>
+                          </div>
+                          <span className="text-xs text-slate-500">Optional</span>
+                        </div>
+                        
+                        {createUserAccount && (
+                          <div className="p-4 space-y-4">
+                            {/* Email/Username */}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Email / Username <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={generatedUsername}
+                                readOnly
+                                placeholder="isaac.l.quelemine@sicss.edu"
+                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-100 text-slate-700"
+                              />
+                            </div>
+
+                            {/* Role */}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Role <span className="text-red-500">*</span>
+                              </label>
+                              <Select 
+                                value={userRole}
+                                onChange={(e) => setUserRole(e.target.value)}
+                                options={[
+                                  { value: 'STUDENT', label: 'STUDENT' },
+                                  { value: 'TEACHER', label: 'TEACHER' },
+                                  { value: 'ADMIN', label: 'ADMIN' },
+                                ]}
+                              />
+                            </div>
+
+                            {/* Phone */}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Phone (for WhatsApp/SMS delivery)
+                              </label>
+                              <input
+                                type="text"
+                                value={userPhone}
+                                onChange={(e) => setUserPhone(e.target.value)}
+                                placeholder="e.g. 0770123456"
+                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md text-slate-700"
+                              />
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Password <span className="text-red-500">*</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type={showPassword ? 'text' : 'password'}
+                                  value={generatedPassword}
+                                  readOnly
+                                  className="w-full px-3 py-2 pr-24 text-sm border border-slate-300 rounded-md bg-slate-100 text-slate-700"
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={handleGenerateCredentials}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 rounded hover:bg-slate-200"
+                                    title="Regenerate"
+                                  >
+                                    ↺
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleCopyPassword}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 rounded hover:bg-slate-200"
+                                    title="Copy password"
+                                  >
+                                    ⎘
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 rounded hover:bg-slate-200"
+                                    title="Show/Hide"
+                                  >
+                                    {showPassword ? '👁' : '👁‍🗨'}
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-slate-500">Auto-generated · hand to student securely</span>
+                                <span className={`text-xs font-medium ${getPasswordStrength(generatedPassword).color}`}>
+                                  Strength: {getPasswordStrength(generatedPassword).label}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Account Active Toggle */}
+                            <div className="flex items-center justify-between pt-2">
+                              <span className="text-sm font-medium text-slate-700">Account active</span>
+                              <button
+                                type="button"
+                                onClick={() => setAccountActive(!accountActive)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                  accountActive ? 'bg-green-500' : 'bg-slate-300'
+                                }`}
+                              >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  accountActive ? 'translate-x-6' : 'translate-x-1'
+                                }`} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex justify-between mt-8 pt-4 border-t border-slate-200">
+                <Button onClick={prevStep} variant="secondary">
+                  ← Back
+                </Button>
+                <Button onClick={handleSave} disabled={saving} variant="primary" style={{ backgroundColor: '#2563EB', color: 'white' }}>
+                  {saving ? 'Saving…' : editId ? 'Save Changes' : 'Submit Application'}
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      </div>
+
     </div>
   );
 }

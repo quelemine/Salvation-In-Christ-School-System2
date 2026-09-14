@@ -6,6 +6,17 @@ import OfflineBanner from '../components/OfflineBanner';
 import NotificationBell from '../components/NotificationBell';
 import { authService } from '../services/authService';
 
+interface MenuItem {
+  path: string;
+  label: string;
+  icon: string;
+}
+
+interface MenuCategory {
+  name: string;
+  items: MenuItem[];
+}
+
 export default function MainLayout() {
   const { user, logout, isAuthenticated } = useAuthStore();
   const { settings } = useSettingsStore();
@@ -14,116 +25,287 @@ export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Main']));
 
   const isActive = (path: string) => location.pathname === path;
 
-  // ── Sidebar colour scheme based on settings ──────────────────────────────
-  const sidebarBg =
-    theme.sidebarStyle === 'light'   ? 'bg-white border-r border-slate-200 text-slate-900' :
-    theme.sidebarStyle === 'colored' ? 'text-white'                                         :
-    'bg-slate-950 text-white';  // dark (default)
-
-  const sidebarColorStyle =
-    theme.sidebarStyle === 'colored' ? { backgroundColor: 'var(--accent)' } : {};
-
-  const activeItemCls =
-    theme.sidebarStyle === 'light'
-      ? 'bg-slate-100 text-slate-950 font-semibold'
-      : 'bg-white/20 text-white font-semibold';
-
-  const inactiveItemCls =
-    theme.sidebarStyle === 'light'
-      ? 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-      : 'text-white/70 hover:bg-white/10 hover:text-white';
-
-  const logoTextCls =
-    theme.sidebarStyle === 'light' ? 'text-slate-950' : 'text-white';
-
-  const logoSubCls =
-    theme.sidebarStyle === 'light' ? 'text-slate-400' : 'text-white/50';
-
-  const logoBadgeStyle =
-    theme.sidebarStyle === 'colored'
-      ? { backgroundColor: '#ffffff22', color: '#fff' }
-      : { backgroundColor: 'var(--accent)', color: 'var(--accent-dark)' };
-
-  // ── Menu items by role ────────────────────────────────────────────────────
-  const getMenuItems = () => {
-    const role = user?.role?.slug || '';
-
-    const commonItems = [
-      { path: '/dashboard',       label: 'Dashboard',       icon: '📊' },
-      { path: '/profile',         label: 'My profile',      icon: '👤' },
-      { path: '/helpdesk',        label: 'Help desk',       icon: '🎫' },
-    ];
-
-    const adminItems = [
-      { path: '/users',          label: 'User accounts',   icon: '◉'  },
-      { path: '/admin-staff',    label: 'Admin & Staff',   icon: '👥' },
-      { path: '/announcements',  label: 'Announcements',   icon: '📢' },
-      { path: '/helpdesk-admin', label: 'Help desk',       icon: '🎫' },
-      { path: '/divisions',     label: 'Divisions',     icon: '🏫' },
-      { path: '/classes',       label: 'Classes',       icon: '📚' },
-      { path: '/students',            label: 'Students',          icon: '👨‍🎓' },
-      { path: '/student-application', label: 'Apply / Register',  icon: '📝' },
-      { path: '/teachers',      label: 'Teachers',      icon: '👨‍🏫' },
-      { path: '/teacher-payroll', label: 'Teacher payroll', icon: '💰' },
-      { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' },
-      { path: '/subjects',      label: 'Subjects',      icon: '📖' },
-      { path: '/attendance',    label: 'Student attendance', icon: '📋' },
-      { path: '/grades',        label: 'Grades',        icon: '📝' },
-      { path: '/assignments',   label: 'Assignments',   icon: '📄' },
-      { path: '/comments',      label: 'Comments',      icon: '💬' },
-      { path: '/fee-structure',  label: 'Fee structure',   icon: '📋' },
-      { path: '/fee-clearance',  label: 'Fee clearance',   icon: '✅' },
-      { path: '/payments',       label: 'Payments',        icon: '💳' },
-      { path: '/invoices',      label: 'Invoices',      icon: '📄' },
-      { path: '/receipts',      label: 'Receipts',      icon: '🧾' },
-      { path: '/reports',       label: 'Reports',       icon: '📈' },
-      { path: '/report-cards',  label: 'Report cards',  icon: '🎓' },
-      { path: '/activity-logs', label: 'Activity logs',  icon: '🛡️' },
-      { path: '/security',      label: 'Security center', icon: '🔐' },
-      { path: '/sync',          label: 'Sync status',     icon: '🔄' },
-      { path: '/settings',      label: 'Settings',        icon: '⚙️' },
-    ];
-
-    const teacherItems = [
-      { path: '/fee-structure', label: 'Fee structure', icon: '📋' },
-      { path: '/attendance',     label: 'Student attendance', icon: '📋' },
-      { path: '/grades',         label: 'Grades',         icon: '📝' },
-      { path: '/assignments',    label: 'Assignments',    icon: '📄' },
-      { path: '/comments',       label: 'Comments',       icon: '💬' },
-    ];
-
-    const financeItems = [
-      { path: '/fee-structure', label: 'Fee structure', icon: '�' },
-      { path: '/payments',      label: 'Payments',      icon: '💳' },
-      { path: '/receipts',      label: 'Receipts',      icon: '🧾' },
-      { path: '/reports',       label: 'Reports',       icon: '📊' },
-    ];
-
-    // Admin gets their own common items (without /helpdesk since they use /helpdesk-admin)
-    const adminCommonItems = [
-      { path: '/dashboard',       label: 'Dashboard',       icon: '📊' },
-      { path: '/profile',         label: 'My profile',      icon: '👤' },
-    ];
-
-    if (role === 'admin')                              return [...adminCommonItems, ...adminItems];
-    if (role === 'class-teacher' || role === 'class-sponsor') return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/comments', label: 'Comments', icon: '💬' }, { path: '/class-sponsor-portal', label: '📋 Mark sheet', icon: '📝' }, { path: '/report-cards', label: 'Report cards', icon: '🎓' }];
-    if (role === 'subject-teacher')                    return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/students', label: 'My students', icon: '👨‍🎓' }, { path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }, { path: '/subject-marks', label: 'Submit marks', icon: '✏️' }];
-    if (role === 'student')                            return [...commonItems, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/my-grade-sheet', label: 'My grade sheet', icon: '📝' }, { path: '/my-attendance', label: 'My attendance', icon: '📋' }, { path: '/my-assignments', label: 'My assignments', icon: '📄' }, { path: '/my-financial-records', label: 'My finance', icon: '💳' }];
-    if (role === 'parent')                             return [...commonItems, { path: '/parent-portal', label: 'My children', icon: '👨‍👩‍👧' }, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }];
-    if (role === 'vice-principal-instruction')         return [...commonItems, { path: '/report-cards', label: 'Report cards', icon: '🎓' }, { path: '/divisions', label: 'Divisions', icon: '🏢' }, { path: '/classes', label: 'Classes', icon: '🏫' }, { path: '/subjects', label: 'Subjects', icon: '📚' }, { path: '/teachers', label: 'Teachers', icon: '👨‍🏫' }, { path: '/students', label: 'Students', icon: '👨‍🎓' }, { path: '/grades', label: 'Academic records', icon: '📝' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }, { path: '/announcements', label: 'Announcements', icon: '📢' }];
-    if (role === 'teacher')                            return [...commonItems, ...teacherItems];
-    if (role === 'finance' || role === 'finance-staff') return [...commonItems, ...financeItems, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }];
-    if (role === 'principal' || role === 'proprietor' || role === 'proprietress') return [...commonItems, { path: '/divisions', label: 'Divisions', icon: '🏢' }, { path: '/classes', label: 'Classes', icon: '🏫' }, { path: '/subjects', label: 'Subjects', icon: '📚' }, { path: '/students', label: 'Students', icon: '👨‍🎓' }, { path: '/grades', label: 'Academic records', icon: '📝' }, { path: '/report-cards', label: 'Report cards', icon: '🎓' }, { path: '/attendance', label: 'Student attendance', icon: '📋' }, { path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }, { path: '/salary-structures', label: 'Salary & payroll', icon: '💰' }, { path: '/fee-structure', label: 'Fee structure', icon: '📋' }, { path: '/reports', label: 'Reports', icon: '📈' }, ...(role === 'proprietor' || role === 'proprietress' ? [{ path: '/users', label: 'User accounts', icon: '👥' }, { path: '/announcements', label: 'Announcements', icon: '📢' }] : []) ];
-    return commonItems;
+  // Generate breadcrumb from current path
+  const getBreadcrumb = () => {
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const breadcrumbItems = [{ label: 'Dashboard', path: '/dashboard' }];
+    
+    let currentPath = '';
+    for (const part of pathParts) {
+      currentPath += `/${part}`;
+      const menuItem = allMenuItems.find((item) => item.path === currentPath);
+      if (menuItem && menuItem.label !== 'Dashboard') {
+        breadcrumbItems.push({ label: menuItem.label, path: currentPath });
+      }
+    }
+    
+    return breadcrumbItems;
   };
 
-  const menuItems = getMenuItems();
+  const toggleCategory = (categoryName: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryName)) {
+        newSet.delete(categoryName);
+      } else {
+        newSet.add(categoryName);
+      }
+      return newSet;
+    });
+  };
+
+  // ── Sidebar colour scheme - SICSS navy as per design requirements ─────────────
+  const sidebarBg = 'bg-sicss-navy text-white';
+  const sidebarColorStyle = { backgroundColor: '#0D2747' };
+  const activeItemCls = 'bg-sicss-primary text-white font-semibold';
+  const inactiveItemCls = 'text-slate-300 hover:bg-white/10 hover:text-white transition-colors';
+  const logoBadgeStyle = { backgroundColor: '#2563EB', color: '#fff' };
+
+  // ── Menu items by role ────────────────────────────────────────────────────
+  const getMenuCategories = (): MenuCategory[] => {
+    const role = user?.role?.slug || '';
+
+    const commonItems: MenuItem[] = [
+      { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+      { path: '/profile', label: 'My Profile', icon: '👤' },
+    ];
+
+    const peopleItems: MenuItem[] = [
+      { path: '/students', label: 'Students', icon: '👨‍🎓' },
+      { path: '/application', label: 'Unified Application', icon: '📋' },
+      { path: '/teachers', label: 'Teachers', icon: '👨‍🏫' },
+      { path: '/admin-staff', label: 'Staff', icon: '👥' },
+      { path: '/users', label: 'Users', icon: '👤' },
+      { path: '/roles', label: 'Roles', icon: '🔑' },
+    ];
+
+    const schoolItems: MenuItem[] = [
+      { path: '/divisions', label: 'Divisions', icon: '🏢' },
+      { path: '/classes', label: 'Classes', icon: '🏫' },
+      { path: '/subjects', label: 'Subjects', icon: '📚' },
+    ];
+
+    const academicsItems: MenuItem[] = [
+      { path: '/grades', label: 'Academic Records', icon: '📝' },
+      { path: '/assignments', label: 'Assignments', icon: '📄' },
+      { path: '/comments', label: 'Comments', icon: '💬' },
+      { path: '/report-cards', label: 'Report Cards', icon: '🎓' },
+      { path: '/academic-calendar', label: 'Academic Calendar', icon: '📅' },
+      { path: '/exams', label: 'Exams', icon: '📋' },
+      { path: '/timetable', label: 'Timetable', icon: '🗓️' },
+      { path: '/discipline-records', label: 'Discipline', icon: '⚖️' },
+    ];
+
+    const libraryItems: MenuItem[] = [
+      { path: '/library', label: 'Library', icon: '📚' },
+    ];
+
+    const transportationItems: MenuItem[] = [
+      { path: '/transportation', label: 'Transportation', icon: '🚌' },
+    ];
+
+    const hostelItems: MenuItem[] = [
+      { path: '/hostel', label: 'Hostel', icon: '🏠' },
+    ];
+
+    const inventoryItems: MenuItem[] = [
+      { path: '/inventory', label: 'Inventory', icon: '📦' },
+    ];
+
+    const sportsItems: MenuItem[] = [
+      { path: '/sports-activities', label: 'Sports & Activities', icon: '⚽' },
+    ];
+
+    const communicationItems: MenuItem[] = [
+      { path: '/notifications', label: 'Notifications', icon: '🔔' },
+      { path: '/announcements', label: 'Announcements', icon: '📢' },
+      { path: '/helpdesk', label: 'Help Desk', icon: '🎫' },
+    ];
+
+    const administrationItems: MenuItem[] = [
+      { path: '/bulk-import-export', label: 'Import/Export', icon: '📥' },
+      { path: '/documents', label: 'Documents', icon: '📄' },
+      { path: '/medical-records', label: 'Medical Records', icon: '🏥' },
+      { path: '/id-cards', label: 'ID Cards', icon: '🪪' },
+      { path: '/certificates', label: 'Certificates', icon: '🎓' },
+      { path: '/alumni', label: 'Alumni', icon: '👨‍🎓' },
+      { path: '/admin-dashboard', label: 'Admin Dashboard', icon: '🎛️' },
+      { path: '/admin/page-content', label: 'Page Content', icon: '✏️' },
+      { path: '/admin/page-layouts', label: 'Page Layouts', icon: '📐' },
+      { path: '/admin/page-columns', label: 'Table Columns', icon: '📊' },
+      { path: '/settings', label: 'Settings', icon: '⚙️' },
+      { path: '/activity-logs', label: 'Activity Logs', icon: '🛡️' },
+      { path: '/security', label: 'Security Center', icon: '🔐' },
+      { path: '/sync', label: 'Sync Status', icon: '🔄' },
+    ];
+
+    const attendanceItems: MenuItem[] = [
+      { path: '/attendance', label: 'Student Attendance', icon: '📋' },
+      { path: '/teacher-attendance', label: 'Teacher Attendance', icon: '🗓️' },
+    ];
+
+    const financeItems: MenuItem[] = [
+      { path: '/fee-structure', label: 'Fee Structure', icon: '💰' },
+      { path: '/fee-clearance', label: 'Fee Clearance', icon: '✅' },
+      { path: '/payments', label: 'Payments', icon: '💵' },
+      { path: '/invoices', label: 'Invoices', icon: '📄' },
+      { path: '/receipts', label: 'Receipts', icon: '🧾' },
+      { path: '/salary-structures', label: 'Salary & Payroll', icon: '💳' },
+    ];
+
+    const reportsItems: MenuItem[] = [
+      { path: '/reports', label: 'Reports', icon: '📊' },
+    ];
+
+    const helpItems: MenuItem[] = [
+      { path: '/helpdesk', label: 'Help desk', icon: '🎫' },
+    ];
+
+    const studentPersonalItems: MenuItem[] = [
+      { path: '/my-grade-sheet', label: 'My grade sheet', icon: '📝' },
+      { path: '/my-attendance', label: 'My attendance', icon: '📋' },
+      { path: '/my-assignments', label: 'My assignments', icon: '📄' },
+      { path: '/my-financial-records', label: 'My finance', icon: '💰' },
+    ];
+
+    const parentItems: MenuItem[] = [
+      { path: '/parent-portal', label: 'My children', icon: '👨‍👩‍👧' },
+    ];
+
+    const teacherSpecificItems: MenuItem[] = [
+      { path: '/class-sponsor-portal', label: 'Mark sheet', icon: '📊' },
+      { path: '/subject-marks', label: 'Submit marks', icon: '✏️' },
+    ];
+
+    // Build categories based on role
+    if (role === 'admin') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'People', items: peopleItems },
+        { name: 'School', items: schoolItems },
+        { name: 'Academics', items: academicsItems },
+        { name: 'Library', items: libraryItems },
+        { name: 'Transportation', items: transportationItems },
+        { name: 'Hostel', items: hostelItems },
+        { name: 'Inventory', items: inventoryItems },
+        { name: 'Sports', items: sportsItems },
+        { name: 'Attendance', items: attendanceItems },
+        { name: 'Finance', items: financeItems },
+        { name: 'Communication', items: communicationItems },
+        { name: 'Reports', items: reportsItems },
+        { name: 'Administration', items: administrationItems },
+      ];
+    }
+
+    if (role === 'principal' || role === 'proprietor' || role === 'proprietress') {
+      const categories: MenuCategory[] = [
+        { name: 'Main', items: commonItems },
+        { name: 'People', items: peopleItems },
+        { name: 'School', items: schoolItems },
+        { name: 'Academics', items: academicsItems },
+        { name: 'Attendance', items: attendanceItems },
+        { name: 'Finance', items: financeItems },
+        { name: 'Communication', items: communicationItems },
+        { name: 'Reports', items: reportsItems },
+      ];
+      
+      if (role === 'proprietor' || role === 'proprietress') {
+        categories.push({ name: 'Administration', items: [{ path: '/users', label: 'User accounts', icon: '👥' }, { path: '/settings', label: 'Settings', icon: '⚙️' }] });
+      }
+      
+      return categories;
+    }
+
+    if (role === 'vice-principal-instruction') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'People', items: [{ path: '/students', label: 'Students', icon: '👨‍🎓' }, { path: '/teachers', label: 'Teachers', icon: '👨‍🏫' }] },
+        { name: 'School', items: schoolItems },
+        { name: 'Academics', items: academicsItems },
+        { name: 'Attendance', items: attendanceItems },
+        { name: 'Communication', items: communicationItems },
+      ];
+    }
+
+    if (role === 'class-teacher' || role === 'class-sponsor') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'My Students', items: [{ path: '/students', label: 'My students', icon: '👨‍🎓' }] },
+        { name: 'Attendance', items: [{ path: '/attendance', label: 'Student attendance', icon: '📋' }] },
+        { name: 'Academics', items: [{ path: '/comments', label: 'Comments', icon: '💬' }, { path: '/report-cards', label: 'Report cards', icon: '🎓' }] },
+        { name: 'Teaching', items: teacherSpecificItems },
+        { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
+        { name: 'Help', items: helpItems },
+      ];
+    }
+
+    if (role === 'subject-teacher') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'My Students', items: [{ path: '/students', label: 'My students', icon: '👨‍🎓' }] },
+        { name: 'Academics', items: [{ path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }] },
+        { name: 'Teaching', items: teacherSpecificItems },
+        { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
+        { name: 'Help', items: helpItems },
+      ];
+    }
+
+    if (role === 'student') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'My Records', items: studentPersonalItems },
+        { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
+        { name: 'Help', items: helpItems },
+      ];
+    }
+
+    if (role === 'parent') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'My Children', items: parentItems },
+        { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
+        { name: 'Help', items: helpItems },
+      ];
+    }
+
+    if (role === 'finance' || role === 'finance-staff') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'People', items: [{ path: '/students', label: 'Students', icon: '👨‍🎓' }] },
+        { name: 'Finance', items: financeItems },
+        { name: 'Attendance', items: [{ path: '/teacher-attendance', label: 'Teacher attendance', icon: '🗓️' }] },
+        { name: 'Reports', items: reportsItems },
+        { name: 'Help', items: helpItems },
+      ];
+    }
+
+    if (role === 'teacher') {
+      return [
+        { name: 'Main', items: commonItems },
+        { name: 'People', items: [{ path: '/students', label: 'Students', icon: '👨‍🎓' }] },
+        { name: 'Attendance', items: [{ path: '/attendance', label: 'Student attendance', icon: '📋' }] },
+        { name: 'Academics', items: academicsItems },
+        { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
+        { name: 'Help', items: helpItems },
+      ];
+    }
+
+    return [
+      { name: 'Main', items: commonItems },
+      { name: 'Help', items: helpItems },
+    ];
+  };
+
+  const menuCategories = getMenuCategories();
+  const allMenuItems = menuCategories.flatMap(cat => cat.items);
 
   const allowedPaths: Record<string, string[]> = {
-    admin:          [...menuItems.map((item) => item.path), '/settings', '/security', '/change-password', '/announcements', '/helpdesk', '/helpdesk-admin', '/users/account/student'],
+    admin:          [...allMenuItems.map((item) => item.path), '/settings', '/security', '/change-password', '/announcements', '/helpdesk', '/helpdesk-admin', '/users/account/student', '/teacher-application', '/application'],
     teacher:        ['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/grades', '/assignments', '/comments'],
     'class-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards'],
     'class-sponsor':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards'],
@@ -131,9 +313,9 @@ export default function MainLayout() {
     finance:        ['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
     'finance-staff':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
     'vice-principal-instruction': ['/dashboard', '/profile', '/helpdesk', '/report-cards', '/divisions', '/classes', '/subjects', '/teachers', '/students', '/grades', '/attendance', '/teacher-attendance', '/announcements'],
-    principal:      ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements'],
-    proprietor:     ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/users', '/admin-staff'],
-    proprietress:   ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/users', '/admin-staff'],
+    principal:      ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/teacher-application', '/application'],
+    proprietor:     ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/users', '/admin-staff', '/teacher-application', '/application'],
+    proprietress:   ['/dashboard', '/profile', '/helpdesk', '/divisions', '/classes', '/subjects', '/fee-structure', '/grades', '/salary-structures', '/teacher-payroll', '/students', '/attendance', '/teacher-attendance', '/report-cards', '/reports', '/announcements', '/users', '/admin-staff', '/teacher-application', '/application'],
     student:        ['/dashboard', '/profile', '/helpdesk', '/student-profile', '/fee-structure', '/my-grade-sheet', '/my-report-card', '/my-attendance', '/my-assignments', '/my-financial-records'],
     parent:         ['/dashboard', '/profile', '/helpdesk', '/parent-portal', '/fee-structure'],
   };
@@ -168,20 +350,57 @@ export default function MainLayout() {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   // ── Nav item renderer ─────────────────────────────────────────────────────
-  const NavItem = ({ item }: { item: { path: string; label: string; icon: string } }) => (
+  const NavItem = ({ item }: { item: MenuItem }) => (
     <li>
       <Link
         to={item.path}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+        className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-colors ${
           isActive(item.path) ? activeItemCls : inactiveItemCls
         }`}
-        style={isActive(item.path) && theme.sidebarStyle !== 'light' ? { backgroundColor: 'var(--accent)', color: '#fff' } : {}}
       >
-        {theme.showIcons && <span className="w-5 shrink-0 text-center text-base">{item.icon}</span>}
-        <span>{item.label}</span>
+        <span className="w-5 shrink-0 text-center text-base">{item.icon}</span>
+        {!isSidebarCollapsed && <span>{item.label}</span>}
       </Link>
     </li>
   );
+
+  // ── Category renderer ─────────────────────────────────────────────────────
+  const MenuCategory = ({ category }: { category: MenuCategory }) => {
+    const isExpanded = expandedCategories.has(category.name);
+    
+    return (
+      <div className="mb-4">
+        {!isSidebarCollapsed ? (
+          <>
+            <button
+              onClick={() => toggleCategory(category.name)}
+              className="flex w-full items-center justify-between px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors group"
+            >
+              <span className="flex items-center gap-2">
+                <span className={`w-4 h-4 rounded-sm border border-slate-500 flex items-center justify-center text-[10px] transition-colors ${isExpanded ? 'bg-blue-500 border-blue-500 text-white' : 'group-hover:border-white'}`}>
+                  {isExpanded ? '−' : '+'}
+                </span>
+                {category.name}
+              </span>
+            </button>
+            {isExpanded && (
+              <ul className="mt-1 space-y-0.5 pl-10">
+                {category.items.map((item) => (
+                  <NavItem key={item.path} item={item} />
+                ))}
+              </ul>
+            )}
+          </>
+        ) : (
+          <ul className="space-y-0.5">
+            {category.items.map((item) => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   // ── Sidebar content (shared desktop + mobile) ─────────────────────────────
   const SidebarContent = () => (
@@ -197,61 +416,51 @@ export default function MainLayout() {
           }}
         />
 
-        {/* Scrollable nav — offset to sit beside the track */}
-        <nav className="flex-1 overflow-y-auto py-5 pr-3 pl-5 sidebar-nav">
-          <p className={`px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] ${theme.sidebarStyle === 'light' ? 'text-slate-400' : 'text-white/30'}`}>
-            {role === 'admin' ? 'Admin features' : ['teacher', 'class-teacher', 'subject-teacher'].includes(role) ? 'Teaching' : role === 'finance' || role === 'finance-staff' ? 'Finance' : role === 'parent' ? 'Parent portal' : 'My workspace'}
-          </p>
-          <ul className="space-y-0.5">{menuItems.map((item) => <NavItem key={item.path} item={item} />)}</ul>
+        {/* Scrollable nav */}
+        <nav className="flex-1 overflow-y-auto py-6 px-4 sidebar-nav">
+          {menuCategories.map((category) => (
+            <MenuCategory key={category.name} category={category} />
+          ))}
         </nav>
       </div>
-      <div className={`mx-3 mb-5 rounded-xl border p-3 text-xs ${theme.sidebarStyle === 'light' ? 'border-slate-200 text-slate-500' : 'border-white/10 bg-white/5 text-white/50'}`}>
-        <p className={`font-semibold ${theme.sidebarStyle === 'light' ? 'text-slate-700' : 'text-white/80'}`}>{system.systemName}</p>
-        <p className="mt-0.5 leading-4">Year {system.academicYear} · {system.country}</p>
-      </div>
+      {!isSidebarCollapsed && (
+        <div className="mx-4 mb-5 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">
+          <p className="font-semibold text-white/90">{system.systemName}</p>
+          <p className="mt-0.5 leading-4">Year {system.academicYear} · {system.country}</p>
+        </div>
+      )}
     </>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <style>{`
-        .sidebar-nav::-webkit-scrollbar {
-          width: 8px;
-        }
-        .sidebar-nav::-webkit-scrollbar-track {
-          background: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'};
-          border-radius: 4px;
-        }
-        .sidebar-nav::-webkit-scrollbar-thumb {
-          background: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.4)'};
-          border-radius: 4px;
-          border: 2px solid ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'};
-        }
-        .sidebar-nav::-webkit-scrollbar-thumb:hover {
-          background: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'};
-        }
-        .sidebar-nav {
-          scrollbar-width: thin;
-          scrollbar-color: ${theme.sidebarStyle === 'light' ? 'rgba(0,0,0,0.3) rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.4) rgba(255,255,255,0.1)'};
-        }
-      `}</style>
+    <div className="min-h-screen bg-sicss-page">
       <OfflineBanner />
       <div className="flex min-h-screen">
 
-        {/* ── Desktop sidebar ─────────────────────────────── */}
+        {/* ── Desktop sidebar - dark navy ─────────────────────── */}
         <aside
-          className={`hidden w-64 shrink-0 lg:flex lg:flex-col h-screen ${sidebarBg}`}
+          className={`hidden shrink-0 lg:flex lg:flex-col h-full bg-sicss-navy text-white transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-[250px]'}`}
           style={sidebarColorStyle}
         >
-          <div className={`flex items-center gap-3 border-b px-5 py-6 ${theme.sidebarStyle === 'light' ? 'border-slate-200' : 'border-white/10'}`}>
-            {branding.logoUrl
-              ? <img src={branding.logoUrl} alt="Logo" className="h-10 w-10 rounded-xl object-contain" />
-              : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black" style={logoBadgeStyle}>S</div>
-            }
-            <div className="min-w-0">
-              <h1 className={`truncate text-sm font-bold leading-tight ${logoTextCls}`}>{system.systemName}</h1>
-              <p className={`truncate text-xs ${logoSubCls}`}>School management</p>
+          <div className="flex items-center justify-between border-b border-white/10 px-6 py-6">
+            <div className="flex items-center gap-3">
+              {branding.logoUrl
+                ? <img src={branding.logoUrl} alt="Logo" className="h-10 w-10 rounded-xl object-contain" />
+                : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black" style={logoBadgeStyle}>S</div>
+              }
+              {!isSidebarCollapsed && (
+                <div className="min-w-0">
+                  <h1 className="truncate text-sm font-bold leading-tight text-white">SICSS</h1>
+                  <p className="truncate text-xs text-slate-400">Salvation In Christ School System</p>
+                </div>
+              )}
             </div>
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+            >
+              {isSidebarCollapsed ? '→' : '←'}
+            </button>
           </div>
           <SidebarContent />
         </aside>
@@ -270,21 +479,21 @@ export default function MainLayout() {
           className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,20rem)] flex-col shadow-2xl transition-transform duration-300 lg:hidden h-screen ${sidebarBg} ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
           style={sidebarColorStyle}
         >
-          <div className={`flex items-center justify-between border-b px-5 py-5 ${theme.sidebarStyle === 'light' ? 'border-slate-200' : 'border-white/10'}`}>
+          <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
             <div className="flex items-center gap-3">
               {branding.logoUrl
                 ? <img src={branding.logoUrl} alt="Logo" className="h-9 w-9 rounded-xl object-contain" />
                 : <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base font-black" style={logoBadgeStyle}>S</div>
               }
               <div>
-                <h1 className={`text-sm font-bold ${logoTextCls}`}>{system.systemName}</h1>
-                <p className={`text-xs ${logoSubCls}`}>School management</p>
+                <h1 className="text-sm font-bold text-white">SICSS</h1>
+                <p className="text-xs text-slate-400">Salvation In Christ School System</p>
               </div>
             </div>
             <button
               aria-label="Close navigation menu"
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg text-xl ${theme.sidebarStyle === 'light' ? 'text-slate-500 hover:bg-slate-100' : 'text-white/60 hover:bg-white/10'}`}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-xl text-white/60 hover:bg-white/10"
             >×</button>
           </div>
           <SidebarContent />
@@ -292,14 +501,21 @@ export default function MainLayout() {
 
         {/* ── Main content ────────────────────────────────── */}
         <main className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
+          <header className="border-b border-sicss-border bg-white shadow-sm">
             <div className="flex items-center justify-between px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">
+                <button
+                  aria-label="Toggle sidebar"
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  className="hidden lg:flex h-9 w-9 items-center justify-center rounded-lg border border-sicss-border text-sicss-text-primary hover:border-sicss-primary hover:bg-slate-50"
+                >
+                  {isSidebarCollapsed ? '→' : '←'}
+                </button>
                 <button
                   aria-label="Open navigation menu"
                   aria-expanded={isMobileMenuOpen}
                   onClick={() => setIsMobileMenuOpen(true)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 lg:hidden"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-sicss-border text-sicss-text-primary hover:border-sicss-primary hover:bg-slate-50 lg:hidden"
                 >
                   <span className="flex w-4 flex-col gap-[3px]">
                     <span className="h-0.5 w-full rounded bg-current" />
@@ -307,28 +523,35 @@ export default function MainLayout() {
                     <span className="h-0.5 w-full rounded bg-current" />
                   </span>
                 </button>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest lg:hidden" style={{ color: 'var(--accent)' }}>{system.systemName}</p>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {menuItems.find((item) => isActive(item.path))?.label || 'Dashboard'}
-                  </h2>
-                </div>
+                <nav className="flex items-center gap-2 text-sm">
+                  {getBreadcrumb().map((item, index) => (
+                    <span key={item.path} className="flex items-center gap-2">
+                      {index > 0 && <span className="text-sicss-text-muted">/</span>}
+                      {index === getBreadcrumb().length - 1 ? (
+                        <span className="font-semibold text-sicss-text-primary">{item.label}</span>
+                      ) : (
+                        <Link to={item.path} className="text-sicss-text-secondary hover:text-sicss-primary transition-colors">
+                          {item.label}
+                        </Link>
+                      )}
+                    </span>
+                  ))}
+                </nav>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-semibold text-slate-900">{user?.first_name} {user?.last_name}</p>
-                  <p className="text-xs capitalize text-slate-400">{user?.role?.name || 'User'}</p>
-                </div>
+              <div className="flex items-center gap-4">
                 <NotificationBell />
-                <div
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
-                  style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-dark)' }}
-                >
-                  {user?.first_name?.charAt(0) || 'U'}
+                <div className="hidden sm:flex sm:items-center sm:gap-3">
+                  <div className="h-9 w-9 flex items-center justify-center rounded-full bg-sicss-primary/10 text-sicss-primary text-sm font-semibold">
+                    {user?.first_name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-sicss-text-primary">{user?.first_name} {user?.last_name}</p>
+                    <p className="text-xs capitalize text-sicss-text-secondary">{user?.role?.name || 'User'}</p>
+                  </div>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                  className="text-sm font-medium text-sicss-text-secondary hover:text-sicss-text-primary transition-colors"
                 >
                   Logout
                 </button>

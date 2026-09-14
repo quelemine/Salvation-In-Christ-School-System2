@@ -4,9 +4,9 @@ import { classService, type Class } from '../services/classService';
 import { teacherService, type Teacher } from '../services/teacherService';
 import { FormModal } from '../components/FormModal';
 import { useAuthStore } from '../store/authStore';
+import { Button, Input, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
 
 type FormData = {
-  code: string;
   name: string;
   slug: string;
   description: string;
@@ -18,7 +18,6 @@ type FormData = {
 };
 
 const emptyForm: FormData = {
-  code: '',
   name: '',
   slug: '',
   description: '',
@@ -51,6 +50,7 @@ export default function Subjects() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const [s, c, t] = await Promise.all([
         subjectService.getAll(),
@@ -60,19 +60,19 @@ export default function Subjects() {
       setSubjects((s as unknown as Subject[]) || []);
       setClasses((c as unknown as Class[]) || []);
       setTeachers(((t as any).data || t as unknown as Teacher[]) || []);
-    } catch { setError('Failed to load subjects.'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load subjects.');
+    } finally { setLoading(false); }
   };
 
   const filtered = subjects.filter((s) =>
-    `${s.name} ${s.code}`.toLowerCase().includes(search.toLowerCase())
+    `${s.name}`.toLowerCase().includes(search.toLowerCase())
   );
 
   const openAdd = () => { setEditingId(null); setFormData(emptyForm); setIsModalOpen(true); };
   const openEdit = (s: Subject) => {
     setEditingId(s.id);
     setFormData({
-      code:        s.code || '',
       name:        s.name || '',
       slug:        (s as any).slug || toSlug(s.name),
       description: s.description || '',
@@ -144,82 +144,94 @@ export default function Subjects() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic structure</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Subjects</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Academic structure</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Subjects</h1>
           <p className="mt-1 text-sm text-slate-500">{subjects.length} subject{subjects.length !== 1 ? 's' : ''} in the system.</p>
         </div>
         {isAdmin && (
-          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+          <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white">
             + Add subject
-          </button>
+          </Button>
         )}
       </div>
 
-      {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <input
-            type="search"
-            placeholder="Search subjects…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-field max-w-xs"
-          />
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={load} variant="secondary">Try Again</Button>
         </div>
-        {loading ? (
-          <p className="py-12 text-center text-sm text-slate-500">Loading subjects…</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>
-                  {['Code', 'Name', 'Teacher', 'Classes', 'Credits', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-10 text-center text-slate-400">No subjects found.</td></tr>
-                ) : filtered.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50">
-                    <td className="px-5 py-3 font-mono text-xs font-semibold text-cyan-700">{s.code}</td>
-                    <td className="px-5 py-3 font-semibold text-slate-900">{s.name}</td>
-                    <td className="px-5 py-3 text-slate-600">{assignedTeacherName(s)}</td>
-                    <td className="px-5 py-3 text-slate-600">
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="border-b border-slate-200 px-5 py-4">
+            <Input
+              type="search"
+              placeholder="Search subjects…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          {loading ? (
+            <LoadingState message="Loading subjects…" />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title="No subjects found"
+              description="Try adjusting your search to find what you're looking for."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Teacher</TableHead>
+                  <TableHead>Classes</TableHead>
+                  <TableHead>Credits</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-semibold text-slate-900">{s.name}</TableCell>
+                    <TableCell className="text-slate-600">{assignedTeacherName(s)}</TableCell>
+                    <TableCell className="text-slate-600">
                       {((s as any).classes || []).length > 0
-                        ? <span className="inline-flex items-center rounded-full bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-700">{((s as any).classes || []).length} class{((s as any).classes || []).length !== 1 ? 'es' : ''}</span>
+                        ? <Badge variant="info">{((s as any).classes || []).length} class{((s as any).classes || []).length !== 1 ? 'es' : ''}</Badge>
                         : <span className="text-slate-400">—</span>}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">{s.credits}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        (s as any).is_active !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                      }`}>
+                    </TableCell>
+                    <TableCell className="text-slate-600">{s.credits}</TableCell>
+                    <TableCell>
+                      <Badge variant={(s as any).is_active !== false ? 'success' : 'default'}>
                         {(s as any).is_active !== false ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {isAdmin ? (
                         <div className="flex gap-3">
-                          <button onClick={() => openEdit(s)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
-                          <button onClick={() => handleDelete(s.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                          <Button onClick={() => openEdit(s)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                            Edit
+                          </Button>
+                          <Button onClick={() => handleDelete(s.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">
+                            Delete
+                          </Button>
                         </div>
                       ) : (
                         <span className="text-xs text-slate-400">View only</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
+          )}
+          <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-400">
+            {filtered.length} of {subjects.length} subject{subjects.length !== 1 ? 's' : ''}
           </div>
-        )}
-        <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
-          {filtered.length} of {subjects.length} subject{subjects.length !== 1 ? 's' : ''}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <FormModal
         isOpen={isModalOpen}
@@ -230,12 +242,6 @@ export default function Subjects() {
         isLoading={isSubmitting}
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-
-          {/* Code */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Code <span className="text-rose-500">*</span></label>
-            <input required value={formData.code} onChange={field('code')} className="input-field" placeholder="MATH-101" />
-          </div>
 
           {/* Name */}
           <div>
@@ -274,7 +280,7 @@ export default function Subjects() {
               id="is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="h-4 w-4 rounded border-slate-300 text-cyan-600"
+              className="h-4 w-4 rounded border-slate-300 text-blue-600"
             />
             <label htmlFor="is_active" className="text-sm font-medium text-slate-700">Active</label>
           </div>
@@ -314,12 +320,12 @@ export default function Subjects() {
                   <label key={c.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-cyan-600 accent-cyan-600"
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600"
                       checked={formData.class_ids.includes(c.id)}
                       onChange={() => toggleClass(c.id)}
                     />
                     <span className="text-sm text-slate-700">
-                      {c.name}{c.section ? ` — ${c.section}` : ''}
+                      {c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}
                     </span>
                   </label>
                 ))}

@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminSeeder::class,
             DemoDataSeeder::class,
+            ReportCardTemplateSeeder::class,
         ]);
     }
 }

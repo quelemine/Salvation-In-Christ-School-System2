@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { Button, Input, Select, Badge } from '../components/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TicketStatus   = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -31,17 +32,17 @@ interface Ticket {
 }
 
 // ── Meta maps ─────────────────────────────────────────────────────────────────
-const STATUS_META: Record<TicketStatus, { label: string; color: string; dot: string }> = {
-  open:        { label: 'Open',        color: 'bg-blue-100 text-blue-800',    dot: 'bg-blue-500'    },
-  in_progress: { label: 'In progress', color: 'bg-amber-100 text-amber-800',  dot: 'bg-amber-500'   },
-  resolved:    { label: 'Resolved',    color: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500' },
-  closed:      { label: 'Closed',      color: 'bg-slate-100 text-slate-600',  dot: 'bg-slate-400'   },
+const STATUS_META: Record<TicketStatus, { label: string; badgeVariant: 'success' | 'warning' | 'default'; dot: string }> = {
+  open:        { label: 'Open',        badgeVariant: 'success', dot: 'bg-blue-500'    },
+  in_progress: { label: 'In progress', badgeVariant: 'warning', dot: 'bg-amber-500'   },
+  resolved:    { label: 'Resolved',    badgeVariant: 'success', dot: 'bg-emerald-500' },
+  closed:      { label: 'Closed',      badgeVariant: 'default', dot: 'bg-slate-400'   },
 };
-const PRIORITY_META: Record<TicketPriority, { label: string; color: string }> = {
-  low:    { label: 'Low',    color: 'bg-slate-100 text-slate-600'  },
-  medium: { label: 'Medium', color: 'bg-blue-100 text-blue-700'   },
-  high:   { label: 'High',   color: 'bg-amber-100 text-amber-800' },
-  urgent: { label: 'Urgent', color: 'bg-rose-100 text-rose-700'   },
+const PRIORITY_META: Record<TicketPriority, { label: string; badgeVariant: 'default' | 'success' | 'warning' | 'danger' }> = {
+  low:    { label: 'Low',    badgeVariant: 'default'  },
+  medium: { label: 'Medium', badgeVariant: 'success'   },
+  high:   { label: 'High',   badgeVariant: 'warning' },
+  urgent: { label: 'Urgent', badgeVariant: 'danger'   },
 };
 const CATEGORY_ICONS: Record<TicketCategory, string> = {
   account: '👤', academic: '🎓', finance: '💰', technical: '🔧', other: '💬',
@@ -83,10 +84,9 @@ function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)}
-        className="w-full rounded-xl border-2 border-dashed border-slate-300 py-5 text-sm font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700 transition-colors">
+      <Button onClick={() => setOpen(true)} variant="ghost" className="w-full border-2 border-dashed py-5">
         + Submit a new support ticket
-      </button>
+      </Button>
     );
   }
 
@@ -100,40 +100,43 @@ function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{error}</p>}
 
       <div>
-        <label className="mb-1.5 block text-sm font-semibold text-slate-700">Subject <span className="text-rose-500">*</span></label>
-        <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}
-          className="input-field" placeholder="Briefly describe your issue…" />
+        <Input label="Subject" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="Briefly describe your issue…" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
-          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as TicketCategory })} className="input-field">
-            {(Object.entries(CATEGORY_ICONS) as [TicketCategory, string][]).map(([k, icon]) => (
-              <option key={k} value={k}>{icon} {k.charAt(0).toUpperCase() + k.slice(1)}</option>
-            ))}
-          </select>
+          <Select
+            label="Category"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value as TicketCategory })}
+            options={(Object.entries(CATEGORY_ICONS) as [TicketCategory, string][]).map(([k, icon]) => ({ value: k, label: `${icon} ${k.charAt(0).toUpperCase() + k.slice(1)}` }))}
+          />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-slate-700">Priority</label>
-          <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TicketPriority })} className="input-field">
-            {(Object.entries(PRIORITY_META) as [TicketPriority, any][]).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
-            ))}
-          </select>
+          <Select
+            label="Priority"
+            value={form.priority}
+            onChange={(e) => setForm({ ...form, priority: e.target.value as TicketPriority })}
+            options={(Object.entries(PRIORITY_META) as [TicketPriority, any][]).map(([k, v]) => ({ value: k, label: v.label }))}
+          />
         </div>
       </div>
 
       {(isParent || isVPI) && (
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-slate-700">Send message to <span className="text-rose-500">*</span></label>
-          <select value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value as any })} className="input-field">
-            <option value="">Select recipient...</option>
-            <option value="proprietor">Proprietor</option>
-            <option value="proprietress">Proprietress</option>
-            <option value="principal">Principal</option>
-            {isParent && <option value="vice-principal-instruction">Vice Principal Instruction</option>}
-          </select>
+          <Select
+            label="Send message to"
+            required
+            value={form.assigned_to}
+            onChange={(e) => setForm({ ...form, assigned_to: e.target.value as any })}
+            options={[
+              { value: '', label: 'Select recipient...' },
+              { value: 'proprietor', label: 'Proprietor' },
+              { value: 'proprietress', label: 'Proprietress' },
+              { value: 'principal', label: 'Principal' },
+              ...(isParent ? [{ value: 'vice-principal-instruction', label: 'Vice Principal Instruction' }] : [])
+            ]}
+          />
         </div>
       )}
 
@@ -146,141 +149,12 @@ function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
       </div>
 
       <div className="flex justify-end gap-3 pt-1">
-        <button type="button" onClick={() => setOpen(false)}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-          Cancel
-        </button>
-        <button type="submit" disabled={saving}
-          className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+        <Button type="button" onClick={() => setOpen(false)} variant="secondary">Cancel</Button>
+        <Button type="submit" disabled={saving}>
           {saving ? 'Submitting…' : '🎫 Submit ticket'}
-        </button>
+        </Button>
       </div>
     </form>
-  );
-}
-
-// ── Ticket thread view ─────────────────────────────────────────────────────────
-function TicketThread({ ticket, onClose, onUpdated }: {
-  ticket: Ticket; onClose: () => void; onUpdated: (t: Ticket) => void;
-}) {
-  const { user } = useAuthStore();
-  const isAdmin = user?.role?.slug === 'admin';
-  const [replies, setReplies] = useState<Reply[]>(ticket.replies || []);
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-
-  const sendReply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    setSending(true); setError('');
-    try {
-      const res = await api.post(`/helpdesk/tickets/${ticket.id}/reply`, { message });
-      setReplies((p) => [...p, res.data]);
-      setMessage('');
-      onUpdated({ ...ticket, replies: [...replies, res.data], status: isAdmin && ticket.status === 'open' ? 'in_progress' : ticket.status });
-    } catch { setError('Failed to send reply.'); }
-    finally { setSending(false); }
-  };
-
-  const sm = STATUS_META[ticket.status];
-  const pm = PRIORITY_META[ticket.priority];
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      {/* Thread header */}
-      <div className="border-b border-slate-100 px-5 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-base">{CATEGORY_ICONS[ticket.category]}</span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${sm.color}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${sm.dot}`} />
-                {sm.label}
-              </span>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${pm.color}`}>{pm.label}</span>
-              <span className="font-mono text-xs text-slate-400">{ticket.ticket_number}</span>
-            </div>
-            <h3 className="text-base font-bold text-slate-950 truncate">{ticket.subject}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Opened {new Date(ticket.created_at).toLocaleString()}
-              {ticket.assigned_to && ` · Assigned to ${ticket.assigned_to.first_name} ${ticket.assigned_to.last_name}`}
-            </p>
-          </div>
-          <button onClick={onClose} className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50">
-            ← Back
-          </button>
-        </div>
-      </div>
-
-      {/* Original description */}
-      <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-300 text-xs font-bold text-slate-700">
-            {ticket.user?.first_name?.charAt(0)}{ticket.user?.last_name?.charAt(0)}
-          </div>
-          <span className="text-sm font-semibold text-slate-900">
-            {ticket.user ? `${ticket.user.first_name} ${ticket.user.last_name}` : 'You'}
-          </span>
-          <span className="text-xs text-slate-400">{new Date(ticket.created_at).toLocaleString()}</span>
-        </div>
-        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ticket.description}</p>
-      </div>
-
-      {/* Replies */}
-      <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
-        {replies.length === 0 && (
-          <div className="py-8 text-center">
-            <p className="text-sm text-slate-400">No replies yet. Our support team will respond shortly.</p>
-          </div>
-        )}
-        {replies.map((r) => (
-          <div key={r.id} className={`px-5 py-4 ${r.is_staff_reply ? 'bg-cyan-50' : ''}`}>
-            <div className="flex items-start gap-3">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                r.is_staff_reply ? 'bg-cyan-700 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {r.is_staff_reply ? '🛠' : `${r.user.first_name?.charAt(0)}${r.user.last_name?.charAt(0)}`}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-slate-900">
-                    {r.user.first_name} {r.user.last_name}
-                  </span>
-                  {r.is_staff_reply && (
-                    <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-800 uppercase tracking-wide">
-                      Support
-                    </span>
-                  )}
-                  <span className="text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</span>
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{r.message}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Reply box */}
-      {ticket.status !== 'closed' ? (
-        <form onSubmit={sendReply} className="border-t border-slate-200 p-4 space-y-3">
-          {error && <p className="text-xs text-rose-600">{error}</p>}
-          <textarea value={message} onChange={(e) => setMessage(e.target.value)}
-            className="input-field" rows={3}
-            placeholder={isAdmin ? 'Write a support response…' : 'Add a follow-up message…'} />
-          <div className="flex justify-end">
-            <button type="submit" disabled={sending || !message.trim()}
-              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-40">
-              {sending ? 'Sending…' : isAdmin ? '🛠 Send response' : '💬 Send reply'}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-sm text-slate-400 text-center">
-          This ticket is closed. Open a new ticket if you need further assistance.
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -288,7 +162,6 @@ function TicketThread({ ticket, onClose, onUpdated }: {
 export default function HelpDesk() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => { load(); }, []);
@@ -303,10 +176,6 @@ export default function HelpDesk() {
   };
 
   const handleCreated = (t: Ticket) => setTickets((p) => [t, ...p]);
-  const handleUpdated = (t: Ticket) => {
-    setTickets((p) => p.map((x) => (x.id === t.id ? t : x)));
-    setActiveTicket(t);
-  };
 
   const filtered = filterStatus ? tickets.filter((t) => t.status === filterStatus) : tickets;
 
@@ -316,27 +185,11 @@ export default function HelpDesk() {
     resolved:    tickets.filter((t) => t.status === 'resolved').length,
   };
 
-  if (activeTicket) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Help desk</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-950">Ticket thread</h1>
-        </div>
-        <TicketThread
-          ticket={activeTicket}
-          onClose={() => setActiveTicket(null)}
-          onUpdated={handleUpdated}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Support</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Help desk</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Support</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Help desk</h1>
         <p className="mt-2 text-sm text-slate-500">
           Submit a support ticket and our team will respond as soon as possible.
         </p>
@@ -361,14 +214,17 @@ export default function HelpDesk() {
 
       {/* My tickets list */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <p className="text-sm font-bold text-slate-950">My tickets ({tickets.length})</p>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input-field w-auto text-sm">
-            <option value="">All statuses</option>
-            {(Object.entries(STATUS_META) as [TicketStatus, any][]).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <p className="text-sm font-bold text-slate-900">My tickets ({tickets.length})</p>
+          <Select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            options={[
+              { value: '', label: 'All statuses' },
+              ...(Object.entries(STATUS_META) as [TicketStatus, any][]).map(([k, v]) => ({ value: k, label: v.label }))
+            ]}
+            className="w-auto text-sm"
+          />
         </div>
 
         {loading ? (
@@ -386,21 +242,23 @@ export default function HelpDesk() {
               const pm = PRIORITY_META[t.priority];
               const unread = t.replies.filter((r) => r.is_staff_reply).length;
               return (
-                <button key={t.id} onClick={() => setActiveTicket(t)}
+                <button key={t.id}
                   className="w-full px-5 py-4 text-left hover:bg-slate-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <span className="text-xl mt-0.5 shrink-0">{CATEGORY_ICONS[t.category]}</span>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${sm.color}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${sm.dot}`} />{sm.label}
-                          </span>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${pm.color}`}>{pm.label}</span>
+                          <Badge variant={sm.badgeVariant}>
+                            {sm.label}
+                          </Badge>
+                          <Badge variant={pm.badgeVariant}>
+                            {pm.label}
+                          </Badge>
                           {unread > 0 && (
-                            <span className="rounded-full bg-cyan-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                            <Badge variant="success">
                               {unread} repl{unread === 1 ? 'y' : 'ies'}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                         <p className="text-sm font-semibold text-slate-900 truncate">{t.subject}</p>

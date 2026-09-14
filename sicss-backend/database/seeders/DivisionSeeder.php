@@ -12,31 +12,24 @@ class DivisionSeeder extends Seeder
     {
         $divisions = [
             [
-                'name' => 'Early Childhood Division',
-                'slug' => 'early-childhood',
-                'description' => 'ABC, Nursery 1, Nursery 2',
+                'name' => 'Kindergarten Division',
+                'slug' => 'kindergarten',
+                'description' => 'ABC, K1, K2',
                 'order' => 1,
                 'is_active' => true,
             ],
             [
-                'name' => 'Kindergarten Division',
-                'slug' => 'kindergarten',
-                'description' => 'K-1, K-2',
+                'name' => 'Elementary Division',
+                'slug' => 'elementary',
+                'description' => 'Grade 1, Grade 2, Grade 3, Grade 4, Grade 5, Grade 6',
                 'order' => 2,
                 'is_active' => true,
             ],
             [
-                'name' => 'Primary Division',
-                'slug' => 'primary',
-                'description' => 'Grade 1, Grade 2, Grade 3, Grade 4, Grade 5, Grade 6',
-                'order' => 3,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Junior Secondary Division',
-                'slug' => 'junior-secondary',
+                'name' => 'Junior High School',
+                'slug' => 'junior-high',
                 'description' => 'Grade 7, Grade 8, Grade 9',
-                'order' => 4,
+                'order' => 3,
                 'is_active' => true,
             ],
         ];

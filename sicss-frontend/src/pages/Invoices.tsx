@@ -143,8 +143,8 @@ export default function Invoices() {
                 : <p style={{ color: '#94a3b8' }}>Student not selected</p>}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p><b>Issue date:</b> {active.issueDate}</p>
-              <p><b>Due date:</b> {active.dueDate}</p>
+              <p><b>Issue date:</b> {active.issueDate ? new Date(active.issueDate).toLocaleDateString() : '—'}</p>
+              <p><b>Due date:</b> {active.dueDate ? new Date(active.dueDate).toLocaleDateString() : '—'}</p>
             </div>
           </div>
 
@@ -211,7 +211,7 @@ export default function Invoices() {
       <div className="screen-only space-y-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Finance</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Finance</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Invoices</h1>
           </div>
           <div className="flex gap-2">
@@ -220,7 +220,7 @@ export default function Invoices() {
                 🖨 Print invoice
               </button>
             )}
-            <button onClick={createNew} className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
+            <button onClick={createNew} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
               + New invoice
             </button>
           </div>
@@ -252,7 +252,7 @@ export default function Invoices() {
               <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
                 <div>
                   <p className="text-lg font-bold text-slate-950">{active.number}</p>
-                  <p className="text-xs text-slate-400">Created {active.issueDate}</p>
+                  <p className="text-xs text-slate-400">Created {active.issueDate ? new Date(active.issueDate).toLocaleDateString() : '—'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <select value={active.status} onChange={(e) => update({ status: e.target.value as any })}
@@ -320,7 +320,7 @@ export default function Invoices() {
                     </div>
                   ))}
                 </div>
-                <button onClick={addItem} className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-1.5 text-xs font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700">
+                <button onClick={addItem} className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-1.5 text-xs font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-700">
                   + Add line
                 </button>
 

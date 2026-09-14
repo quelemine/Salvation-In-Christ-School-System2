@@ -21,7 +21,7 @@ const statusColors: Record<string, string> = {
 
 const opColors: Record<string, string> = {
   create: 'bg-blue-100 text-blue-800',
-  update: 'bg-cyan-100 text-cyan-800',
+  update: 'bg-blue-100 text-blue-800',
   delete: 'bg-rose-100 text-rose-700',
 };
 
@@ -85,14 +85,14 @@ export default function SyncStatus() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">System tools</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">System tools</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Sync status</h1>
           <p className="mt-2 text-sm text-slate-500">Monitor offline data sync and keep your records up to date.</p>
         </div>
         <button
           onClick={handleSync}
           disabled={syncing || !isOnline}
-          className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50 sm:self-auto"
+          className="self-start rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 sm:self-auto"
         >
           {syncing ? 'Syncing…' : '↑ Sync now'}
         </button>

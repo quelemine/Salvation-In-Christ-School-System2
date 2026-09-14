@@ -4,6 +4,7 @@ import { classService, type Class } from '../services/classService';
 import { formatCurrency, type CurrencyCode } from '../utils/currency';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
+import { Button, Input, Select, Badge } from '../components/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Category = 'tuition' | 'registration' | 'uniform' | 'exam' | 'activity' | 'library' | 'other';
@@ -31,14 +32,14 @@ interface Structure {
   items: (StructureItem & { id: number })[];
 }
 
-const CAT_META: Record<Category, { label: string; color: string }> = {
-  tuition:      { label: 'Tuition',      color: 'bg-blue-100 text-blue-800'    },
-  registration: { label: 'Registration', color: 'bg-purple-100 text-purple-800' },
-  uniform:      { label: 'Uniform',      color: 'bg-cyan-100 text-cyan-800'    },
-  exam:         { label: 'Exam',         color: 'bg-amber-100 text-amber-800'   },
-  activity:     { label: 'Activity',     color: 'bg-emerald-100 text-emerald-800' },
-  library:      { label: 'Library',      color: 'bg-slate-100 text-slate-700'  },
-  other:        { label: 'Other',        color: 'bg-gray-100 text-gray-600'    },
+const CAT_META: Record<Category, { label: string; badgeVariant: 'success' | 'info' | 'warning' | 'default' }> = {
+  tuition:      { label: 'Tuition',      badgeVariant: 'success' },
+  registration: { label: 'Registration', badgeVariant: 'info' },
+  uniform:      { label: 'Uniform',      badgeVariant: 'info' },
+  exam:         { label: 'Exam',         badgeVariant: 'warning' },
+  activity:     { label: 'Activity',     badgeVariant: 'success' },
+  library:      { label: 'Library',      badgeVariant: 'default' },
+  other:        { label: 'Other',        badgeVariant: 'default' },
 };
 
 const newItem = (currency: CurrencyCode): StructureItem => ({
@@ -102,7 +103,7 @@ export default function FeeStructure() {
       name: s.name, academic_year: s.academic_year,
       class_id: s.class_id ? String(s.class_id) : '',
       applies_to: s.applies_to, description: s.description || '', is_active: s.is_active,
-      items: s.items.map((i) => ({ ...i, amount: String(i.amount), due_date: (i.due_date as any)?.slice?.(0, 10) ?? '' })),
+      items: s.items.map((i) => ({ ...i, amount: String(i.amount), due_date: (i.due_date as any)?.split?.('T')?.[0] ?? '' })),
     });
     setFormError('');
     setShowForm(true);
@@ -160,10 +161,10 @@ export default function FeeStructure() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-8">
           <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Finance</p>
-                <h2 className="text-lg font-bold text-slate-950">{editing ? 'Edit' : 'New'} fee structure</h2>
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Finance</p>
+                <h2 className="text-lg font-bold text-slate-900">{editing ? 'Edit' : 'New'} fee structure</h2>
               </div>
               <button onClick={() => setShowForm(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl">×</button>
             </div>
@@ -173,33 +174,35 @@ export default function FeeStructure() {
                 {formError && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{formError}</p>}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">Structure name <span className="text-rose-500">*</span></label>
-                    <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input-field" placeholder="e.g. 2026 Annual School Fees" />
+                    <Input label="Structure name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. 2026 Annual School Fees" />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">Academic year <span className="text-rose-500">*</span></label>
-                    <input required value={form.academic_year} onChange={(e) => setForm({ ...form, academic_year: e.target.value })} className="input-field" />
+                    <Input label="Academic year" required value={form.academic_year} onChange={(e) => setForm({ ...form, academic_year: e.target.value })} />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">Applies to</label>
-                    <select value={form.applies_to} onChange={(e) => setForm({ ...form, applies_to: e.target.value as any })} className="input-field">
-                      <option value="all">All classes</option>
-                      <option value="class">Specific class</option>
-                    </select>
+                    <Select
+                      label="Applies to"
+                      value={form.applies_to}
+                      onChange={(e) => setForm({ ...form, applies_to: e.target.value as any })}
+                      options={[
+                        { value: 'all', label: 'All classes' },
+                        { value: 'class', label: 'Specific class' }
+                      ]}
+                    />
                   </div>
                   {form.applies_to === 'class' && (
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Class</label>
-                      <select value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value })} className="input-field">
-                        <option value="">Select class</option>
-                        {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>)}
-                      </select>
+                      <Select
+                        label="Class"
+                        value={form.class_id}
+                        onChange={(e) => setForm({ ...form, class_id: e.target.value })}
+                        options={[
+                          { value: '', label: 'Select class' },
+                          ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+                        ]}
+                      />
                     </div>
                   )}
-                  <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
-                    <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field" rows={2} />
-                  </div>
                   <div className="flex items-center gap-3">
                     <label className="flex cursor-pointer items-center gap-2">
                       <div onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
@@ -217,7 +220,7 @@ export default function FeeStructure() {
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-slate-950">Fee line items</p>
                   <button type="button" onClick={addItem}
-                    className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700">
+                    className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-700">
                     + Add item
                   </button>
                 </div>
@@ -263,10 +266,10 @@ export default function FeeStructure() {
               </div>
 
               <div className="flex justify-end gap-3 px-6 py-4">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={saving} className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+                <Button type="button" onClick={() => setShowForm(false)} variant="secondary">Cancel</Button>
+                <Button type="submit" disabled={saving}>
                   {saving ? 'Saving…' : editing ? 'Save changes' : 'Create structure'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -276,14 +279,14 @@ export default function FeeStructure() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Finance</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Fee structure</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Finance</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Fee structure</h1>
           <p className="mt-2 text-sm text-slate-500">Define the complete fee breakdown for each academic year. Use these structures to verify student clearance before printing report cards.</p>
         </div>
         {canEdit && (
-          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+          <Button onClick={openAdd}>
             + New fee structure
-          </button>
+          </Button>
         )}
       </div>
 
@@ -291,10 +294,15 @@ export default function FeeStructure() {
 
       {/* Filter */}
       <div className="flex items-center gap-3">
-        <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="input-field w-auto">
-          <option value="">All years</option>
-          {[...new Set(structures.map((s) => s.academic_year))].sort().reverse().map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+        <Select
+          value={filterYear}
+          onChange={(e) => setFilterYear(e.target.value)}
+          options={[
+            { value: '', label: 'All years' },
+            ...[...new Set(structures.map((s) => s.academic_year))].sort().reverse().map((y) => ({ value: y, label: y }))
+          ]}
+          className="w-auto"
+        />
         <span className="text-xs text-slate-400">{filtered.length} structure{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
@@ -322,9 +330,9 @@ export default function FeeStructure() {
                   </p>
                   <p className="text-xs text-slate-400">{s.items.length} line item{s.items.length !== 1 ? 's' : ''}</p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${s.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                <Badge variant={s.is_active ? 'success' : 'default'}>
                   {s.is_active ? 'Active' : 'Inactive'}
-                </span>
+                </Badge>
               </div>
             </div>
           ))}
@@ -351,8 +359,8 @@ export default function FeeStructure() {
                 </div>
                 {canEdit && (
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => openEdit(activeStructure)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
-                    <button onClick={() => handleDelete(activeStructure.id)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50">Delete</button>
+                    <Button onClick={() => openEdit(activeStructure)} variant="secondary" className="text-xs">Edit</Button>
+                    <Button onClick={() => handleDelete(activeStructure.id)} variant="ghost" className="text-xs text-rose-600 hover:text-rose-700">Delete</Button>
                   </div>
                 )}
               </div>
@@ -384,17 +392,17 @@ export default function FeeStructure() {
                       <tr key={item.id} className="hover:bg-slate-50">
                         <td className="px-5 py-3 font-semibold text-slate-900">{item.label}</td>
                         <td className="px-5 py-3">
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CAT_META[item.category as Category]?.color}`}>
+                          <Badge variant={CAT_META[item.category as Category]?.badgeVariant}>
                             {CAT_META[item.category as Category]?.label}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-5 py-3 font-bold text-slate-900">{formatCurrency(Number(item.amount), (item.currency as CurrencyCode) || 'LRD')}</td>
                         <td className="px-5 py-3 font-mono text-xs text-slate-500">{item.currency}</td>
-                        <td className="px-5 py-3 text-slate-600">{item.due_date ? String(item.due_date).slice(0, 10) : '—'}</td>
+                        <td className="px-5 py-3 text-slate-600">{item.due_date ? new Date(item.due_date).toLocaleDateString() : '—'}</td>
                         <td className="px-5 py-3">
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.is_mandatory ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
+                          <Badge variant={item.is_mandatory ? 'danger' : 'default'}>
                             {item.is_mandatory ? 'Required' : 'Optional'}
-                          </span>
+                          </Badge>
                         </td>
                       </tr>
                     ))}

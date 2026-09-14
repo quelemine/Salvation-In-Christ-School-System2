@@ -4,6 +4,7 @@ import { classService, type Class } from '../services/classService';
 import { subjectService, type Subject } from '../services/subjectService';
 import { teacherService, type Teacher } from '../services/teacherService';
 import { FormModal } from '../components/FormModal';
+import { Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
 
 type Assignment = {
   id: number;
@@ -36,11 +37,10 @@ const emptyForm: FormData = {
   status: 'published',
 };
 
-const statusColors: Record<string, string> = {
-  published: 'bg-emerald-100 text-emerald-800',
-  draft: 'bg-amber-100 text-amber-800',
-  closed: 'bg-slate-100 text-slate-600',
-};
+const statusBadgeVariant = (status: string) =>
+  status === 'published' ? 'success' as const
+  : status === 'draft' ? 'warning' as const
+  : 'default' as const;
 
 export default function Assignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -59,6 +59,7 @@ export default function Assignments() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const [aRes, cRes, sRes, tRes] = await Promise.all([
         api.get('/assignments'),
@@ -72,8 +73,9 @@ export default function Assignments() {
       setClasses((cRes as unknown as Class[]) || []);
       setSubjects((sRes as unknown as Subject[]) || []);
       setTeachers(tRes.data || []);
-    } catch { setError('Failed to load assignments.'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load assignments.');
+    } finally { setLoading(false); }
   };
 
   const filtered = assignments.filter((a) =>
@@ -132,106 +134,162 @@ export default function Assignments() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Teaching tools</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Assignments</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Teaching tools</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Assignments</h1>
         </div>
-        <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+        <Button onClick={openAdd}>
           + Add assignment
-        </button>
+        </Button>
       </div>
 
-      {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <input type="search" placeholder="Search assignments…" value={search} onChange={(e) => setSearch(e.target.value)} className="input-field max-w-xs" />
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={load} variant="secondary">Try Again</Button>
         </div>
-        {loading ? (
-          <p className="py-12 text-center text-sm text-slate-500">Loading assignments…</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>
-                  {['Title', 'Class', 'Subject', 'Teacher', 'Due date', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-10 text-center text-slate-400">No assignments found.</td></tr>
-                ) : filtered.map((a) => (
-                  <tr key={a.id} className="hover:bg-slate-50">
-                    <td className="px-5 py-3 font-semibold text-slate-900 max-w-[200px] truncate">{a.title}</td>
-                    <td className="px-5 py-3 text-slate-600">{a.class?.name || '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{a.subject?.name || '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{a.teacher ? `${a.teacher.first_name} ${a.teacher.last_name}` : '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{a.due_date || '—'}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[a.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex gap-3">
-                        <button onClick={() => openEdit(a)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
-                        <button onClick={() => handleDelete(a.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="border-b border-slate-200 px-5 py-4">
+            <Input
+              type="search"
+              placeholder="Search assignments…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
           </div>
-        )}
-        <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
-          {filtered.length} of {assignments.length} assignment{assignments.length !== 1 ? 's' : ''}
-        </div>
-      </div>
+          {loading ? (
+            <LoadingState message="Loading assignments…" />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title="No assignments found"
+              description="Try adjusting your search to find what you're looking for."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Teacher</TableHead>
+                  <TableHead>Due date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-semibold text-slate-900 max-w-[200px] truncate">{a.title}</TableCell>
+                    <TableCell className="text-slate-600">{a.class?.name || '—'}</TableCell>
+                    <TableCell className="text-slate-600">{a.subject?.name || '—'}</TableCell>
+                    <TableCell className="text-slate-600">{a.teacher ? `${a.teacher.first_name} ${a.teacher.last_name}` : '—'}</TableCell>
+                    <TableCell className="text-slate-600">{a.due_date ? new Date(a.due_date).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusBadgeVariant(a.status)}>
+                        {a.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-3">
+                        <Button onClick={() => openEdit(a)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                          Edit
+                        </Button>
+                        <Button onClick={() => handleDelete(a.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-400">
+            {filtered.length} of {assignments.length} assignment{assignments.length !== 1 ? 's' : ''}
+          </div>
+        </CardContent>
+      </Card>
 
       <FormModal isOpen={isModalOpen} title={editingId ? 'Edit assignment' : 'Add assignment'} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit} submitText={editingId ? 'Save changes' : 'Add assignment'} isLoading={isSubmitting}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Title <span className="text-rose-500">*</span></label>
-            <input required value={formData.title} onChange={field('title')} className="input-field" placeholder="Chapter 3 exercises" />
+            <Input
+              label="Title"
+              value={formData.title}
+              onChange={field('title')}
+              placeholder="Chapter 3 exercises"
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Class <span className="text-rose-500">*</span></label>
-            <select required value={formData.class_id} onChange={field('class_id')} className="input-field">
-              <option value="">Select class</option>
-              {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>)}
-            </select>
+            <Select
+              label="Class"
+              value={formData.class_id}
+              onChange={field('class_id')}
+              options={[
+                { value: '', label: 'Select class' },
+                ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+              ]}
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Subject <span className="text-rose-500">*</span></label>
-            <select required value={formData.subject_id} onChange={field('subject_id')} className="input-field">
-              <option value="">Select subject</option>
-              {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <Select
+              label="Subject"
+              value={formData.subject_id}
+              onChange={field('subject_id')}
+              options={[
+                { value: '', label: 'Select subject' },
+                ...subjects.map((s) => ({ value: String(s.id), label: s.name }))
+              ]}
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Teacher</label>
-            <select value={formData.teacher_id} onChange={field('teacher_id')} className="input-field">
-              <option value="">Select teacher (optional)</option>
-              {teachers.map((t) => <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>)}
-            </select>
+            <Select
+              label="Teacher"
+              value={formData.teacher_id}
+              onChange={field('teacher_id')}
+              options={[
+                { value: '', label: 'Select teacher (optional)' },
+                ...teachers.map((t) => ({ value: String(t.id), label: `${t.first_name} ${t.last_name}` }))
+              ]}
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Due date <span className="text-rose-500">*</span></label>
-            <input required type="date" value={formData.due_date} onChange={field('due_date')} className="input-field" />
+            <Input
+              label="Due date"
+              type="date"
+              value={formData.due_date}
+              onChange={field('due_date')}
+              required
+            />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
-            <select value={formData.status} onChange={field('status')} className="input-field">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="closed">Closed</option>
-            </select>
+            <Select
+              label="Status"
+              value={formData.status}
+              onChange={field('status')}
+              options={[
+                { value: 'draft', label: 'Draft' },
+                { value: 'published', label: 'Published' },
+                { value: 'closed', label: 'Closed' },
+              ]}
+            />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
-            <textarea value={formData.description} onChange={field('description')} className="input-field" rows={3} placeholder="Describe the assignment…" />
+            <Input
+              label="Description"
+              type="textarea"
+              value={formData.description}
+              onChange={field('description')}
+              rows={3}
+              placeholder="Describe the assignment…"
+            />
           </div>
         </div>
       </FormModal>

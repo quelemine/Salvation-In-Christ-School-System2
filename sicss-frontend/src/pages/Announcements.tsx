@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { authService } from '../services/authService';
 import type { User } from '../types';
+import { Button, Input, Select, Badge } from '../components/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Priority = 'normal' | 'important' | 'urgent';
@@ -23,10 +24,10 @@ interface Announcement {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PRIORITY_META: Record<Priority, { label: string; color: string; dot: string }> = {
-  normal:    { label: 'Normal',    color: 'bg-slate-100 text-slate-700',    dot: 'bg-slate-400'    },
-  important: { label: 'Important', color: 'bg-amber-100 text-amber-800',   dot: 'bg-amber-500'    },
-  urgent:    { label: 'Urgent',    color: 'bg-rose-100 text-rose-700',     dot: 'bg-rose-500'     },
+const PRIORITY_META: Record<Priority, { label: string; badgeVariant: 'default' | 'warning' | 'danger'; dot: string }> = {
+  normal:    { label: 'Normal',    badgeVariant: 'default', dot: 'bg-slate-400'    },
+  important: { label: 'Important', badgeVariant: 'warning', dot: 'bg-amber-500'    },
+  urgent:    { label: 'Urgent',    badgeVariant: 'danger',  dot: 'bg-rose-500'     },
 };
 const CATEGORY_META: Record<Category, { label: string; icon: string }> = {
   general:   { label: 'General',   icon: '📢' },
@@ -104,12 +105,12 @@ function ComposeModal({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-8">
       <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">
               {existing ? 'Edit' : 'New'} announcement
             </p>
-            <h2 className="text-lg font-bold text-slate-950">
+            <h2 className="text-lg font-bold text-slate-900">
               {existing ? 'Edit announcement' : 'Compose announcement'}
             </h2>
           </div>
@@ -125,30 +126,26 @@ function ComposeModal({
 
             {/* Title */}
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Title <span className="text-rose-500">*</span></label>
-              <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="input-field" placeholder="Announcement title…" />
+              <Input label="Title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Announcement title…" />
             </div>
 
             {/* Priority + Category row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Priority</label>
-                <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}
-                  className="input-field">
-                  {Object.entries(PRIORITY_META).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
+                <Select
+                  label="Priority"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}
+                  options={Object.entries(PRIORITY_META).map(([k, v]) => ({ value: k, label: v.label }))}
+                />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
-                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })}
-                  className="input-field">
-                  {Object.entries(CATEGORY_META).map(([k, v]) => (
-                    <option key={k} value={k}>{v.icon} {v.label}</option>
-                  ))}
-                </select>
+                <Select
+                  label="Category"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value as Category })}
+                  options={Object.entries(CATEGORY_META).map(([k, v]) => ({ value: k, label: `${v.icon} ${v.label}` }))}
+                />
               </div>
             </div>
 
@@ -260,14 +257,10 @@ function ComposeModal({
 
           {/* Footer buttons */}
           <div className="flex justify-end gap-3 px-6 py-4">
-            <button type="button" onClick={onClose}
-              className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={saving}
-              className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+            <Button type="button" onClick={onClose} variant="secondary">Cancel</Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Sending…' : existing ? 'Save changes' : '📢 Send announcement'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -371,16 +364,15 @@ export default function Announcements() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Communications</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Announcements</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Communications</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Announcements</h1>
           <p className="mt-2 text-sm text-slate-500">
             Send messages to everyone or specific users. Active announcements appear on each user's dashboard.
           </p>
         </div>
-        <button onClick={() => setShowCompose(true)}
-          className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 shadow-sm sm:self-auto">
+        <Button onClick={() => setShowCompose(true)}>
           📢 New announcement
-        </button>
+        </Button>
       </div>
 
       {/* Status message */}
@@ -409,20 +401,26 @@ export default function Announcements() {
 
       {/* Filters + table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4">
-          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}
-            className="input-field w-auto text-sm">
-            <option value="">All priorities</option>
-            {Object.entries(PRIORITY_META).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
-            ))}
-          </select>
-          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)}
-            className="input-field w-auto text-sm">
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-5 py-4">
+          <Select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            options={[
+              { value: '', label: 'All priorities' },
+              ...Object.entries(PRIORITY_META).map(([k, v]) => ({ value: k, label: v.label }))
+            ]}
+            className="w-auto text-sm"
+          />
+          <Select
+            value={filterActive}
+            onChange={(e) => setFilterActive(e.target.value)}
+            options={[
+              { value: '', label: 'All statuses' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' }
+            ]}
+            className="w-auto text-sm"
+          />
           <span className="ml-auto text-xs text-slate-400">{filtered.length} announcement{filtered.length !== 1 ? 's' : ''}</span>
         </div>
 
@@ -447,23 +445,22 @@ export default function Announcements() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="text-base">{cm.icon}</span>
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${pm.color}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${pm.dot}`} />
+                        <Badge variant={pm.badgeVariant}>
                           {pm.label}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 capitalize">
+                        </Badge>
+                        <Badge variant="default">
                           {cm.label}
-                        </span>
+                        </Badge>
                         {!ann.is_active && (
-                          <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-500">Inactive</span>
+                          <Badge variant="default">Inactive</Badge>
                         )}
                         {isExpired && (
-                          <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-600">Expired</span>
+                          <Badge variant="danger">Expired</Badge>
                         )}
                         {ann.publish_at && new Date(ann.publish_at) > new Date() && (
-                          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                          <Badge variant="info">
                             Scheduled: {new Date(ann.publish_at).toLocaleString()}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       <h3 className="text-base font-bold text-slate-950 truncate">{ann.title}</h3>
@@ -480,22 +477,11 @@ export default function Announcements() {
                     </div>
                     {/* Right: actions */}
                     <div className="flex shrink-0 items-center gap-2 sm:ml-4">
-                      <button onClick={() => handleToggleActive(ann)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                          ann.is_active
-                            ? 'border-slate-300 text-slate-600 hover:bg-slate-50'
-                            : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
-                        }`}>
+                      <Button onClick={() => handleToggleActive(ann)} variant={ann.is_active ? 'secondary' : 'ghost'} className={`text-xs ${ann.is_active ? '' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
                         {ann.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
-                      <button onClick={() => setEditing(ann)}
-                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDelete(ann.id)}
-                        className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50">
-                        Delete
-                      </button>
+                      </Button>
+                      <Button onClick={() => setEditing(ann)} variant="secondary" className="text-xs">Edit</Button>
+                      <Button onClick={() => handleDelete(ann.id)} variant="ghost" className="text-xs text-rose-600 hover:text-rose-700">Delete</Button>
                     </div>
                   </div>
                 </div>

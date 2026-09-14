@@ -14,7 +14,7 @@ class Student extends Model
     protected $fillable = [
         'user_id', 'student_id', 'class_id', 'first_name', 'last_name',
         'date_of_birth', 'place_of_birth', 'nationality', 'county',
-        'gender', 'previous_school', 'grade_applying_for',
+        'gender', 'previous_school',
         'parent_guardian_name', 'parent_guardian_phone', 'parent_guardian_email',
         'father_name', 'mother_name', 'father_occupation', 'mother_occupation',
         'father_contact', 'mother_contact', 'parent_address',
@@ -34,6 +34,33 @@ class Student extends Model
         'cleared_at'     => 'datetime',
         'has_illness'    => 'boolean',
     ];
+
+    public static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($student) {
+            if ($student->student_id) {
+                if (static::where('student_id', $student->student_id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("Duplicate student_id: {$student->student_id}");
+                }
+                if (\App\Models\User::where('user_code', $student->student_id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("student_id conflicts with existing user_code: {$student->student_id}");
+                }
+            }
+        });
+        
+        static::updating(function ($student) {
+            if ($student->isDirty('student_id') && $student->student_id) {
+                if (static::where('student_id', $student->student_id)->where('id', '!=', $student->id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("Duplicate student_id: {$student->student_id}");
+                }
+                if (\App\Models\User::where('user_code', $student->student_id)->exists()) {
+                    throw new \Illuminate\Database\QueryException("student_id conflicts with existing user_code: {$student->student_id}");
+                }
+            }
+        });
+    }
 
     public function class(): BelongsTo
     {

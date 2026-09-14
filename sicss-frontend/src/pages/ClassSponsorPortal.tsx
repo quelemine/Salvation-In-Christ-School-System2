@@ -229,7 +229,7 @@ export default function ClassSponsorPortal() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Class sponsor</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Class sponsor</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Mark sheet compilation</h1>
         <p className="mt-2 text-sm text-slate-500">
           Collect subject marks from teachers, review each submission, request revisions if needed, then submit to the VPI.

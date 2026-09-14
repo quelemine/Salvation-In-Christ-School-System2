@@ -41,9 +41,9 @@ export default function ForgotPassword() {
             <label htmlFor="forgot-email" className="mb-2 block text-sm font-semibold text-slate-700">Email address</label>
             <input id="forgot-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="input-field" placeholder="admin@sicss.com" />
           </div>
-          <button type="submit" disabled={loading} className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Sending...' : 'Send reset instructions'}</button>
+          <button type="submit" disabled={loading} className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Sending...' : 'Send reset instructions'}</button>
         </form>
-        <Link to="/login" className="mt-6 block text-center text-sm font-semibold text-cyan-700 hover:text-cyan-900">Back to sign in</Link>
+        <Link to="/login" className="mt-6 block text-center text-sm font-semibold text-blue-700 hover:text-blue-900">Back to sign in</Link>
       </div>
     </div>
   );

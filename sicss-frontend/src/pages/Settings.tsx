@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useSettingsStore, type AccentColor, type SidebarStyle, type FontSize, type LayoutDensity, type BankAccount } from '../store/settingsStore';
 import api from '../services/api';
+import { Button, Input } from '../components/ui';
 
 type Tab = 'branding' | 'theme' | 'typography' | 'layout' | 'payment' | 'reportcard' | 'system' | 'reset';
 
@@ -128,8 +129,8 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Administration</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Settings</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Administration</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Settings</h1>
         <p className="mt-2 text-sm text-slate-500">Customize the appearance, branding, and behavior of the entire system.</p>
       </div>
 
@@ -150,7 +151,7 @@ export default function Settings() {
                 onClick={() => setActiveTab(t.key)}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-left transition-colors ${
                   activeTab === t.key
-                    ? 'bg-slate-950 text-white shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -170,32 +171,25 @@ export default function Settings() {
               <SectionTitle>School identity</SectionTitle>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="School name" hint="Shown in the sidebar, report cards, and receipts.">
-                  <input className="input-field" value={settings.branding.schoolName}
-                    onChange={(e) => updateBranding({ schoolName: e.target.value })} />
+                  <Input value={settings.branding.schoolName} onChange={(e) => updateBranding({ schoolName: e.target.value })} />
                 </Field>
                 <Field label="Subtitle / tagline">
-                  <input className="input-field" value={settings.branding.schoolSubtitle}
-                    onChange={(e) => updateBranding({ schoolSubtitle: e.target.value })} />
+                  <Input value={settings.branding.schoolSubtitle} onChange={(e) => updateBranding({ schoolSubtitle: e.target.value })} />
                 </Field>
                 <Field label="School motto">
-                  <input className="input-field" value={settings.branding.schoolMotto}
-                    onChange={(e) => updateBranding({ schoolMotto: e.target.value })} />
+                  <Input value={settings.branding.schoolMotto} onChange={(e) => updateBranding({ schoolMotto: e.target.value })} />
                 </Field>
                 <Field label="Address">
-                  <input className="input-field" value={settings.branding.schoolAddress}
-                    onChange={(e) => updateBranding({ schoolAddress: e.target.value })} />
+                  <Input value={settings.branding.schoolAddress} onChange={(e) => updateBranding({ schoolAddress: e.target.value })} />
                 </Field>
                 <Field label="Phone">
-                  <input className="input-field" value={settings.branding.schoolPhone}
-                    onChange={(e) => updateBranding({ schoolPhone: e.target.value })} />
+                  <Input value={settings.branding.schoolPhone} onChange={(e) => updateBranding({ schoolPhone: e.target.value })} />
                 </Field>
                 <Field label="Email">
-                  <input type="email" className="input-field" value={settings.branding.schoolEmail}
-                    onChange={(e) => updateBranding({ schoolEmail: e.target.value })} />
+                  <Input type="email" value={settings.branding.schoolEmail} onChange={(e) => updateBranding({ schoolEmail: e.target.value })} />
                 </Field>
                 <Field label="Website">
-                  <input className="input-field" value={settings.branding.schoolWebsite}
-                    onChange={(e) => updateBranding({ schoolWebsite: e.target.value })} />
+                  <Input value={settings.branding.schoolWebsite} onChange={(e) => updateBranding({ schoolWebsite: e.target.value })} />
                 </Field>
               </div>
 
@@ -211,13 +205,13 @@ export default function Settings() {
                     <p className="text-sm text-slate-500">Upload a PNG or SVG logo. It will appear on report cards and receipts. Recommended size: 200×200 px.</p>
                     <input ref={logoInputRef} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" className="hidden" onChange={handleLogoUpload} />
                     <div className="flex gap-2">
-                      <button onClick={() => logoInputRef.current?.click()} disabled={uploading} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                      <Button onClick={() => logoInputRef.current?.click()} disabled={uploading} variant="secondary">
                         {uploading ? 'Uploading…' : 'Upload logo'}
-                      </button>
+                      </Button>
                       {settings.branding.logoUrl && (
-                        <button onClick={handleLogoRemove} className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50">
+                        <Button onClick={handleLogoRemove} variant="ghost" className="text-rose-600 hover:text-rose-700">
                           Remove
-                        </button>
+                        </Button>
                       )}
                     </div>
                     {uploadError && <p className="text-xs text-rose-600">{uploadError}</p>}
@@ -225,9 +219,9 @@ export default function Settings() {
                 </div>
               </div>
 
-              <button onClick={() => save(() => {})} className="mt-6 rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
+              <Button onClick={() => save(() => {})} className="mt-6">
                 Save branding
-              </button>
+              </Button>
 
               {/* Login page preview */}
               <div className="mt-6 rounded-xl border border-slate-200 overflow-hidden">
@@ -246,18 +240,18 @@ export default function Settings() {
                     <div className="text-center">
                       <p className="text-xs font-black text-white leading-tight">{settings.branding.schoolName || 'School Name'}</p>
                       {settings.branding.schoolSubtitle && <p className="text-[9px] text-white/50 mt-0.5">{settings.branding.schoolSubtitle}</p>}
-                      {settings.branding.schoolMotto && <p className="text-[9px] text-cyan-300 italic mt-1">"{settings.branding.schoolMotto}"</p>}
+                      {settings.branding.schoolMotto && <p className="text-[9px] text-blue-300 italic mt-1">"{settings.branding.schoolMotto}"</p>}
                       {settings.branding.schoolAddress && <p className="text-[9px] text-white/30 mt-0.5">{settings.branding.schoolAddress}</p>}
                     </div>
                   </div>
                   {/* Right form preview */}
                   <div className="flex flex-1 flex-col justify-center bg-slate-50 px-5 py-4 gap-2">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-cyan-700">{settings.system.systemName}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-blue-700">{settings.system.systemName}</p>
                     <p className="text-sm font-bold text-slate-950">Welcome back</p>
                     <p className="text-[10px] text-slate-400 mb-1">Sign in to your account to continue</p>
                     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] text-slate-400">Email address</div>
                     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] text-slate-400">Password</div>
-                    <div className="mt-1 rounded-lg px-3 py-2 text-center text-[10px] font-bold text-white" style={{ backgroundColor: 'var(--accent, #0891b2)' }}>Sign in</div>
+                    <div className="mt-1 rounded-lg px-3 py-2 text-center text-[10px] font-bold text-white" style={{ backgroundColor: 'var(--accent, #2563EB)' }}>Sign in</div>
                   </div>
                 </div>
                 <div className="border-t border-slate-100 bg-slate-50 px-4 py-2">
@@ -299,7 +293,7 @@ export default function Settings() {
                       onClick={() => save(() => updateTheme({ sidebarStyle: s.value }))}
                       className={`rounded-xl border-2 p-4 text-left transition-all ${
                         settings.theme.sidebarStyle === s.value
-                          ? 'border-slate-950 bg-slate-50'
+                          ? 'border-blue-600 bg-slate-50'
                           : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
@@ -330,7 +324,7 @@ export default function Settings() {
                       key={r}
                       onClick={() => save(() => updateTheme({ borderRadius: r }))}
                       className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                        settings.theme.borderRadius === r ? 'border-slate-950 bg-slate-50' : 'border-slate-200 hover:border-slate-300'
+                        settings.theme.borderRadius === r ? 'border-blue-600 bg-slate-50' : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       <span className={`block h-10 w-16 bg-slate-900 ${
@@ -347,7 +341,7 @@ export default function Settings() {
                 <label className="flex cursor-pointer items-center gap-3">
                   <div
                     onClick={() => save(() => updateTheme({ showIcons: !settings.theme.showIcons }))}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${settings.theme.showIcons ? 'bg-slate-950' : 'bg-slate-300'}`}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${settings.theme.showIcons ? 'bg-blue-600' : 'bg-slate-300'}`}
                   >
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.theme.showIcons ? 'translate-x-5' : 'translate-x-0.5'}`} />
                   </div>
@@ -368,7 +362,7 @@ export default function Settings() {
                     onClick={() => save(() => updateTheme({ fontSize: f.value }))}
                     className={`rounded-xl border-2 p-4 text-left transition-all ${
                       settings.theme.fontSize === f.value
-                        ? 'border-slate-950 bg-slate-50'
+                        ? 'border-blue-600 bg-slate-50'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
@@ -393,7 +387,7 @@ export default function Settings() {
                     onClick={() => save(() => updateTheme({ density: d.value }))}
                     className={`rounded-xl border-2 p-4 text-left transition-all ${
                       settings.theme.density === d.value
-                        ? 'border-slate-950 bg-slate-50'
+                        ? 'border-blue-600 bg-slate-50'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
@@ -423,7 +417,7 @@ export default function Settings() {
                   <SectionTitle>Cash payment</SectionTitle>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <div onClick={() => updatePayment({ cashEnabled: !settings.payment.cashEnabled })}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${settings.payment.cashEnabled ? 'bg-slate-950' : 'bg-slate-300'}`}>
+                      className={`relative h-6 w-11 rounded-full transition-colors ${settings.payment.cashEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}>
                       <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.payment.cashEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                     </div>
                     <span className="text-sm font-medium text-slate-700">Enabled</span>
@@ -451,7 +445,7 @@ export default function Settings() {
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <div onClick={() => updatePayment({ flutterwaveEnabled: !settings.payment.flutterwaveEnabled })}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.payment.flutterwaveEnabled ? 'bg-slate-950' : 'bg-slate-300'}`}>
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.payment.flutterwaveEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}>
                         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.payment.flutterwaveEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                       </div>
                       <span className="text-sm font-medium text-slate-700">Enabled</span>
@@ -465,15 +459,15 @@ export default function Settings() {
                 )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Public key">
-                    <input className="input-field font-mono text-xs" placeholder="FLWPUBK_TEST-..." value={settings.payment.flutterwavePublicKey}
+                    <Input className="font-mono text-xs" placeholder="FLWPUBK_TEST-..." value={settings.payment.flutterwavePublicKey}
                       onChange={(e) => updatePayment({ flutterwavePublicKey: e.target.value })} />
                   </Field>
                   <Field label="Secret key">
-                    <input type="password" className="input-field font-mono text-xs" placeholder="FLWSECK_TEST-..." value={settings.payment.flutterwaveSecretKey}
+                    <Input type="password" className="font-mono text-xs" placeholder="FLWSECK_TEST-..." value={settings.payment.flutterwaveSecretKey}
                       onChange={(e) => updatePayment({ flutterwaveSecretKey: e.target.value })} />
                   </Field>
                   <Field label="Encryption key">
-                    <input type="password" className="input-field font-mono text-xs" placeholder="Encryption key..." value={settings.payment.flutterwaveEncryptionKey}
+                    <Input type="password" className="font-mono text-xs" placeholder="Encryption key..." value={settings.payment.flutterwaveEncryptionKey}
                       onChange={(e) => updatePayment({ flutterwaveEncryptionKey: e.target.value })} />
                   </Field>
                 </div>
@@ -499,14 +493,14 @@ export default function Settings() {
                             const providers = [...settings.payment.mobileMoneyProviders];
                             providers[i] = { ...providers[i], enabled: !providers[i].enabled };
                             updatePayment({ mobileMoneyProviders: providers });
-                          }} className={`relative h-5 w-9 rounded-full transition-colors ${provider.enabled ? 'bg-slate-950' : 'bg-slate-300'}`}>
+                          }} className={`relative h-5 w-9 rounded-full transition-colors ${provider.enabled ? 'bg-blue-600' : 'bg-slate-300'}`}>
                             <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${provider.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                           </div>
                         </label>
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Field label="Merchant / Till number">
-                          <input className="input-field" placeholder="e.g. 0777123456" value={provider.merchantNumber}
+                          <Input placeholder="e.g. 0777123456" value={provider.merchantNumber}
                             onChange={(e) => {
                               const providers = [...settings.payment.mobileMoneyProviders];
                               providers[i] = { ...providers[i], merchantNumber: e.target.value };
@@ -514,7 +508,7 @@ export default function Settings() {
                             }} />
                         </Field>
                         <Field label="Merchant / Business name">
-                          <input className="input-field" placeholder="Name shown on transfer" value={provider.merchantName}
+                          <Input placeholder="Name shown on transfer" value={provider.merchantName}
                             onChange={(e) => {
                               const providers = [...settings.payment.mobileMoneyProviders];
                               providers[i] = { ...providers[i], merchantName: e.target.value };
@@ -531,15 +525,15 @@ export default function Settings() {
               <Card>
                 <div className="flex items-center justify-between mb-4">
                   <SectionTitle>Bank transfer accounts</SectionTitle>
-                  <button onClick={() => {
+                  <Button onClick={() => {
                     const accounts = [...settings.payment.bankAccounts, {
                       id: Date.now().toString(), bankName: '', accountName: '', accountNumber: '',
                       routingCode: '', swiftCode: '', branch: '', enabled: true
                     }];
                     updatePayment({ bankAccounts: accounts });
-                  }} className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700">
+                  }} variant="ghost" className="border border-dashed text-xs">
                     + Add bank account
-                  </button>
+                  </Button>
                 </div>
                 <div className="space-y-5">
                   {settings.payment.bankAccounts.map((account, i) => (
@@ -555,7 +549,7 @@ export default function Settings() {
                               const accounts = [...settings.payment.bankAccounts];
                               accounts[i] = { ...accounts[i], enabled: !accounts[i].enabled };
                               updatePayment({ bankAccounts: accounts });
-                            }} className={`relative h-5 w-9 rounded-full transition-colors ${account.enabled ? 'bg-slate-950' : 'bg-slate-300'}`}>
+                            }} className={`relative h-5 w-9 rounded-full transition-colors ${account.enabled ? 'bg-blue-600' : 'bg-slate-300'}`}>
                               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${account.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                             </div>
                           </label>
@@ -575,7 +569,7 @@ export default function Settings() {
                           ['swiftCode', 'SWIFT / BIC code', ''],
                         ] as [keyof BankAccount, string, string][]).map(([key, label, placeholder]) => (
                           <Field key={key} label={label}>
-                            <input className="input-field" placeholder={placeholder} value={account[key] as string}
+                            <Input placeholder={placeholder} value={account[key] as string}
                               onChange={(e) => {
                                 const accounts = [...settings.payment.bankAccounts];
                                 accounts[i] = { ...accounts[i], [key]: e.target.value };
@@ -838,7 +832,7 @@ export default function Settings() {
                 </div>
                 <button
                   onClick={() => updateReportCard({ customPeriods: [...settings.reportCard.customPeriods, ''] })}
-                  className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700"
+                  className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-700"
                 >
                   + Add period / column
                 </button>
@@ -865,7 +859,7 @@ export default function Settings() {
                 </div>
                 <button
                   onClick={() => updateReportCard({ signatories: [...settings.reportCard.signatories, ''] })}
-                  className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700"
+                  className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-700"
                 >
                   + Add signatory
                 </button>

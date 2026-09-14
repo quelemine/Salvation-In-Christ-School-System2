@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { divisionService, type Division } from '../services/divisionService';
 import { FormModal } from '../components/FormModal';
 import { useAuthStore } from '../store/authStore';
+import { Button, Input, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
 
 type Form = { name: string; description: string };
 const empty: Form = { name: '', description: '' };
@@ -23,11 +24,13 @@ export default function Divisions() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await divisionService.getAll();
       setDivisions((Array.isArray(res) ? res : (res as any).data) || []);
-    } catch { setError('Failed to load divisions.'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load divisions.');
+    } finally { setLoading(false); }
   };
 
   const openAdd = () => { setEditingId(null); setForm(empty); setError(''); setIsOpen(true); };
@@ -82,67 +85,101 @@ export default function Divisions() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic structure</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Divisions</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Academic structure</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Divisions</h1>
           <p className="mt-1 text-sm text-slate-500">Divisions group related classes together (e.g. Primary, Junior High).</p>
         </div>
         {isAdmin && (
-          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+          <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white">
             + Add division
-          </button>
+          </Button>
         )}
       </div>
 
-      {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <input type="search" placeholder="Search divisions…" value={search} onChange={(e) => setSearch(e.target.value)} className="input-field max-w-xs text-sm" />
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={load} variant="secondary">Try Again</Button>
         </div>
-        {loading ? <p className="py-12 text-center text-sm text-slate-500">Loading…</p> : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>{['Name', 'Description', 'Created', 'Actions'].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0
-                  ? <tr><td colSpan={4} className="py-10 text-center text-slate-400">No divisions found.</td></tr>
-                  : filtered.map((d) => (
-                  <tr key={d.id} className="hover:bg-slate-50">
-                    <td className="px-5 py-3 font-semibold text-slate-900">{d.name}</td>
-                    <td className="px-5 py-3 text-slate-600">{d.description || '—'}</td>
-                    <td className="px-5 py-3 text-slate-400 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}</td>
-                    <td className="px-5 py-3">
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="border-b border-slate-200 px-5 py-4">
+            <Input
+              type="search"
+              placeholder="Search divisions…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          {loading ? (
+            <LoadingState message="Loading…" />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title="No divisions found"
+              description="Try adjusting your search to find what you're looking for."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-semibold text-slate-900">{d.name}</TableCell>
+                    <TableCell className="text-slate-600">{d.description || '—'}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell>
                       {isAdmin ? (
                         <div className="flex gap-3">
-                          <button onClick={() => openEdit(d)} className="text-xs font-semibold text-cyan-700 hover:underline">Edit</button>
-                          <button onClick={() => setDeleteId(d.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                          <Button onClick={() => openEdit(d)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                            Edit
+                          </Button>
+                          <Button onClick={() => setDeleteId(d.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">
+                            Delete
+                          </Button>
                         </div>
                       ) : (
                         <span className="text-xs text-slate-400">View only</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">{filtered.length} of {divisions.length}</div>
-      </div>
+              </TableBody>
+            </Table>
+          )}
+          <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-400">{filtered.length} of {divisions.length}</div>
+        </CardContent>
+      </Card>
 
       <FormModal isOpen={isOpen} title={editingId ? 'Edit division' : 'Add division'} onClose={() => setIsOpen(false)} onSubmit={handleSubmit} submitText={editingId ? 'Save changes' : 'Create division'} isLoading={saving}>
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Division name <span className="text-rose-500">*</span></label>
-            <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input-field" placeholder="Primary School, Junior High…" />
+            <Input
+              label="Division name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Primary School, Junior High…"
+              required
+            />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field" rows={3} placeholder="Optional description…" />
+            <Input
+              label="Description"
+              type="textarea"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={3}
+              placeholder="Optional description…"
+            />
           </div>
         </div>
       </FormModal>

@@ -4,8 +4,10 @@ import { studentService } from '../services/studentService';
 import { FormModal } from '../components/FormModal';
 import { formatCurrency, type CurrencyCode } from '../utils/currency';
 import { useSettingsStore } from '../store/settingsStore';
+import { useAuthStore } from '../store/authStore';
 import type { Receipt, Payment } from '../types';
 import type { Student } from '../types';
+import { Button, Input } from '../components/ui';
 
 type FormData = {
   payment_id: string;
@@ -27,6 +29,8 @@ const emptyForm = (defaultCurrency: CurrencyCode): FormData => ({
 
 export default function Receipts() {
   const { settings } = useSettingsStore();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const { branding, payment: payConfig, system } = settings;
   const defaultCurrency = system.currency as CurrencyCode;
 
@@ -136,7 +140,7 @@ export default function Receipts() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14, fontSize: '0.85em', borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
             <div>
               <p style={{ margin: '2px 0' }}><b>Receipt No:</b> {(printReceipt as any).receipt_number || `${payConfig.receiptPrefix}-${printReceipt.id}`}</p>
-              <p style={{ margin: '2px 0' }}><b>Date:</b> {(printReceipt as any).receipt_date}</p>
+              <p style={{ margin: '2px 0' }}><b>Date:</b> {(printReceipt as any).receipt_date ? new Date((printReceipt as any).receipt_date).toLocaleDateString() : '—'}</p>
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ margin: '2px 0' }}><b>Student:</b></p>
@@ -209,21 +213,22 @@ export default function Receipts() {
       {/* ── Screen UI ───────────────────────────────────────── */}
       <div className="screen-only flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Finance</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Receipts</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Finance</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Receipts</h1>
         </div>
-        <button onClick={() => { setFormData(emptyForm(defaultCurrency)); setIsModalOpen(true); }}
-          className="screen-only self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + Generate receipt
-        </button>
+        {isAdmin && (
+          <Button onClick={() => { setFormData(emptyForm(defaultCurrency)); setIsModalOpen(true); }}>
+            + Generate receipt
+          </Button>
+        )}
       </div>
 
-      {error && <p className="screen-only rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+      {error && <div className="screen-only rounded-lg border border-rose-200 bg-rose-50 p-4 text-center"><p className="text-sm text-rose-800 mb-4">{error}</p><Button onClick={load} variant="secondary">Try Again</Button></div>}
 
       <div className="screen-only rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <input type="search" placeholder="Search by student or receipt number…"
-            value={search} onChange={(e) => setSearch(e.target.value)} className="input-field max-w-xs" />
+        <div className="border-b border-slate-200 px-5 py-4">
+          <Input type="search" placeholder="Search by student or receipt number…"
+            value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         </div>
         {loading ? (
           <p className="py-12 text-center text-sm text-slate-500">Loading receipts…</p>
@@ -244,7 +249,7 @@ export default function Receipts() {
                   const proofUrl = (lp as any)?.payment_proof_url;
                   return (
                     <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="px-5 py-3 font-mono text-xs font-semibold text-cyan-700">
+                      <td className="px-5 py-3 font-mono text-xs font-semibold text-blue-700">
                         {(r as any).receipt_number || `${payConfig.receiptPrefix}-${r.id}`}
                       </td>
                       <td className="px-5 py-3 font-semibold text-slate-900">
@@ -256,17 +261,17 @@ export default function Receipts() {
                       <td className="px-5 py-3 text-slate-600 capitalize">
                         {((lp as any)?.payment_method || '—').replace(/_/g, ' ')}
                       </td>
-                      <td className="px-5 py-3 text-slate-600">{(r as any).receipt_date || '—'}</td>
+                      <td className="px-5 py-3 text-slate-600">{(r as any).receipt_date ? new Date((r as any).receipt_date).toLocaleDateString() : '—'}</td>
                       <td className="px-5 py-3">
                         {proofUrl
-                          ? <a href={proofUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-cyan-700 hover:underline">View proof</a>
+                          ? <a href={proofUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-blue-700 hover:underline">View proof</a>
                           : <span className="text-xs text-slate-300">None</span>}
                       </td>
                       <td className="px-5 py-3 text-slate-500 max-w-[140px] truncate">{r.notes || '—'}</td>
                       <td className="px-5 py-3">
                         <div className="flex gap-3">
-                          <button onClick={() => handlePrint(r)} className="text-xs font-semibold text-cyan-700 hover:underline">Print</button>
-                          <button onClick={() => handleDelete(r.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                          <Button onClick={() => handlePrint(r)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">Print</Button>
+                          <Button onClick={() => handleDelete(r.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">Delete</Button>
                         </div>
                       </td>
                     </tr>

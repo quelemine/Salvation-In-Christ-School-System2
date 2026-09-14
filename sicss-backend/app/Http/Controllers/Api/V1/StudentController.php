@@ -98,29 +98,7 @@ class StudentController extends Controller
 
         // Ensure student_id is unique with proper sequential format
         if (empty($data['student_id'])) {
-            $year = date('Y');
-            $last = \App\Models\Student::where('student_id', 'like', "STU-{$year}-%")
-                ->where('student_id', 'not like', "%-%-%")  // Exclude timestamped IDs
-                ->orderByRaw("CAST(SPLIT_PART(student_id, '-', 3) AS INTEGER) DESC")
-                ->first();
-            $next = 1;
-            if ($last) {
-                $parts = explode('-', $last->student_id);
-                $next  = (int) ($parts[2] ?? 0) + 1;
-            }
-            $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
-
-            // Ensure unique student_id (avoid collision by incrementing)
-            while (\App\Models\Student::where('student_id', $data['student_id'])->exists()) {
-                $next++;
-                $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
-            }
-
-            // Ensure student_id doesn't conflict with user_codes in users table
-            while (\App\Models\User::where('user_code', $data['student_id'])->exists()) {
-                $next++;
-                $data['student_id'] = "STU-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
-            }
+            $data['student_id'] = \App\Services\IdGeneratorService::generateStudentId();
         }
 
         $data['registration_number'] = $this->nextRegistrationNumber();

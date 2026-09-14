@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { classService, type Class } from '../services/classService';
 import { useSettingsStore } from '../store/settingsStore';
+import { Button, Input, Select, Badge } from '../components/ui';
 
 interface StudentRow {
   id: number;
@@ -87,14 +88,13 @@ export default function FeeClearance() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Finance</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Fee clearance</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Finance</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Fee clearance</h1>
           <p className="mt-2 text-sm text-slate-500">Mark students as fee-cleared. Only cleared students can print or download their report cards.</p>
         </div>
-        <button onClick={clearAll} disabled={filtered.every((s) => s.is_cleared)}
-          className="self-start rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-40 sm:self-auto">
+        <Button onClick={clearAll} disabled={filtered.every((s) => s.is_cleared)} variant="secondary">
           ✓ Clear all visible
-        </button>
+        </Button>
       </div>
 
       {msg && <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${msg.ok ? 'border border-emerald-200 bg-emerald-50 text-emerald-800' : 'border border-rose-200 bg-rose-50 text-rose-700'}`}>{msg.ok ? '✓' : '✕'} {msg.text}</div>}
@@ -115,18 +115,28 @@ export default function FeeClearance() {
 
       {/* Filters */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap gap-3 border-b border-slate-100 px-5 py-4">
-          <input type="search" placeholder="Search students…" value={search} onChange={(e) => setSearch(e.target.value)} className="input-field max-w-xs text-sm" />
-          <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="input-field w-auto text-sm">
-            <option value="">All classes</option>
-            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>)}
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input-field w-auto text-sm">
-            <option value="">All statuses</option>
-            <option value="cleared">Cleared</option>
-            <option value="outstanding">Outstanding</option>
-          </select>
-          <input value={year} onChange={(e) => setYear(e.target.value)} className="input-field w-28 text-sm" placeholder="Year" />
+        <div className="flex flex-wrap gap-3 border-b border-slate-200 px-5 py-4">
+          <Input type="search" placeholder="Search students…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs text-sm" />
+          <Select
+            value={filterClass}
+            onChange={(e) => setFilterClass(e.target.value)}
+            options={[
+              { value: '', label: 'All classes' },
+              ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+            ]}
+            className="w-auto text-sm"
+          />
+          <Select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            options={[
+              { value: '', label: 'All statuses' },
+              { value: 'cleared', label: 'Cleared' },
+              { value: 'outstanding', label: 'Outstanding' }
+            ]}
+            className="w-auto text-sm"
+          />
+          <Input value={year} onChange={(e) => setYear(e.target.value)} className="w-28 text-sm" placeholder="Year" />
         </div>
 
         {loading ? (
@@ -148,25 +158,22 @@ export default function FeeClearance() {
                     <td className="px-5 py-3 font-mono text-xs text-slate-500">{s.student_id}</td>
                     <td className="px-5 py-3 text-slate-600">{s.class?.name || '—'}</td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
-                        s.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                      }`}>{s.status}</span>
+                      <Badge variant={s.status === 'active' ? 'success' : 'default'}>
+                        {s.status}
+                      </Badge>
                     </td>
                     <td className="px-5 py-3 text-slate-500 text-xs">
                       {s.cleared_at ? new Date(s.cleared_at).toLocaleString() : '—'}
                     </td>
                     <td className="px-5 py-3">
-                      <button
+                      <Button
                         onClick={() => toggle(s)}
                         disabled={saving[s.id]}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                          s.is_cleared
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-rose-50 hover:text-rose-700'
-                            : 'bg-rose-100 text-rose-700 hover:bg-emerald-50 hover:text-emerald-800'
-                        }`}
+                        variant="ghost"
+                        className={`text-xs ${s.is_cleared ? 'bg-emerald-50 text-emerald-700 hover:bg-rose-50 hover:text-rose-700' : 'bg-rose-50 text-rose-700 hover:bg-emerald-50 hover:text-emerald-700'}`}
                       >
                         {saving[s.id] ? '…' : s.is_cleared ? '✓ Cleared — Revoke' : '✕ Outstanding — Clear'}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

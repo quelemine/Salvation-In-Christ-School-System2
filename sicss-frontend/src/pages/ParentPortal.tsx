@@ -36,7 +36,7 @@ function Section({ title, eyebrow, children }: { title: string; eyebrow: string;
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">{eyebrow}</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">{eyebrow}</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-950">{title}</h1>
       </div>
       {children}
@@ -153,7 +153,7 @@ export default function ParentPortal() {
     return (
       <div className="mx-auto max-w-lg space-y-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Parent portal</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Parent portal</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-950">Children's records</h1>
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center space-y-2">
@@ -172,8 +172,8 @@ export default function ParentPortal() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Parent portal</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Children's records</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Parent portal</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Children's records</h1>
         <p className="mt-1 text-sm text-slate-500">View your child's academic progress, attendance, and financial records.</p>
       </div>
 
@@ -315,7 +315,7 @@ export default function ParentPortal() {
                 <DataTable
                   headers={['Date', 'Status', 'Remarks']}
                   rows={records.map((r) => [
-                    r.date,
+                    r.date ? new Date(r.date).toLocaleDateString() : '—',
                     <span key={r.id} className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
                       r.status === 'present' ? 'bg-emerald-100 text-emerald-800' :
                       r.status === 'absent'  ? 'bg-rose-100 text-rose-700' :
@@ -345,7 +345,7 @@ export default function ParentPortal() {
                     <p className="font-semibold text-slate-900">{a.title}</p>
                     {a.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{a.description}</p>}
                   </div>,
-                  a.due_date || '—',
+                  a.due_date ? new Date(a.due_date).toLocaleDateString() : '—',
                   a.teacher ? `${a.teacher.first_name} ${a.teacher.last_name}` : '—',
                 ])}
               />
@@ -369,7 +369,7 @@ export default function ParentPortal() {
               <DataTable
                 headers={['Date', 'Fee', 'Amount', 'Method', 'Status']}
                 rows={(data.payments || []).map((p: any) => [
-                  p.payment_date || '—',
+                  p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—',
                   p.fee?.name || '—',
                   formatCurrency(Number(p.amount), (p.currency as CurrencyCode) || 'LRD'),
                   (p.payment_method || '').replace(/_/g, ' '),
@@ -398,7 +398,7 @@ export default function ParentPortal() {
                   </div>,
                   formatCurrency(Number(f.amount), (f.currency as CurrencyCode) || 'LRD'),
                   f.currency || 'LRD',
-                  f.due_date || '—',
+                  f.due_date ? new Date(f.due_date).toLocaleDateString() : '—',
                   <span key={f.id + '-s'} className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
                     f.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                   }`}>{f.status || 'active'}</span>,

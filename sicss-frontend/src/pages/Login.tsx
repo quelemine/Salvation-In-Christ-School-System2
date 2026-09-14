@@ -68,7 +68,7 @@ export default function Login() {
           <h1 className="text-3xl font-black text-white leading-tight">{branding.schoolName}</h1>
           {branding.schoolSubtitle && <p className="mt-2 text-sm text-white/60">{branding.schoolSubtitle}</p>}
           {branding.schoolMotto && (
-            <p className="mt-4 text-sm italic text-cyan-300">"{branding.schoolMotto}"</p>
+            <p className="mt-4 text-sm italic text-blue-300">"{branding.schoolMotto}"</p>
           )}
           {branding.schoolAddress && <p className="mt-3 text-xs text-white/40">{branding.schoolAddress}</p>}
         </div>
@@ -84,7 +84,7 @@ export default function Login() {
               ? <img src={branding.logoUrl} alt="School logo" className="h-16 w-16 rounded-xl object-contain mb-3 shadow-md" />
               : (
                 <div className="h-16 w-16 rounded-xl bg-slate-950 flex items-center justify-center mb-3 shadow-md">
-                  <span className="text-2xl font-black text-cyan-400">S</span>
+                  <span className="text-2xl font-black text-blue-400">S</span>
                 </div>
               )
             }
@@ -95,7 +95,7 @@ export default function Login() {
           {/* Form card */}
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="mb-7">
-              <p className="text-xs font-bold uppercase tracking-widest text-cyan-700 mb-1">{system.systemName}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-blue-700 mb-1">{system.systemName}</p>
               <h2 className="text-2xl font-bold text-slate-950">Welcome back</h2>
               <p className="mt-1 text-sm text-slate-500">Sign in to your account to continue</p>
             </div>
@@ -128,7 +128,7 @@ export default function Login() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
-                  <Link to="/forgot-password" className="text-xs font-semibold text-cyan-700 hover:underline">
+                  <Link to="/forgot-password" className="text-xs font-semibold text-blue-700 hover:underline">
                     Forgot password?
                   </Link>
                 </div>

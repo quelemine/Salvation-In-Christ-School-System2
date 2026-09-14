@@ -75,7 +75,7 @@ export default function StudentProfile() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">My Profile</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">My Profile</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Student Information</h1>
         <p className="mt-1 text-sm text-slate-500">View and manage your personal information.</p>
       </div>
@@ -116,7 +116,7 @@ export default function StudentProfile() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Date of Birth</label>
-            <p className="text-sm text-slate-900">{student.date_of_birth?.split('T')[0] || '—'}</p>
+            <p className="text-sm text-slate-900">{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : '—'}</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Nationality</label>
@@ -125,10 +125,6 @@ export default function StudentProfile() {
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">County</label>
             <p className="text-sm text-slate-900">{student.county || '—'}</p>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Grade Applying For</label>
-            <p className="text-sm text-slate-900">{student.grade_applying_for || '—'}</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Class</label>

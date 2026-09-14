@@ -44,7 +44,7 @@ export default function OfficialUseSection({ data, onChange, classId, onClassIdC
     // Approval records should carry a date even when the administrator does not
     // enter one manually. The date remains editable afterwards.
     if (status === 'approved' && !f('approval_date')) {
-      onChange('approval_date', new Date().toISOString().slice(0, 10));
+      onChange('approval_date', new Date().toISOString().split('T')[0]);
     }
   };
 
@@ -137,13 +137,13 @@ export default function OfficialUseSection({ data, onChange, classId, onClassIdC
                       const id = e.target.value;
                       onClassIdChange?.(id);
                       const cls = classes.find((c) => String(c.id) === id);
-                      if (cls) onChange('class_assigned', cls.name + (cls.section ? ` - ${cls.section}` : ''));
+                      if (cls) onChange('class_assigned', cls.name.replace(/\s[A-Z][a-z]*$/, '').trim());
                     }}
                   >
                     <option value="">— Select class —</option>
                     {classes.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}{c.section ? ` - ${c.section}` : ''}
+                        {c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}
                       </option>
                     ))}
                   </select>

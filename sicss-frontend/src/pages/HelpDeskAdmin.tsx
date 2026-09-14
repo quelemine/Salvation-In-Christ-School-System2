@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import { Button, Input, Select, Badge } from '../components/ui';
 
 type TicketStatus   = 'open' | 'in_progress' | 'resolved' | 'closed';
 type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -28,17 +29,17 @@ interface Ticket {
   replies: Reply[];
 }
 
-const STATUS_META: Record<TicketStatus, { label: string; color: string; dot: string }> = {
-  open:        { label: 'Open',        color: 'bg-blue-100 text-blue-800',       dot: 'bg-blue-500'    },
-  in_progress: { label: 'In progress', color: 'bg-amber-100 text-amber-800',     dot: 'bg-amber-500'   },
-  resolved:    { label: 'Resolved',    color: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500' },
-  closed:      { label: 'Closed',      color: 'bg-slate-100 text-slate-600',     dot: 'bg-slate-400'   },
+const STATUS_META: Record<TicketStatus, { label: string; badgeVariant: 'success' | 'warning' | 'default'; dot: string }> = {
+  open:        { label: 'Open',        badgeVariant: 'success', dot: 'bg-blue-500'    },
+  in_progress: { label: 'In progress', badgeVariant: 'warning', dot: 'bg-amber-500'   },
+  resolved:    { label: 'Resolved',    badgeVariant: 'success', dot: 'bg-emerald-500' },
+  closed:      { label: 'Closed',      badgeVariant: 'default', dot: 'bg-slate-400'   },
 };
-const PRIORITY_META: Record<TicketPriority, { label: string; color: string; row: string }> = {
-  low:    { label: 'Low',    color: 'bg-slate-100 text-slate-600',  row: '' },
-  medium: { label: 'Medium', color: 'bg-blue-100 text-blue-700',    row: '' },
-  high:   { label: 'High',   color: 'bg-amber-100 text-amber-800',  row: 'border-l-2 border-amber-400' },
-  urgent: { label: 'Urgent', color: 'bg-rose-100 text-rose-700',    row: 'border-l-2 border-rose-500' },
+const PRIORITY_META: Record<TicketPriority, { label: string; badgeVariant: 'default' | 'success' | 'warning' | 'danger'; row: string }> = {
+  low:    { label: 'Low',    badgeVariant: 'default',  row: '' },
+  medium: { label: 'Medium', badgeVariant: 'success',    row: '' },
+  high:   { label: 'High',   badgeVariant: 'warning',  row: 'border-l-2 border-amber-400' },
+  urgent: { label: 'Urgent', badgeVariant: 'danger',    row: 'border-l-2 border-rose-500' },
 };
 const CATEGORY_ICONS: Record<TicketCategory, string> = {
   account: '👤', academic: '🎓', finance: '💰', technical: '🔧', other: '💬',
@@ -127,8 +128,8 @@ export default function HelpDeskAdmin() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Support management</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Help desk</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Support management</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Help desk</h1>
         <p className="mt-2 text-sm text-slate-500">Manage and respond to user support tickets.</p>
       </div>
 
@@ -155,22 +156,22 @@ export default function HelpDeskAdmin() {
         {/* ── Left: ticket list ── */}
         <div className="xl:w-96 shrink-0 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {/* Filters */}
-          <div className="border-b border-slate-100 p-4 space-y-3">
-            <input type="search" placeholder="Search tickets…" value={search}
-              onChange={(e) => setSearch(e.target.value)} className="input-field text-sm" />
+          <div className="border-b border-slate-200 p-4 space-y-3">
+            <Input type="search" placeholder="Search tickets…" value={search}
+              onChange={(e) => setSearch(e.target.value)} className="text-sm" />
             <div className="flex gap-2">
-              <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="input-field text-xs flex-1">
-                <option value="">All statuses</option>
-                {(Object.entries(STATUS_META) as [TicketStatus, any][]).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
-              <select value={fPriority} onChange={(e) => setFPriority(e.target.value)} className="input-field text-xs flex-1">
-                <option value="">All priorities</option>
-                {(Object.entries(PRIORITY_META) as [TicketPriority, any][]).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
+              <Select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="text-xs flex-1"
+                options={[
+                  { value: '', label: 'All statuses' },
+                  ...(Object.entries(STATUS_META) as [TicketStatus, any][]).map(([k, v]) => ({ value: k, label: v.label }))
+                ]}
+              />
+              <Select value={fPriority} onChange={(e) => setFPriority(e.target.value)} className="text-xs flex-1"
+                options={[
+                  { value: '', label: 'All priorities' },
+                  ...(Object.entries(PRIORITY_META) as [TicketPriority, any][]).map(([k, v]) => ({ value: k, label: v.label }))
+                ]}
+              />
             </div>
           </div>
 
@@ -198,10 +199,12 @@ export default function HelpDeskAdmin() {
                         {t.user ? `${t.user.first_name} ${t.user.last_name}` : '—'}
                       </p>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${sm.color}`}>
-                          <span className={`h-1 w-1 rounded-full ${sm.dot}`} />{sm.label}
-                        </span>
-                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${pm.color}`}>{pm.label}</span>
+                        <Badge variant={sm.badgeVariant}>
+                          {sm.label}
+                        </Badge>
+                        <Badge variant={pm.badgeVariant}>
+                          {pm.label}
+                        </Badge>
                         <span className="text-[9px] text-slate-400">{t.ticket_number}</span>
                       </div>
                     </div>
@@ -210,7 +213,7 @@ export default function HelpDeskAdmin() {
                       {t.replies.filter((r: any) => r.is_staff_reply).length === 0 ? (
                         <span className="mt-1 inline-block rounded-full bg-rose-600 px-1.5 py-0.5 text-[8px] font-bold text-white animate-pulse">NEW</span>
                       ) : (
-                        <p className="text-[9px] text-cyan-600 mt-1">{t.replies.length} repl{t.replies.length === 1 ? 'y' : 'ies'}</p>
+                        <p className="text-[9px] text-blue-600 mt-1">{t.replies.length} repl{t.replies.length === 1 ? 'y' : 'ies'}</p>
                       )}
                     </div>
                   </div>
@@ -241,13 +244,12 @@ export default function HelpDeskAdmin() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="text-lg">{CATEGORY_ICONS[active.category]}</span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_META[active.status].color}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_META[active.status].dot}`} />
+                      <Badge variant={STATUS_META[active.status].badgeVariant}>
                         {STATUS_META[active.status].label}
-                      </span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PRIORITY_META[active.priority].color}`}>
+                      </Badge>
+                      <Badge variant={PRIORITY_META[active.priority].badgeVariant}>
                         {PRIORITY_META[active.priority].label}
-                      </span>
+                      </Badge>
                       <span className="font-mono text-xs text-slate-400">{active.ticket_number}</span>
                     </div>
                     <h3 className="text-base font-bold text-slate-950">{active.subject}</h3>
@@ -274,16 +276,14 @@ export default function HelpDeskAdmin() {
                           closed:      'border-rose-200 text-rose-600 hover:bg-rose-50',
                         };
                         return (
-                          <button key={s} onClick={() => updateStatus(s)} disabled={updatingStatus}
-                            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-40 ${colors[s]}`}>
+                          <Button key={s} onClick={() => updateStatus(s)} disabled={updatingStatus} variant="secondary" className={`text-xs ${colors[s]}`}>
                             {updatingStatus ? '…' : labels[s]}
-                          </button>
+                          </Button>
                         );
                       })}
-                    <button onClick={() => deleteTicket(active.id)}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50">
+                    <Button onClick={() => deleteTicket(active.id)} variant="ghost" className="text-xs text-rose-600 hover:text-rose-700">
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -305,10 +305,10 @@ export default function HelpDeskAdmin() {
                 {active.replies.length === 0 ? (
                   <p className="py-8 text-center text-sm text-slate-400">No replies yet. Respond below to help the user.</p>
                 ) : active.replies.map((r) => (
-                  <div key={r.id} className={`px-5 py-4 ${r.is_staff_reply ? 'bg-cyan-50' : ''}`}>
+                  <div key={r.id} className={`px-5 py-4 ${r.is_staff_reply ? 'bg-blue-50' : ''}`}>
                     <div className="flex items-start gap-3">
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        r.is_staff_reply ? 'bg-cyan-700 text-white' : 'bg-slate-200 text-slate-600'
+                        r.is_staff_reply ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-600'
                       }`}>
                         {r.is_staff_reply ? '🛠' : `${r.user.first_name?.charAt(0)}${r.user.last_name?.charAt(0)}`}
                       </div>
@@ -316,7 +316,7 @@ export default function HelpDeskAdmin() {
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className="text-sm font-semibold">{r.user.first_name} {r.user.last_name}</span>
                           {r.is_staff_reply && (
-                            <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-800 uppercase tracking-wide">Support</span>
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800 uppercase tracking-wide">Support</span>
                           )}
                           <span className="text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</span>
                         </div>
@@ -339,10 +339,9 @@ export default function HelpDeskAdmin() {
                       <p className="text-xs text-slate-400">Your reply will be marked as a staff response.</p>
                       <p className="text-[10px] text-slate-400">Changing status above also auto-notifies the user with a message.</p>
                     </div>
-                    <button type="submit" disabled={sending || !reply.trim()}
-                      className="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800 disabled:opacity-40">
+                    <Button type="submit" disabled={sending || !reply.trim()} variant="primary" className="text-sm text-white">
                       {sending ? 'Sending…' : '🛠 Send response'}
-                    </button>
+                    </Button>
                   </div>
                 </form>
               ) : (

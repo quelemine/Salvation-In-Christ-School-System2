@@ -11,6 +11,7 @@ import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { reportCardSubjects, SEM1_PERIODS, SEM2_PERIODS, parseMark, scoreColor } from '../services/reportCardService';
+import { Input, Select, Badge, Card, CardContent } from '../components/ui';
 
 type RC = {
   id: number;
@@ -49,14 +50,6 @@ type MySubmission = {
 };
 
 const ALL_PERIODS = [...SEM1_PERIODS, 'Exam 1', ...SEM2_PERIODS, 'Exam 2'];
-
-const STATUS_COLORS: Record<string, string> = {
-  draft:           'bg-slate-100 text-slate-700',
-  pending_sponsor: 'bg-amber-100 text-amber-800',
-  pending_vpi:     'bg-blue-100 text-blue-800',
-  approved:        'bg-emerald-100 text-emerald-800',
-  rejected:        'bg-rose-100 text-rose-700',
-};
 
 const SUB_STATUS_COLORS: Record<string, string> = {
   submitted:          'bg-amber-100 text-amber-800 border-amber-200',
@@ -237,8 +230,8 @@ export default function SubjectMarks() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic work</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Subject marks</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Academic work</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Subject marks</h1>
         <p className="mt-2 text-sm text-slate-500">
           Enter and submit marks for your subject. The class sponsor will collect all marks and compile the final report card.
         </p>
@@ -329,60 +322,73 @@ export default function SubjectMarks() {
       )}
 
       {/* ── Filters ── */}
-      <div className="flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-600">Academic year</label>
-          <input value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="input-field w-24 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-600">Report card</label>
-          <select value={selectedRC} onChange={(e) => handleSelectRC(e.target.value ? Number(e.target.value) : '')} className="input-field text-sm">
-            <option value="">Select student / report card</option>
-            {loading ? <option disabled>Loading…</option> : reportCards.map((rc) => (
-              <option key={rc.id} value={rc.id}>
-                {rc.student ? `${rc.student.first_name} ${rc.student.last_name} (${rc.student.student_id})` : `RC #${rc.id}`}
-                {' — '}{rc.class?.name}{rc.class?.section ? ` ${rc.class.section}` : ''} {rc.academic_year}
-                {' ['}{rc.approval_status}{']'}
-              </option>
-            ))}
-          </select>
-        </div>
-        {selectedRC && (
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Subject</label>
-            <select value={subject} onChange={(e) => handleSelectSubject(e.target.value)} className="input-field text-sm">
-              <option value="">Select your subject</option>
-              {reportCardSubjects.map((s) => {
-                const sub = submissions.find((x) => x.subject === s);
-                const suffix = sub?.submission_status === 'revision_requested' ? ' ⚠ Revision'
-                             : sub?.submission_status === 'accepted'           ? ' ✓ Accepted'
-                             : sub                                             ? ' ✓'
-                             : '';
-                return <option key={s} value={s}>{s}{suffix}</option>;
-              })}
-            </select>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-3">
+            <div>
+              <Input label="Academic year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-24 text-sm" />
+            </div>
+            <div>
+              <Select
+                label="Report card"
+                value={String(selectedRC)}
+                onChange={(e) => handleSelectRC(e.target.value ? Number(e.target.value) : '')}
+                options={[
+                  { value: '', label: 'Select student / report card' },
+                  ...reportCards.map((rc) => ({
+                    value: String(rc.id),
+                    label: `${rc.student ? `${rc.student.first_name} ${rc.student.last_name} (${rc.student.student_id})` : `RC #${rc.id}`} — ${rc.class?.name}${rc.class?.section ? ` ${rc.class.section}` : ''} ${rc.academic_year} [${rc.approval_status}]`
+                  }))
+                ]}
+                disabled={loading}
+              />
+            </div>
+            {selectedRC && (
+              <div>
+                <Select
+                  label="Subject"
+                  value={subject}
+                  onChange={(e) => handleSelectSubject(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select your subject' },
+                    ...reportCardSubjects.map((s) => {
+                      const sub = submissions.find((x) => x.subject === s);
+                      const suffix = sub?.submission_status === 'revision_requested' ? ' ⚠ Revision'
+                                   : sub?.submission_status === 'accepted'           ? ' ✓ Accepted'
+                                   : sub                                             ? ' ✓'
+                                   : '';
+                      return { value: s, label: `${s}${suffix}` };
+                    })
+                  ]}
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* ── Selected RC banner ── */}
       {activeRC && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
-          <div>
-            <p className="font-semibold text-slate-900">
-              {activeRC.student?.first_name} {activeRC.student?.last_name}
-            </p>
-            <p className="text-xs text-slate-500">
-              {activeRC.class?.name}{activeRC.class?.section ? ` - ${activeRC.class.section}` : ''} · {activeRC.academic_year}
-            </p>
-          </div>
-          <span className={`ml-auto inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_COLORS[activeRC.approval_status]}`}>
-            {activeRC.approval_status?.replace(/_/g, ' ')}
-          </span>
-          {isLocked && (
-            <span className="text-xs text-rose-600 font-semibold">Marks locked — card already submitted</span>
-          )}
-        </div>
+        <Card>
+          <CardContent className="px-5 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <p className="font-semibold text-slate-900">
+                  {activeRC.student?.first_name} {activeRC.student?.last_name}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {activeRC.class?.name}{activeRC.class?.section ? ` - ${activeRC.class.section}` : ''} · {activeRC.academic_year}
+                </p>
+              </div>
+              <Badge variant={activeRC.approval_status === 'approved' ? 'success' : activeRC.approval_status === 'pending_vpi' ? 'info' : activeRC.approval_status === 'pending_sponsor' ? 'warning' : 'default'}>
+                {activeRC.approval_status?.replace(/_/g, ' ')}
+              </Badge>
+              {isLocked && (
+                <span className="text-xs text-rose-600 font-semibold">Marks locked — card already submitted</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── Submissions overview (after a card is selected) ── */}

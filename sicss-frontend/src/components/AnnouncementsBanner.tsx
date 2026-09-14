@@ -21,7 +21,7 @@ interface Announcement {
 }
 
 const PRIORITY_STYLES: Record<Priority, { bar: string; bg: string; title: string; badge: string; icon: string }> = {
-  normal:    { bar: 'bg-cyan-500',   bg: 'bg-cyan-50  border-cyan-200',    title: 'text-cyan-900',  badge: 'bg-cyan-100 text-cyan-800',   icon: '📢' },
+  normal:    { bar: 'bg-blue-500',   bg: 'bg-blue-50  border-blue-200',    title: 'text-blue-900',  badge: 'bg-blue-100 text-blue-800',   icon: '📢' },
   important: { bar: 'bg-amber-500',  bg: 'bg-amber-50 border-amber-200',   title: 'text-amber-900', badge: 'bg-amber-100 text-amber-800',  icon: '⚠️' },
   urgent:    { bar: 'bg-rose-600',   bg: 'bg-rose-50  border-rose-300',    title: 'text-rose-900',  badge: 'bg-rose-100 text-rose-700',    icon: '🚨' },
 };
@@ -40,7 +40,6 @@ export default function AnnouncementsBanner() {
   useEffect(() => {
     api.get('/announcements/feed')
       .then((r) => {
-        console.log('Announcements loaded:', r.data);
         setItems(r.data);
       })
       .catch((err) => {
@@ -96,7 +95,7 @@ export default function AnnouncementsBanner() {
           )}
           {visible.length > 3 && (
             <button onClick={() => setShowAll((v) => !v)}
-              className="text-xs font-semibold text-cyan-700 hover:underline">
+              className="text-xs font-semibold text-blue-700 hover:underline">
               {showAll ? 'Show less' : `Show all (${visible.length})`}
             </button>
           )}

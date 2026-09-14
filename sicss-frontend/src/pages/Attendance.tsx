@@ -3,14 +3,15 @@ import { attendanceService } from '../services/attendanceService';
 import { studentService } from '../services/studentService';
 import { classService, type Class } from '../services/classService';
 import type { Attendance, Student } from '../types';
+import { Button, Input, Select, Badge } from '../components/ui';
 
 type StatusType = 'present' | 'absent' | 'late' | 'excused';
 
-const STATUS_META: Record<StatusType, { label: string; color: string; bg: string }> = {
-  present:  { label: 'Present',  color: 'text-emerald-800', bg: 'bg-emerald-100' },
-  absent:   { label: 'Absent',   color: 'text-rose-700',    bg: 'bg-rose-100'    },
-  late:     { label: 'Late',     color: 'text-amber-800',   bg: 'bg-amber-100'   },
-  excused:  { label: 'Excused',  color: 'text-slate-600',   bg: 'bg-slate-100'   },
+const STATUS_META: Record<StatusType, { label: string; badgeVariant: 'success' | 'danger' | 'warning' | 'default' }> = {
+  present:  { label: 'Present',  badgeVariant: 'success' },
+  absent:   { label: 'Absent',   badgeVariant: 'danger' },
+  late:     { label: 'Late',     badgeVariant: 'warning' },
+  excused:  { label: 'Excused',  badgeVariant: 'default' },
 };
 
 // ── Take Attendance Modal ─────────────────────────────────────────────────────
@@ -84,10 +85,10 @@ function TakeAttendanceModal({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-8">
       <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic</p>
-            <h2 className="text-lg font-bold text-slate-950">Take Attendance</h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Academic</p>
+            <h2 className="text-lg font-bold text-slate-900">Take Attendance</h2>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl">×</button>
         </div>
@@ -99,24 +100,29 @@ function TakeAttendanceModal({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Class <span className="text-rose-500">*</span></label>
-                  <select value={classId} onChange={(e) => setClassId(e.target.value)} className="input-field">
-                    <option value="">Select a class</option>
-                    {classes.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
-                    ))}
-                  </select>
+                  <Select
+                    label="Class"
+                    value={classId}
+                    onChange={(e) => setClassId(e.target.value)}
+                    options={[
+                      { value: '', label: 'Select a class' },
+                      ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+                    ]}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Date <span className="text-rose-500">*</span></label>
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
+                  <Input
+                    label="Date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="flex justify-end pt-2">
-                <button onClick={loadStudents} disabled={!classId || loading}
-                  className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+                <Button onClick={loadStudents} disabled={!classId || loading}>
                   {loading ? 'Loading students…' : 'Load students →'}
-                </button>
+                </Button>
               </div>
             </>
           ) : (
@@ -124,9 +130,9 @@ function TakeAttendanceModal({
               {/* Summary bar */}
               <div className="flex flex-wrap gap-2">
                 {(Object.entries(counts) as [StatusType, number][]).map(([s, n]) => (
-                  <span key={s} className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_META[s].bg} ${STATUS_META[s].color}`}>
+                  <Badge key={s} variant={STATUS_META[s].badgeVariant}>
                     {STATUS_META[s].label}: {n}
-                  </span>
+                  </Badge>
                 ))}
               </div>
 
@@ -134,10 +140,9 @@ function TakeAttendanceModal({
               <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <span className="text-xs font-semibold text-slate-600">Mark all:</span>
                 {(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => (
-                  <button key={s} onClick={() => markAll(s)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold ${STATUS_META[s].bg} ${STATUS_META[s].color} hover:opacity-80`}>
+                  <Button key={s} onClick={() => markAll(s)} variant="ghost" className="text-xs px-3 py-1">
                     {STATUS_META[s].label}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -145,7 +150,6 @@ function TakeAttendanceModal({
               <div className="max-h-[340px] overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
                 {students.map((student, idx) => {
                   const status = statuses[student.id] || 'present';
-                  const sm = STATUS_META[status];
                   return (
                     <div key={student.id} className={`flex items-center gap-3 px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
                       {/* Avatar */}
@@ -163,7 +167,7 @@ function TakeAttendanceModal({
                       <select
                         value={status}
                         onChange={(e) => setStatuses({ ...statuses, [student.id]: e.target.value as StatusType })}
-                        className={`rounded-lg border-0 px-2 py-1.5 text-xs font-semibold ${sm.bg} ${sm.color} focus:outline-none focus:ring-1 focus:ring-offset-1`}
+                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-400"
                       >
                         {(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => (
                           <option key={s} value={s}>{STATUS_META[s].label}</option>
@@ -182,13 +186,12 @@ function TakeAttendanceModal({
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <button onClick={() => setStep('select')} className="text-xs font-semibold text-slate-500 hover:underline">
+                <Button onClick={() => setStep('select')} variant="ghost" className="text-xs text-slate-500">
                   ← Change class / date
-                </button>
-                <button onClick={handleSave} disabled={saving}
-                  className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
                   {saving ? 'Saving…' : `✓ Save attendance (${students.length} students)`}
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -289,19 +292,17 @@ export default function Attendance() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Attendance</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Academic</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Attendance</h1>
           <p className="mt-1 text-sm text-slate-500">Record and review daily student attendance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleSync} disabled={syncing}
-            className="rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          <Button onClick={handleSync} disabled={syncing} className="bg-blue-600 hover:bg-blue-700 text-white">
             {syncing ? '↻ Syncing…' : '↻ Sync'}
-          </button>
-          <button onClick={() => setShowModal(true)}
-            className="rounded-lg bg-slate-950 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-cyan-700">
+          </Button>
+          <Button onClick={() => setShowModal(true)}>
             📋 Take Attendance
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -315,9 +316,9 @@ export default function Attendance() {
       {attendance.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(Object.entries(counts) as [StatusType, number][]).map(([s, n]) => (
-            <div key={s} className={`rounded-xl border p-4 text-center ${STATUS_META[s].bg}`}>
-              <p className={`text-xs font-semibold uppercase tracking-wide ${STATUS_META[s].color}`}>{STATUS_META[s].label}</p>
-              <p className={`mt-1 text-2xl font-bold ${STATUS_META[s].color}`}>{n}</p>
+            <div key={s} className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{STATUS_META[s].label}</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{n}</p>
             </div>
           ))}
         </div>
@@ -325,24 +326,31 @@ export default function Attendance() {
 
       {/* Filters */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-          <input type="date" value={selectedDate}
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+          <Input
+            type="date"
+            value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="input-field w-auto flex-1 sm:flex-none" />
-          <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
-            className="input-field w-auto flex-1 sm:flex-none">
-            <option value="">All classes</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
-            ))}
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="input-field w-auto flex-1 sm:flex-none">
-            <option value="">All statuses</option>
-            {(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => (
-              <option key={s} value={s}>{STATUS_META[s].label}</option>
-            ))}
-          </select>
+            className="w-auto flex-1 sm:flex-none"
+          />
+          <Select
+            value={filterClass}
+            onChange={(e) => setFilterClass(e.target.value)}
+            options={[
+              { value: '', label: 'All classes' },
+              ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+            ]}
+            className="w-auto flex-1 sm:flex-none"
+          />
+          <Select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            options={[
+              { value: '', label: 'All statuses' },
+              ...(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => ({ value: s, label: STATUS_META[s].label }))
+            ]}
+            className="w-auto flex-1 sm:flex-none"
+          />
           <span className="ml-auto text-xs text-slate-400">{attendance.length} record{attendance.length !== 1 ? 's' : ''}</span>
         </div>
 
@@ -371,7 +379,6 @@ export default function Attendance() {
               <tbody className="divide-y divide-slate-100">
                 {attendance.map((record) => {
                   const status = (record.status as StatusType) || 'present';
-                  const sm = STATUS_META[status] || STATUS_META.present;
                   return (
                     <tr key={record.id} className="hover:bg-slate-50">
                       <td className="px-3 sm:px-5 py-3 font-semibold text-slate-900">
@@ -384,9 +391,9 @@ export default function Attendance() {
                         {(record as any).date || selectedDate}
                       </td>
                       <td className="px-3 sm:px-5 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${sm.bg} ${sm.color}`}>
-                          {sm.label}
-                        </span>
+                        <Badge variant={STATUS_META[status].badgeVariant}>
+                          {STATUS_META[status].label}
+                        </Badge>
                       </td>
                       <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">
                         {(record as any).remarks || '—'}
@@ -395,7 +402,7 @@ export default function Attendance() {
                         <select
                           value={status}
                           onChange={(e) => handleStatusChange(record, e.target.value as StatusType)}
-                          className={`rounded-lg border-0 px-2 py-1.5 text-xs font-semibold ${sm.bg} ${sm.color} focus:outline-none focus:ring-1 focus:ring-offset-1`}
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-400"
                         >
                           {(['present', 'absent', 'late', 'excused'] as StatusType[]).map((s) => (
                             <option key={s} value={s}>{STATUS_META[s].label}</option>
@@ -403,12 +410,13 @@ export default function Attendance() {
                         </select>
                       </td>
                       <td className="px-3 sm:px-5 py-3">
-                        <button
+                        <Button
                           onClick={() => handleDeleteRecord(record.id)}
-                          className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap"
+                          variant="ghost"
+                          className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );

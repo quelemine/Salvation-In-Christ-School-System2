@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { payrollService, teacherService, type SalaryStructure, type Teacher } from '../services/teacherService';
 import { classService, type Class } from '../services/classService';
 import { subjectService, type Subject } from '../services/subjectService';
@@ -7,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import type { User } from '../types';
 import { FormModal } from '../components/FormModal';
 import api from '../services/api';
+import { Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
 
 type FormData = {
   user_id: string;
@@ -51,6 +53,7 @@ const emptyForm: FormData = {
 };
 
 export default function Teachers() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAdmin = user?.role?.slug === 'admin';
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -74,6 +77,7 @@ export default function Teachers() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       if (isAdmin) {
         const [res, userData, classData, subjectData, structures] = await Promise.all([teacherService.getAll(), authService.users(), classService.getAll(), subjectService.getAll(), payrollService.structures()]);
@@ -86,8 +90,9 @@ export default function Teachers() {
         const res = await teacherService.getAll();
         setTeachers(res.data || (res as unknown as Teacher[]) || []);
       }
-    } catch { setError('Failed to load teachers.'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load teachers.');
+    } finally { setLoading(false); }
   };
 
   const filtered = teachers.filter((t) => {
@@ -95,7 +100,6 @@ export default function Teachers() {
     return `${t.first_name} ${t.last_name} ${t.email} ${displayId}`.toLowerCase().includes(search.toLowerCase());
   });
 
-  const openAdd = () => { setEditingId(null); setUploadError(''); setFormData(emptyForm); setIsModalOpen(true); };
   const openEdit = (t: Teacher) => {
     setEditingId(t.id);
     setUploadError('');
@@ -213,129 +217,208 @@ export default function Teachers() {
       `}</style>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Staff management</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Teachers</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Staff management</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Teachers</h1>
           <p className="mt-1 text-sm text-slate-500">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.</p>
         </div>
-        {isAdmin && (
-          <button onClick={openAdd} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-            + Add teacher
-          </button>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => window.print()} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-          🖨️ Print
-        </button>
-      </div>
-
-      {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-4 py-4 sm:px-5 no-print">
-          <input
-            type="search"
-            placeholder="Search teachers…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-field w-full max-w-xs"
-          />
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => window.print()} variant="secondary">
+            🖨️ Print
+          </Button>
+          {isAdmin && (
+            <Button onClick={() => navigate('/application')} className="bg-blue-600 hover:bg-blue-700 text-white">
+              📝 Add Teacher
+            </Button>
+          )}
         </div>
-        {loading ? (
-          <p className="py-12 text-center text-sm text-slate-500">Loading teachers…</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-[900px] divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-3 sm:px-5 py-3 text-left">Photo</th>
-                  <th className="px-3 sm:px-5 py-3 text-left">Employee ID</th>
-                  <th className="px-3 sm:px-5 py-3 text-left">Name</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden sm:table-cell">Salary structure</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Email</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Phone</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Class(es)</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Specialization</th>
-                  <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Hire date</th>                  <th className="px-3 sm:px-5 py-3 text-left">Status</th>
-                  <th className="px-3 sm:px-5 py-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={11} className="py-10 text-center text-slate-400">No teachers found.</td></tr>
-                ) : filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50">
-                    <td className="px-3 sm:px-5 py-3">
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={load} variant="secondary">Try Again</Button>
+        </div>
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5 no-print">
+            <Input
+              type="search"
+              placeholder="Search teachers…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          {loading ? (
+            <LoadingState message="Loading teachers…" />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title="No teachers found"
+              description="Try adjusting your search to find what you're looking for."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Photo</TableHead>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="hidden sm:table-cell">Salary structure</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Phone</TableHead>
+                  <TableHead className="hidden lg:table-cell">Class(es)</TableHead>
+                  <TableHead className="hidden lg:table-cell">Specialization</TableHead>
+                  <TableHead className="hidden lg:table-cell">Hire date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="no-print">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell>
                       {(t as any).photo
                         ? <img src={(t as any).photo} alt={`${t.first_name} ${t.last_name}`} className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-slate-200 object-cover" />
                         : <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{t.first_name?.[0]}{t.last_name?.[0]}</div>}
-                    </td>
-                    <td className="px-3 sm:px-5 py-3 font-mono text-xs text-slate-600">{(t as any).user?.user_code || t.employee_id}</td>
-                    <td className="px-3 sm:px-5 py-3 font-semibold text-slate-900">{t.first_name} {t.last_name}</td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden sm:table-cell">{t.salary_structure?.name || '—'}</td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{t.email}</td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{t.phone || '—'}</td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500">{t.employee_id}</TableCell>
+                    <TableCell className="font-semibold text-slate-900">{t.first_name} {t.last_name}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-slate-600">{t.salary_structure?.name || '—'}</TableCell>
+                    <TableCell className="hidden md:table-cell text-slate-600">{t.email}</TableCell>
+                    <TableCell className="hidden md:table-cell text-slate-600">{t.phone || '—'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-slate-600">
                       {((t as any).classes || []).length > 0
-                        ? ((t as any).classes as any[]).map((c: any) => c.name + (c.section ? ` ${c.section}` : '')).join(', ')
+                        ? ((t as any).classes as any[]).map((c: any) => c.name.replace(/\s[A-Z][a-z]*$/, '').trim()).join(', ')
                         : (t as any).sponsored_class?.name
-                          ? `${(t as any).sponsored_class.name}${(t as any).sponsored_class.section ? ` ${(t as any).sponsored_class.section}` : ''}`
+                          ? `${(t as any).sponsored_class.name.replace(/\s[A-Z][a-z]*$/, '').trim()}`
                           : '—'}
-                    </td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{t.subject_specialization || (t as any).specialization || '—'}</td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{(t as any).hire_date || '—'}</td>
-                    <td className="px-3 sm:px-5 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        (t as any).status === 'active' ? 'bg-emerald-100 text-emerald-800' :
-                        (t as any).status === 'on_leave' ? 'bg-amber-100 text-amber-800' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{(t as any).status || 'active'}</span>
-                    </td>
-                    <td className="px-3 sm:px-5 py-3">
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-slate-600">{t.subject_specialization || (t as any).specialization || '—'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-slate-600">{(t as any).hire_date ? new Date((t as any).hire_date).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={(t as any).status === 'active' ? 'success' : (t as any).status === 'on_leave' ? 'warning' : 'default'}>
+                        {(t as any).status || 'active'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="no-print">
                       {isAdmin ? (
                         <div className="flex gap-2 flex-wrap">
-                          <button onClick={() => openEdit(t)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
-                          <button onClick={() => handleDelete(t.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
+                          <Button onClick={() => openEdit(t)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                            Edit
+                          </Button>
+                          <Button onClick={() => handleDelete(t.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">
+                            Delete
+                          </Button>
                         </div>
                       ) : (
                         <span className="text-xs text-slate-400">View only</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
+          )}
+          <div className="border-t border-slate-200 px-4 py-3 sm:px-5 text-xs text-slate-400">
+            {filtered.length} of {teachers.length} teacher{teachers.length !== 1 ? 's' : ''}
           </div>
-        )}
-        <div className="border-t border-slate-100 px-4 py-3 sm:px-5 text-xs text-slate-400">
-          {filtered.length} of {teachers.length} teacher{teachers.length !== 1 ? 's' : ''}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <FormModal isOpen={isModalOpen} title={editingId ? 'Edit teacher' : 'Add teacher'} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit} submitText={editingId ? 'Save changes' : 'Add teacher'} isLoading={isSubmitting}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2"><label className="mb-1 block text-sm font-medium text-slate-700">User account</label>
-            <select value={formData.user_id} onChange={field('user_id')} className="input-field">
-              <option value="">No linked account</option>
-              {users.filter((u) => ['teacher', 'class-teacher', 'subject-teacher'].includes(u.role?.slug || '')).map((u) => <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.role?.name}</option>)}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">Create the user with a Class Teacher or Subject Teacher role first, then link it here.</p>
+          <div className="sm:col-span-2">
+            <Select
+              label="User account"
+              value={formData.user_id}
+              onChange={field('user_id')}
+              options={[
+                { value: '', label: 'No linked account' },
+                ...(users.some((u) => ['class-sponsor', 'class-teacher'].includes(u.role?.slug || '')) ? [{ value: 'class-sponsor', label: 'Class Sponsor' }] : []),
+                ...(users.some((u) => ['subject-teacher'].includes(u.role?.slug || '')) ? [{ value: 'subject-teacher', label: 'Subject Teacher' }] : [])
+              ]}
+              helperText="Create the user with a Class Teacher or Subject Teacher role first, then link it here."
+            />
           </div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Employee ID (optional - auto-generated if empty)</label><input value={formData.employee_id} onChange={field('employee_id')} className="input-field" placeholder="EMP-2026-0001" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">First name <span className="text-rose-500">*</span></label><input required value={formData.first_name} onChange={field('first_name')} className="input-field" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Last name <span className="text-rose-500">*</span></label><input required value={formData.last_name} onChange={field('last_name')} className="input-field" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Email <span className="text-rose-500">*</span></label><input required type="email" value={formData.email} onChange={field('email')} className="input-field" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Phone</label><input value={formData.phone} onChange={field('phone')} className="input-field" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
-            <select value={formData.gender} onChange={field('gender')} className="input-field">
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
+          <div>
+            <Input
+              label="Employee ID (optional - auto-generated if empty)"
+              value={formData.employee_id}
+              onChange={field('employee_id')}
+              placeholder="EMP-2026-0001"
+            />
           </div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Date of birth</label><input type="date" value={formData.date_of_birth} onChange={field('date_of_birth')} className="input-field" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Hire date <span className="text-rose-500">*</span></label><input required type="date" value={formData.hire_date} onChange={field('hire_date')} className="input-field" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Qualifications</label><input value={formData.qualifications} onChange={field('qualifications')} className="input-field" placeholder="B.Ed, M.Ed…" /></div>
+          <div>
+            <Input
+              label="First name"
+              value={formData.first_name}
+              onChange={field('first_name')}
+              required
+            />
+          </div>
+          <div>
+            <Input
+              label="Last name"
+              value={formData.last_name}
+              onChange={field('last_name')}
+              required
+            />
+          </div>
+          <div>
+            <Input
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={field('email')}
+              required
+            />
+          </div>
+          <div>
+            <Input
+              label="Phone"
+              value={formData.phone}
+              onChange={field('phone')}
+            />
+          </div>
+          <div>
+            <Select
+              label="Gender"
+              value={formData.gender}
+              onChange={field('gender')}
+              options={[
+                { value: 'male', label: 'Male' },
+                { value: 'female', label: 'Female' },
+                { value: 'other', label: 'Other' },
+              ]}
+            />
+          </div>
+          <div>
+            <Input
+              label="Date of birth"
+              type="date"
+              value={formData.date_of_birth}
+              onChange={field('date_of_birth')}
+            />
+          </div>
+          <div>
+            <Input
+              label="Hire date"
+              type="date"
+              value={formData.hire_date}
+              onChange={field('hire_date')}
+              required
+            />
+          </div>
+          <div>
+            <Input
+              label="Qualifications"
+              value={formData.qualifications}
+              onChange={field('qualifications')}
+              placeholder="B.Ed, M.Ed…"
+            />
+          </div>
           <div className="sm:col-span-2 grid grid-cols-1 gap-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 sm:grid-cols-2">
             <input ref={profileImageRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => uploadTeacherImage('profile', event.target.files?.[0])} />
             <input ref={credentialImageRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => uploadTeacherImage('credential', event.target.files?.[0])} />
@@ -344,7 +427,7 @@ export default function Teachers() {
               <div className="mt-2 flex items-center gap-3">
                 {formData.photo ? <img src={formData.photo} alt="Teacher profile preview" className="h-14 w-14 rounded-full border border-slate-200 object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-xs text-slate-500">No photo</div>}
                 <div className="flex flex-col items-start gap-1">
-                  <button type="button" onClick={() => profileImageRef.current?.click()} disabled={uploadingImage !== null} className="text-sm font-semibold text-cyan-700 hover:underline disabled:opacity-50">{uploadingImage === 'profile' ? 'Uploading…' : formData.photo ? 'Replace photo' : 'Upload photo'}</button>
+                  <button type="button" onClick={() => profileImageRef.current?.click()} disabled={uploadingImage !== null} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">{uploadingImage === 'profile' ? 'Uploading…' : formData.photo ? 'Replace photo' : 'Upload photo'}</button>
                   {formData.photo && <button type="button" onClick={() => setFormData((current) => ({ ...current, photo: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}
                 </div>
               </div>
@@ -354,24 +437,44 @@ export default function Teachers() {
               <div className="mt-2 flex items-center gap-3">
                 {formData.credential_image_path ? <img src={formData.credential_image_path} alt="Credential preview" className="h-14 w-20 rounded border border-slate-200 object-cover" /> : <div className="flex h-14 w-20 items-center justify-center rounded border border-dashed border-slate-300 text-center text-xs text-slate-500">No credential</div>}
                 <div className="flex flex-col items-start gap-1">
-                  <button type="button" onClick={() => credentialImageRef.current?.click()} disabled={uploadingImage !== null} className="text-sm font-semibold text-cyan-700 hover:underline disabled:opacity-50">{uploadingImage === 'credential' ? 'Uploading…' : formData.credential_image_path ? 'Replace image' : 'Upload image'}</button>
+                  <button type="button" onClick={() => credentialImageRef.current?.click()} disabled={uploadingImage !== null} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">{uploadingImage === 'credential' ? 'Uploading…' : formData.credential_image_path ? 'Replace image' : 'Upload image'}</button>
                   {formData.credential_image_path && <button type="button" onClick={() => setFormData((current) => ({ ...current, credential_image_path: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}
                 </div>
               </div>
             </div>
             {uploadError && <p className="sm:col-span-2 text-xs text-rose-600">{uploadError}</p>}
           </div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Specialization</label><input value={formData.specialization} onChange={field('specialization')} className="input-field" placeholder="Mathematics, Science…" /></div>
-          <div><label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
-            <select value={formData.status} onChange={field('status')} className="input-field">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="on_leave">On leave</option>
-            </select>
+          <div>
+            <Input
+              label="Specialization"
+              value={formData.specialization}
+              onChange={field('specialization')}
+              placeholder="Mathematics, Science…"
+            />
           </div>
-          <div className="sm:col-span-2"><label className="mb-1 block text-sm font-medium text-slate-700">Salary structure</label>
-            <select value={formData.salary_structure_id} onChange={field('salary_structure_id')} className="input-field"><option value="">No structure assigned</option>{salaryStructures.filter((structure) => structure.is_active).map((structure) => <option key={structure.id} value={structure.id}>{structure.name} — {structure.currency} {structure.monthly_salary}/month</option>)}</select>
-            <p className="mt-1 text-xs text-slate-500">Payroll uses this as the default monthly salary. It can be adjusted when a monthly payroll is created.</p>
+          <div>
+            <Select
+              label="Status"
+              value={formData.status}
+              onChange={field('status')}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+                { value: 'on_leave', label: 'On leave' },
+              ]}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Select
+              label="Salary structure"
+              value={formData.salary_structure_id}
+              onChange={field('salary_structure_id')}
+              options={[
+                { value: '', label: 'No structure assigned' },
+                ...salaryStructures.filter((structure) => structure.is_active).map((structure) => ({ value: String(structure.id), label: `${structure.name} — ${structure.currency} ${structure.monthly_salary}/month` }))
+              ]}
+              helperText="Payroll uses this as the default monthly salary. It can be adjusted when a monthly payroll is created."
+            />
           </div>
 
           {/* ── Classes assigned to this teacher (all roles) ── */}
@@ -385,12 +488,12 @@ export default function Teachers() {
                   <label key={c.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 accent-cyan-600"
+                      className="h-4 w-4 rounded border-slate-300 accent-blue-600"
                       checked={formData.class_ids.includes(c.id)}
                       onChange={() => toggleClass(c.id)}
                     />
                     <span className="text-sm text-slate-700">
-                      {c.name}{c.section ? ` — ${c.section}` : ''}
+                      {c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}
                     </span>
                   </label>
                 ))}
@@ -404,12 +507,16 @@ export default function Teachers() {
           {/* ── Sponsored class — class-sponsor / class-teacher roles ── */}
           {isSponsorRole && (
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700">Sponsored class (home class)</label>
-              <select value={formData.sponsor_class_id} onChange={field('sponsor_class_id')} className="input-field">
-                <option value="">No sponsored class</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` — ${c.section}` : ''}</option>)}
-              </select>
-              <p className="mt-1 text-xs text-slate-500">The sponsored class is the teacher's home class. They compile the mark sheet and send it to the VPI for approval.</p>
+              <Select
+                label="Sponsored class (home class)"
+                value={formData.sponsor_class_id}
+                onChange={field('sponsor_class_id')}
+                options={[
+                  { value: '', label: 'No sponsored class' },
+                  ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
+                ]}
+                helperText="The sponsored class is the teacher's home class. They compile the mark sheet and send it to the VPI for approval."
+              />
             </div>
           )}
 
@@ -420,18 +527,18 @@ export default function Teachers() {
               <p className="text-xs text-slate-500">Assign this teacher to specific subjects within specific classes.</p>
               {formData.subject_assignments.map((assignment, index) => (
                 <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                  <select value={assignment.class_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, class_id: e.target.value } : a) }))} className="input-field">
+                  <select value={assignment.class_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, class_id: e.target.value } : a) }))} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
                     <option value="">Class</option>
-                    {classes.map((c) => <option key={c.id} value={c.id}>{c.name}{c.section ? ` — ${c.section}` : ''}</option>)}
+                    {classes.map((c) => <option key={c.id} value={c.id}>{c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}</option>)}
                   </select>
-                  <select value={assignment.subject_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, subject_id: e.target.value } : a) }))} className="input-field">
+                  <select value={assignment.subject_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, subject_id: e.target.value } : a) }))} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
                     <option value="">Subject</option>
                     {subjects.map((s) => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
                   </select>
                   <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.filter((_, i) => i !== index) }))} className="px-2 text-sm font-semibold text-rose-600">Remove</button>
                 </div>
               ))}
-              <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: [...f.subject_assignments, { class_id: '', subject_id: '' }] }))} className="text-sm font-semibold text-cyan-700">
+              <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: [...f.subject_assignments, { class_id: '', subject_id: '' }] }))} className="text-sm font-semibold text-blue-600">
                 + Assign a subject to a class
               </button>
             </div>

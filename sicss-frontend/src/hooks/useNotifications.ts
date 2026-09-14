@@ -57,7 +57,6 @@ export function useNotifications() {
       // ── 1. Announcements (all users) ────────────────────────────────────
       try {
         const annRes = await api.get('/announcements/feed');
-        console.log('Notifications hook - announcements loaded:', annRes.data);
         for (const ann of annRes.data as any[]) {
           // Detect marks-submission and revision-request notifications by title prefix
           let kind: NotifKind = 'announcement';

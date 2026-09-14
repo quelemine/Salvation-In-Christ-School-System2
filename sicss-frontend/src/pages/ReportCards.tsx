@@ -15,6 +15,7 @@ import {
   type SubjectMarks,
 } from '../services/reportCardService';
 import ReportCardSheet from '../components/ReportCardSheet';
+import { Button, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
 
 type Student = { id: number; first_name: string; last_name: string; student_id: string; class_id: number };
 type Teacher = { id: number; first_name: string; last_name: string };
@@ -218,16 +219,12 @@ export default function ReportCards() {
     }
   };
 
-  const approvalStatusColor = (status?: string) => {
-    switch (status) {
-      case 'draft':            return 'bg-slate-100 text-slate-600';
-      case 'pending_sponsor':  return 'bg-amber-100 text-amber-700';
-      case 'pending_vpi':      return 'bg-blue-100 text-blue-700';
-      case 'approved':         return 'bg-emerald-100 text-emerald-700';
-      case 'rejected':         return 'bg-rose-100 text-rose-700';
-      default:                 return 'bg-slate-100 text-slate-600';
-    }
-  };
+  const approvalStatusBadgeVariant = (status?: string) =>
+    status === 'approved' ? 'success' as const
+    : status === 'pending_vpi' ? 'info' as const
+    : status === 'pending_sponsor' ? 'warning' as const
+    : status === 'rejected' ? 'danger' as const
+    : 'default' as const;
 
   const filteredReportCards = reportCards.filter(rc => {
     if (!approvalFilter) return true;
@@ -420,11 +417,12 @@ export default function ReportCards() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Academic work</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Report Cards</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Academic work</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Report Cards</h1>
           <p className="mt-1 text-sm text-slate-500">{reportCards.length} report card{reportCards.length !== 1 ? 's' : ''} generated.</p>
-        </div>        {canCreate && (
-        <button 
+        </div>
+        {canCreate && (
+        <Button 
           onClick={() => { 
             setPreviewMode(true); 
             setSelectedStudent(null); 
@@ -444,15 +442,18 @@ export default function ReportCards() {
             setGradeLevel('');
             setAcademicYear(new Date().getFullYear().toString());
           }} 
-          className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 cursor-pointer"
-          type="button"
         >
           + New Report Card
-        </button>
+        </Button>
         )}
       </div>
 
-      {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={loadData} variant="secondary">Try Again</Button>
+        </div>
+      )}
 
       {/* ── VPI Full Report Card Review Panel ── */}
       {vpiReviewRC && (
@@ -480,9 +481,9 @@ export default function ReportCards() {
 
                 {/* Status bar */}
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${approvalStatusColor((vpiReviewRC as any).approval_status)}`}>
+                  <Badge variant={approvalStatusBadgeVariant((vpiReviewRC as any).approval_status)}>
                     {(vpiReviewRC as any).approval_status?.replace(/_/g, ' ')}
-                  </span>
+                  </Badge>
                   {vpiReviewStatus === 'pending_sponsor_reply' && (
                     <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">⏳ Awaiting sponsor reply</span>
                   )}
@@ -734,114 +735,118 @@ export default function ReportCards() {
       )}
 
       {!previewMode ? (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h2 className="text-lg font-semibold text-slate-900">Existing Report Cards</h2>
-            {(isClassSponsor || isVPI || isAdmin) && (
-              <select 
-                value={approvalFilter} 
-                onChange={(e) => setApprovalFilter(e.target.value)}
-                className="input-field w-full sm:w-auto text-sm"
-              >
-                <option value="">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="pending_sponsor">Pending Sponsor</option>
-                <option value="pending_vpi">Pending VPI</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            )}
-          </div>
-          {loading ? (
-            <p className="py-12 text-center text-sm text-slate-500">Loading…</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-[700px] divide-y divide-slate-100 text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <tr>
-                    <th className="px-3 sm:px-5 py-3 text-left">Student</th>
-                    <th className="px-3 sm:px-5 py-3 text-left hidden sm:table-cell">Class</th>
-                    <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Academic Year</th>
-                    <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Aggregate</th>
-                    <th className="px-3 sm:px-5 py-3 text-left hidden md:table-cell">Average</th>
-                    <th className="px-3 sm:px-5 py-3 text-left hidden lg:table-cell">Rank</th>
-                    <th className="px-3 sm:px-5 py-3 text-left">Status</th>
-                    <th className="px-3 sm:px-5 py-3 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredReportCards.length === 0 ? (
-                    <tr><td colSpan={8} className="py-10 text-center text-slate-400">No report cards found.</td></tr>
-                  ) : (
-                    filteredReportCards.map((rc) => (
-                      <tr key={rc.id} className="hover:bg-slate-50">
-                        <td className="px-3 sm:px-5 py-3 font-semibold text-slate-900">
-                          {rc.student?.first_name} {rc.student?.last_name}
-                        </td>
-                        <td className="px-3 sm:px-5 py-3 text-slate-600 hidden sm:table-cell">{rc.class?.name}</td>
-                        <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{rc.academic_year}</td>
-                        <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{rc.aggregate ?? '—'}</td>
-                        <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{rc.average ?? '—'}</td>
-                        <td className="px-3 sm:px-5 py-3 text-slate-600 hidden lg:table-cell">{rc.rank ?? '—'}</td>
-                        <td className="px-3 sm:px-5 py-3">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${approvalStatusColor((rc as any).approval_status)}`}>
-                            {(rc as any).approval_status?.replace(/_/g, ' ') || 'draft'}
-                          </span>
-                          {isClassSponsor && (rc as any).vpi_review_status === 'pending_sponsor_reply' && (
-                            <span className="ml-1 inline-flex rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">⚠ VPI</span>
-                          )}
-                        </td>
-                        <td className="px-3 sm:px-5 py-3">
-                          <div className="flex gap-2 flex-wrap">
-                            <button onClick={() => loadReportCard(rc)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">View</button>
-                            {/* VPI: full review panel with mark sheet + messaging */}
-                            {(isVPI || isAdmin) && (
-                              <button onClick={() => openVPIReview(rc)} className="text-xs font-semibold text-blue-700 hover:underline whitespace-nowrap">
-                                {(rc as any).approval_status === 'pending_vpi' ? '🔍 Review' : '📋 Open'}
-                              </button>
-                            )}
-                            {/* Class sponsor: open messages panel for report cards with VPI feedback */}
-                            {isClassSponsor && (rc as any).vpi_review_status && (
-                              <button onClick={() => openVPIReview(rc)} className={`text-xs font-semibold hover:underline whitespace-nowrap ${(rc as any).vpi_review_status === 'pending_sponsor_reply' ? 'text-amber-700' : 'text-emerald-700'}`}>
-                                {(rc as any).vpi_review_status === 'pending_sponsor_reply' ? '⚠ VPI message' : '💬 Messages'}
-                              </button>
-                            )}
-                            {(isClassSponsor || isAdmin) && (rc as any).approval_status === 'pending_sponsor' && (
-                              <>
-                                <button onClick={() => handleSponsorApprove(rc.id, 'approve')} className="text-xs font-semibold text-emerald-600 hover:underline whitespace-nowrap">Approve</button>
-                                <button onClick={() => {
-                                  const reason = prompt('Rejection reason:');
-                                  if (reason) handleSponsorApprove(rc.id, 'reject', reason);
-                                }} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Reject</button>
-                              </>
-                            )}
-                            {(isVPI || isAdmin) && (rc as any).approval_status === 'pending_vpi' && (
-                              <>
-                                <button onClick={() => handleVPIApprove(rc.id, 'approve')} className="text-xs font-semibold text-emerald-600 hover:underline whitespace-nowrap">Approve</button>
-                                <button onClick={() => {
-                                  const reason = prompt('Rejection reason:');
-                                  if (reason) handleVPIApprove(rc.id, 'reject', reason);
-                                }} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Reject</button>
-                              </>
-                            )}
-                            {/* Comment button for viewers (principal, proprietor, proprietress) */}
-                            {isViewer && (
-                              <button onClick={() => openComments(rc.id)} className="text-xs font-semibold text-amber-700 hover:underline whitespace-nowrap">💬 Comment</button>
-                            )}
-                            {/* Delete — admin only */}
-                            {canDelete && (
-                              <button onClick={() => handleDelete(rc.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Delete</button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+        <Card>
+          <CardContent className="p-0">
+            <div className="border-b border-slate-200 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-900">Existing Report Cards</h2>
+              {(isClassSponsor || isVPI || isAdmin) && (
+                <Select
+                  value={approvalFilter}
+                  onChange={(e) => setApprovalFilter(e.target.value)}
+                  options={[
+                    { value: '', label: 'All Status' },
+                    { value: 'draft', label: 'Draft' },
+                    { value: 'pending_sponsor', label: 'Pending Sponsor' },
+                    { value: 'pending_vpi', label: 'Pending VPI' },
+                    { value: 'approved', label: 'Approved' },
+                    { value: 'rejected', label: 'Rejected' },
+                  ]}
+                  className="w-full sm:w-auto text-sm"
+                />
+              )}
             </div>
-          )}
-        </div>
+            {loading ? (
+              <LoadingState message="Loading…" />
+            ) : filteredReportCards.length === 0 ? (
+              <EmptyState
+                title="No report cards found"
+                description="Try adjusting your filter to find what you're looking for."
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead className="hidden sm:table-cell">Class</TableHead>
+                    <TableHead className="hidden md:table-cell">Academic Year</TableHead>
+                    <TableHead className="hidden md:table-cell">Aggregate</TableHead>
+                    <TableHead className="hidden md:table-cell">Average</TableHead>
+                    <TableHead className="hidden lg:table-cell">Rank</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReportCards.map((rc) => (
+                    <TableRow key={rc.id}>
+                      <TableCell className="font-semibold text-slate-900">
+                        {rc.student?.first_name} {rc.student?.last_name}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-slate-600">{rc.class?.name}</TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">{rc.academic_year}</TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">{rc.aggregate ?? '—'}</TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">{rc.average ?? '—'}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-slate-600">{rc.rank ?? '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={approvalStatusBadgeVariant((rc as any).approval_status)}>
+                          {(rc as any).approval_status?.replace(/_/g, ' ') || 'draft'}
+                        </Badge>
+                        {isClassSponsor && (rc as any).vpi_review_status === 'pending_sponsor_reply' && (
+                          <Badge variant="warning" className="ml-1">⚠ VPI</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button onClick={() => loadReportCard(rc)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                            View
+                          </Button>
+                          {/* VPI: full review panel with mark sheet + messaging */}
+                          {(isVPI || isAdmin) && (
+                            <Button onClick={() => openVPIReview(rc)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                              Review
+                            </Button>
+                          )}
+                          {/* Class sponsor: open messages panel for report cards with VPI feedback */}
+                          {isClassSponsor && (rc as any).vpi_review_status && (
+                            <Button onClick={() => openVPIReview(rc)} variant="ghost" className={`text-xs p-0 h-auto ${(rc as any).vpi_review_status === 'pending_sponsor_reply' ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700'}`}>
+                              {(rc as any).vpi_review_status === 'pending_sponsor_reply' ? '⚠ VPI message' : '💬 Messages'}
+                            </Button>
+                          )}
+                          {(isClassSponsor || isAdmin) && (rc as any).approval_status === 'pending_sponsor' && (
+                            <>
+                              <Button onClick={() => handleSponsorApprove(rc.id, 'approve')} variant="ghost" className="text-emerald-600 hover:text-emerald-700 text-xs p-0 h-auto">Approve</Button>
+                              <Button onClick={() => {
+                                const reason = prompt('Rejection reason:');
+                                if (reason) handleSponsorApprove(rc.id, 'reject', reason);
+                              }} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">Reject</Button>
+                            </>
+                          )}
+                          {(isVPI || isAdmin) && (rc as any).approval_status === 'pending_vpi' && (
+                            <>
+                              <Button onClick={() => handleVPIApprove(rc.id, 'approve')} variant="ghost" className="text-emerald-600 hover:text-emerald-700 text-xs p-0 h-auto">Approve</Button>
+                              <Button onClick={() => {
+                                const reason = prompt('Rejection reason:');
+                                if (reason) handleVPIApprove(rc.id, 'reject', reason);
+                              }} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">Reject</Button>
+                            </>
+                          )}
+                          {/* Comment button for viewers (principal, proprietor, proprietress) */}
+                          {isViewer && (
+                            <Button onClick={() => openComments(rc.id)} variant="ghost" className="text-amber-600 hover:text-amber-700 text-xs p-0 h-auto">💬 Comment</Button>
+                          )}
+                          {/* Delete — admin only */}
+                          {canDelete && (
+                            <Button onClick={() => handleDelete(rc.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">Delete</Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-6">
           {/* Form */}
@@ -862,7 +867,7 @@ export default function ReportCards() {
                 <select value={selectedClass || ''} onChange={(e) => setSelectedClass(Number(e.target.value))} className="input-field">
                   <option value="">Select class</option>
                   {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name} {c.section ? `(${c.section})` : ''}</option>
+                    <option key={c.id} value={c.id}>{c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}</option>
                   ))}
                 </select>
               </div>

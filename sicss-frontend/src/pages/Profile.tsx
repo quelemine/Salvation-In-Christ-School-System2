@@ -30,7 +30,7 @@ function StudentRegistrationDetails({ profile, error }: { profile: any; error: s
       ['Phone', profile.phone], ['Home address', profile.address],
     ] },
     { title: 'School information', fields: [
-      ['Class', profile.class?.name], ['Previous school', profile.previous_school], ['Grade applying for', profile.grade_applying_for],
+      ['Class', profile.class?.name], ['Previous school', profile.previous_school],
       ['Admission date', date(profile.admission_date)], ['Application status', profile.application_status], ['Registration number', profile.registration_number],
     ] },
     { title: 'Parent / guardian information', fields: [
@@ -186,14 +186,14 @@ export default function Profile() {
   const visibleTabs = isProfileReadOnly ? tabs.filter((tab) => tab.key !== 'edit') : tabs;
   const initials = `${user?.first_name?.charAt(0) || ''}${user?.last_name?.charAt(0) || ''}`.toUpperCase() || 'U';
   const roleColor = user?.role?.slug === 'admin' ? 'bg-rose-100 text-rose-800'
-    : user?.role?.slug === 'teacher' ? 'bg-cyan-100 text-cyan-800'
+    : user?.role?.slug === 'teacher' ? 'bg-blue-100 text-blue-800'
     : user?.role?.slug?.includes('finance') ? 'bg-emerald-100 text-emerald-800'
     : 'bg-slate-100 text-slate-700';
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Account</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Account</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">My profile</h1>
       </div>
 

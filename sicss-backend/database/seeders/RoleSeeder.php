@@ -83,9 +83,5 @@ class RoleSeeder extends Seeder
         // The original broad Teacher role is retained for existing records only.
         // Administrators must reassign those accounts to one of the scoped roles.
         Role::where('slug', 'teacher')->update(['is_active' => false]);
-
-        // Head of School is replaced by Proprietor / Proprietress.
-        // Deactivate it so it no longer appears in role selectors.
-        Role::where('slug', 'head-of-school')->update(['is_active' => false]);
     }
 }

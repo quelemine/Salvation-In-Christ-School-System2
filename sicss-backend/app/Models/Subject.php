@@ -12,7 +12,6 @@ class Subject extends Model
     use SoftDeletes, Syncable;
 
     protected $fillable = [
-        'code',
         'name',
         'slug',
         'description',

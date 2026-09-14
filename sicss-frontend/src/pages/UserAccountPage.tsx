@@ -24,7 +24,6 @@ interface StudentRecord {
   nationality: string;
   county: string;
   address: string;
-  grade_applying_for: string;
   father_name: string;
   mother_name: string;
   father_contact: string;
@@ -196,7 +195,9 @@ function CredentialModal({
             </p>
           </div>
           <button onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl">×</button>
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl">
+            ×
+          </button>
         </div>
 
         {/* Credential card preview */}
@@ -210,7 +211,7 @@ function CredentialModal({
 
           {/* Print */}
           <button onClick={handlePrint}
-            className="flex w-full items-center gap-4 rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-left transition-all hover:border-slate-950 hover:bg-slate-50">
+            className="flex w-full items-center gap-4 rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-left transition-all hover:border-slate-900 hover:bg-slate-50">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl">🖨️</div>
             <div>
               <p className="text-sm font-bold text-slate-900">Print credential card</p>
@@ -231,13 +232,7 @@ function CredentialModal({
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">+</span>
-                <input
-                  type="tel"
-                  value={whatsappNum}
-                  onChange={(e) => setWhatsappNum(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="input-field pl-7 font-mono text-sm"
-                  placeholder="2310770123456"
-                />
+                <input type="tel" value={whatsappNum} onChange={(e) => setWhatsappNum(e.target.value.replace(/[^0-9]/g, ''))} className="input-field pl-7 font-mono text-sm" placeholder="2310770123456" />
               </div>
               <button onClick={handleWhatsApp} disabled={!whatsappNum}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
@@ -280,7 +275,7 @@ function CredentialModal({
 
         <div className="flex justify-end">
           <button onClick={onClose}
-            className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
             Done
           </button>
         </div>
@@ -437,7 +432,7 @@ export default function UserAccountPage() {
   if (!student) return (
     <div className="mx-auto max-w-lg rounded-xl border border-rose-200 bg-rose-50 p-8 text-center">
       <p className="text-rose-700 font-semibold">Student not found.</p>
-      <Link to="/students" className="mt-4 inline-flex rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700">← Back</Link>
+      <Link to="/students" className="mt-4 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">← Back</Link>
     </div>
   );
 
@@ -462,8 +457,8 @@ export default function UserAccountPage() {
 
       {/* Header */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">User account setup</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{student.first_name} {student.last_name}</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">User account setup</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{student.first_name} {student.last_name}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="font-mono text-sm font-semibold text-slate-500">{student.student_id}</span>
           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${appStatus==='approved'?'bg-emerald-100 text-emerald-800':appStatus==='pending'?'bg-amber-100 text-amber-800':'bg-rose-100 text-rose-700'}`}>
@@ -482,7 +477,6 @@ export default function UserAccountPage() {
             ['Date of birth',  student.date_of_birth?.slice(0,10)],
             ['Nationality',    student.nationality],
             ['County',         student.county],
-            ['Grade applying', student.grade_applying_for],
             ['Class assigned', student.class ? `${student.class.name}${student.class.section?` - ${student.class.section}`:''}` : '—'],
             ['Father',         student.father_name || '—'],
             ['Father contact', student.father_contact || '—'],
@@ -497,7 +491,7 @@ export default function UserAccountPage() {
           ))}
         </dl>
         <div className="mt-4 border-t border-slate-100 pt-4">
-          <Link to={`/student-application?id=${studentId}`} className="text-xs font-semibold text-cyan-700 hover:underline">
+          <Link to={`/application?id=${studentId}&type=student`} className="text-xs font-semibold text-blue-700 hover:underline">
             ✏️ Edit full application form →
           </Link>
         </div>
@@ -528,7 +522,7 @@ export default function UserAccountPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Role <span className="text-rose-500">*</span></label>
             <select required value={form.role_id} onChange={(e)=>setForm({...form,role_id:e.target.value})} className="input-field">
               <option value="">— Select role —</option>
-              {roles.map((r)=><option key={r.id} value={r.id}>{r.name}</option>)}
+              {roles.map((r1)=><option key={r1.id} value={r1.id}>{r1.name}</option>)}
             </select>
           </div>
 
@@ -547,7 +541,7 @@ export default function UserAccountPage() {
 
             {!hasAccount && (
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <button type="button" onClick={refreshPassword} className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800 hover:bg-cyan-100">
+                <button type="button" onClick={refreshPassword} className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-100">
                   ↺ Regenerate
                 </button>
                 <button type="button" onClick={copyPassword} className={`rounded-lg border px-3 py-1 text-xs font-semibold transition-colors ${copied?'border-emerald-300 bg-emerald-50 text-emerald-800':'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}>
@@ -604,7 +598,7 @@ export default function UserAccountPage() {
             ← Return to students
           </Link>
           <button type="submit" disabled={saving}
-            className="rounded-lg bg-slate-950 px-6 py-2.5 text-sm font-bold text-white hover:bg-cyan-700 disabled:opacity-50 transition-colors">
+            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
             {saving ? 'Saving…' : hasAccount ? '💾 Update account' : '✓ Create account'}
           </button>
         </div>

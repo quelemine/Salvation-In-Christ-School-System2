@@ -34,6 +34,31 @@ use App\Http\Controllers\Api\V1\TeacherPayrollController;
 use App\Http\Controllers\Api\V1\TeacherAttendanceController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\SystemSettingsController;
+use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\ReportCardTemplateController;
+use App\Http\Controllers\Api\V1\PageContentController;
+use App\Http\Controllers\Api\V1\PageLayoutController;
+use App\Http\Controllers\Api\V1\PageColumnController;
+use App\Http\Controllers\Api\V1\AcademicCalendarController;
+use App\Http\Controllers\Api\V1\ExamController;
+use App\Http\Controllers\Api\V1\TimetableController;
+use App\Http\Controllers\Api\V1\DisciplineRecordController;
+use App\Http\Controllers\Api\V1\LibraryBookController;
+use App\Http\Controllers\Api\V1\LibraryTransactionController;
+use App\Http\Controllers\Api\V1\TransportationVehicleController;
+use App\Http\Controllers\Api\V1\TransportationAssignmentController;
+use App\Http\Controllers\Api\V1\HostelController;
+use App\Http\Controllers\Api\V1\HostelAssignmentController;
+use App\Http\Controllers\Api\V1\InventoryItemController;
+use App\Http\Controllers\Api\V1\ParentAccountController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\BulkImportController;
+use App\Http\Controllers\Api\V1\DocumentController;
+use App\Http\Controllers\Api\V1\MedicalRecordController;
+use App\Http\Controllers\Api\V1\SportsActivityController;
+use App\Http\Controllers\Api\V1\IdCardController;
+use App\Http\Controllers\Api\V1\CertificateController;
+use App\Http\Controllers\Api\V1\AlumniController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -164,7 +189,6 @@ Route::prefix('v1')->group(function () {
 
         // Users - viewable by admin, VPI, proprietor, and proprietress
         Route::get('/users', [UserController::class, 'index'])->middleware('role:admin|vice-principal-instruction|proprietor|proprietress');
-        Route::get('/roles', [UserController::class, 'roles'])->middleware('role:admin|vice-principal-instruction|proprietor|proprietress');
 
         Route::middleware('role:admin')->group(function () {
             Route::get('/search', GlobalSearchController::class);
@@ -172,6 +196,23 @@ Route::prefix('v1')->group(function () {
             Route::get('/users/{user}', [UserController::class, 'show']);
             Route::put('/users/{user}', [UserController::class, 'update']);
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
+            
+            // Roles CRUD - admin only
+            Route::apiResource('roles', RoleController::class);
+            
+            // Report card templates and learning areas - admin only
+            Route::get('/report-card-templates', [ReportCardTemplateController::class, 'indexTemplates']);
+            Route::post('/report-card-templates', [ReportCardTemplateController::class, 'storeTemplate']);
+            Route::get('/report-card-templates/{id}', [ReportCardTemplateController::class, 'showTemplate']);
+            Route::put('/report-card-templates/{id}', [ReportCardTemplateController::class, 'updateTemplate']);
+            Route::delete('/report-card-templates/{id}', [ReportCardTemplateController::class, 'destroyTemplate']);
+            
+            Route::get('/learning-areas', [ReportCardTemplateController::class, 'indexLearningAreas']);
+            Route::post('/learning-areas', [ReportCardTemplateController::class, 'storeLearningArea']);
+            Route::get('/learning-areas/{id}', [ReportCardTemplateController::class, 'showLearningArea']);
+            Route::put('/learning-areas/{id}', [ReportCardTemplateController::class, 'updateLearningArea']);
+            Route::delete('/learning-areas/{id}', [ReportCardTemplateController::class, 'destroyLearningArea']);
+            
             // Student application approval (admin only)
             Route::post('/students/{student}/approve', function(\Illuminate\Http\Request $req, \App\Models\Student $student) {
                 $data = $req->validate([
@@ -310,6 +351,57 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('payments', PaymentController::class);
             Route::apiResource('receipts', ReceiptController::class)->except(['update']);
             Route::get('payments/student/{studentId}', [PaymentController::class, 'studentPayments']);
+        });
+
+        // Admin customization routes
+        Route::middleware('role:admin')->group(function () {
+            Route::apiResource('page-contents', PageContentController::class);
+            Route::post('page-contents/bulk', [PageContentController::class, 'bulkUpdate']);
+            Route::get('page-contents/{pageKey}', [PageContentController::class, 'show']);
+            
+            Route::apiResource('page-layouts', PageLayoutController::class);
+            Route::get('page-layouts/{pageKey}', [PageLayoutController::class, 'show']);
+            Route::post('page-layouts/{pageKey}/reset', [PageLayoutController::class, 'reset']);
+            
+            Route::apiResource('page-columns', PageColumnController::class);
+            Route::get('page-columns/{pageKey}', [PageColumnController::class, 'show']);
+            Route::post('page-columns/bulk', [PageColumnController::class, 'bulkUpdate']);
+            Route::post('page-columns/{pageKey}/reset', [PageColumnController::class, 'reset']);
+            
+            Route::apiResource('academic-calendar', AcademicCalendarController::class);
+            Route::apiResource('exams', ExamController::class);
+            Route::post('exams/{id}/publish', [ExamController::class, 'publish']);
+            Route::post('exams/{id}/unpublish', [ExamController::class, 'unpublish']);
+            Route::apiResource('timetables', TimetableController::class);
+            Route::apiResource('discipline-records', DisciplineRecordController::class);
+            Route::post('discipline-records/{id}/resolve', [DisciplineRecordController::class, 'resolve']);
+            Route::apiResource('library-books', LibraryBookController::class);
+            Route::apiResource('library-transactions', LibraryTransactionController::class);
+            Route::post('library-transactions/{id}/return', [LibraryTransactionController::class, 'returnBook']);
+            Route::apiResource('transportation-vehicles', TransportationVehicleController::class);
+            Route::apiResource('transportation-assignments', TransportationAssignmentController::class);
+            Route::apiResource('hostels', HostelController::class);
+            Route::apiResource('hostel-assignments', HostelAssignmentController::class);
+            Route::apiResource('inventory-items', InventoryItemController::class);
+            Route::apiResource('parent-accounts', ParentAccountController::class);
+            Route::apiResource('notifications', NotificationController::class);
+            Route::post('notifications/{id}/mark-read', [NotificationController::class, 'markAsRead']);
+            Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+            Route::post('notifications/send-bulk', [NotificationController::class, 'sendBulk']);
+            Route::post('bulk-import/students', [BulkImportController::class, 'importStudents']);
+            Route::post('bulk-import/teachers', [BulkImportController::class, 'importTeachers']);
+            Route::get('bulk-export/students', [BulkImportController::class, 'exportStudents']);
+            Route::get('bulk-export/teachers', [BulkImportController::class, 'exportTeachers']);
+            Route::get('bulk-export/classes', [BulkImportController::class, 'exportClasses']);
+            Route::apiResource('documents', DocumentController::class);
+            Route::get('documents/{id}/download', [DocumentController::class, 'download']);
+            Route::apiResource('medical-records', MedicalRecordController::class);
+            Route::apiResource('sports-activities', SportsActivityController::class);
+            Route::post('id-cards/student', [IdCardController::class, 'generateStudentIdCard']);
+            Route::post('id-cards/teacher', [IdCardController::class, 'generateTeacherIdCard']);
+            Route::post('certificates/completion', [CertificateController::class, 'generateCompletionCertificate']);
+            Route::post('certificates/achievement', [CertificateController::class, 'generateAchievementCertificate']);
+            Route::apiResource('alumni', AlumniController::class);
         });
 
         // Financial reports — finance/admin can send reports; principal/proprietor/proprietress can VIEW only

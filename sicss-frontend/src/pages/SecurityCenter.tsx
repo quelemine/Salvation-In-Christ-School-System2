@@ -123,7 +123,7 @@ export default function SecurityCenter() {
 
   const roleColor = (slug?: string) =>
     slug === 'admin' ? 'bg-rose-100 text-rose-700'
-    : slug === 'teacher' ? 'bg-cyan-100 text-cyan-800'
+    : slug === 'teacher' ? 'bg-blue-100 text-blue-800'
     : slug?.includes('finance') ? 'bg-emerald-100 text-emerald-800'
     : 'bg-slate-100 text-slate-600';
 
@@ -231,7 +231,7 @@ export default function SecurityCenter() {
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Edit account</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Edit account</p>
                 <h2 className="text-lg font-bold text-slate-950">{editUser.first_name} {editUser.last_name}</h2>
               </div>
               <button onClick={() => setEditUser(null)}
@@ -282,7 +282,7 @@ export default function SecurityCenter() {
 
       {/* ── Page header ─────────────────────────────────────── */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Administration</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Administration</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Security center</h1>
         <p className="mt-2 text-sm text-slate-500">
           Reset user passwords, update account details, and manage access. Changes are logged in the activity trail.
@@ -353,7 +353,7 @@ export default function SecurityCenter() {
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-3">
                         <button onClick={() => openEdit(u)}
-                          className="text-xs font-semibold text-cyan-700 hover:underline">
+                          className="text-xs font-semibold text-blue-700 hover:underline">
                           Edit
                         </button>
                         <button onClick={() => openReset(u.id)}

@@ -30,6 +30,18 @@ class ClassController extends Controller
             'subject_ids.*'     => 'exists:subjects,id',
         ]);
 
+        // Check for duplicate class (division_id + name + section)
+        $existing = ClassModel::where('division_id', $request->division_id)
+            ->where('name', $request->name)
+            ->where('section', $request->section ?? null)
+            ->first();
+        
+        if ($existing) {
+            return response()->json([
+                'message' => 'A class with this name and section already exists in this division.'
+            ], 422);
+        }
+
         $class = ClassModel::create($request->except(['subject_ids']));
 
         if ($request->filled('sponsor_teacher_id')) {
@@ -66,6 +78,19 @@ class ClassController extends Controller
             'subject_ids'       => 'nullable|array',
             'subject_ids.*'     => 'exists:subjects,id',
         ]);
+
+        // Check for duplicate class (division_id + name + section), excluding current record
+        $existing = ClassModel::where('division_id', $request->division_id)
+            ->where('name', $request->name)
+            ->where('section', $request->section ?? null)
+            ->where('id', '!=', $class->id)
+            ->first();
+        
+        if ($existing) {
+            return response()->json([
+                'message' => 'A class with this name and section already exists in this division.'
+            ], 422);
+        }
 
         $class->update($request->except(['subject_ids']));
 

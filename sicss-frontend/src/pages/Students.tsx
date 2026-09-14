@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import type { Student } from '../types';
 import { syncManager } from '../sync/syncManager';
 import api from '../services/api';
+import { Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState } from '../components/ui';
 
 // ── Main Students page ────────────────────────────────────────────────────────
 export default function Students() {
@@ -14,13 +15,14 @@ export default function Students() {
   const isStudent = user?.role?.slug === 'student';
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterApplicationStatus, setFilterApplicationStatus] = useState('');
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedFields, setSelectedFields] = useState<string[]>([
-    'student_id', 'name', 'gender', 'grade_applying_for', 'class', 'status'
+    'student_id', 'name', 'gender', 'class', 'status'
   ]);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -49,8 +51,10 @@ export default function Students() {
     try {
       const response = await studentService.getAll();
       setStudents((response as any).data || (response as any).data?.data || []);
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load students. Please try again.');
+    } finally { setLoading(false); }
   };
 
   const handleSync = async () => { await syncManager.sync(); loadStudents(); };
@@ -88,7 +92,6 @@ export default function Students() {
     { key: 'nationality', label: 'Nationality' },
     { key: 'county', label: 'County' },
     { key: 'previous_school', label: 'Previous School' },
-    { key: 'grade_applying_for', label: 'Grade Applying' },
     { key: 'address', label: 'Address' },
     { key: 'father_name', label: "Father's Name" },
     { key: 'mother_name', label: "Mother's Name" },
@@ -126,7 +129,7 @@ export default function Students() {
             row['Gender'] = student.gender || '';
             break;
           case 'date_of_birth':
-            row['Date of Birth'] = student.date_of_birth?.split('T')[0] || '';
+            row['Date of Birth'] = student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : '';
             break;
           case 'nationality':
             row['Nationality'] = (student as any).nationality || '';
@@ -136,9 +139,6 @@ export default function Students() {
             break;
           case 'previous_school':
             row['Previous School'] = (student as any).previous_school || '';
-            break;
-          case 'grade_applying_for':
-            row['Grade Applying'] = ((student as any).grade_applying_for || '').split(' - ')[0];
             break;
           case 'address':
             row['Address'] = student.address || '';
@@ -183,7 +183,7 @@ export default function Students() {
             row['Class'] = student.class?.name || '';
             break;
           case 'admission_date':
-            row['Admission Date'] = (student as any).admission_date?.split('T')[0] || '';
+            row['Admission Date'] = (student as any).admission_date ? new Date((student as any).admission_date).toLocaleDateString() : '';
             break;
           case 'approved_by_registrar':
             row['Approved by Registrar'] = (student as any).approved_by_registrar || '';
@@ -192,7 +192,7 @@ export default function Students() {
             row['Approved by Principal'] = (student as any).approved_by_principal || '';
             break;
           case 'approval_date':
-            row['Approval Date'] = (student as any).approval_date?.split('T')[0] || '';
+            row['Approval Date'] = (student as any).approval_date ? new Date((student as any).approval_date).toLocaleDateString() : '';
             break;
           case 'application_status':
             row['Application Status'] = (student as any).application_status || '';
@@ -254,11 +254,6 @@ export default function Students() {
         const idB = b.user?.user_code || b.student_id || '';
         comparison = idA.localeCompare(idB);
         break;
-      case 'grade_applying_for':
-        const gradeA = ((a as any).grade_applying_for || '').split(' - ')[0];
-        const gradeB = ((b as any).grade_applying_for || '').split(' - ')[0];
-        comparison = gradeA.localeCompare(gradeB);
-        break;
       case 'class':
         comparison = (a.class?.name || '').localeCompare(b.class?.name || '');
         break;
@@ -295,7 +290,7 @@ export default function Students() {
       {isStudent ? (
         <>
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">My Application</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">My Application</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">My Application Record</h1>
             <p className="mt-1 text-sm text-slate-500">View your student application details</p>
           </div>
@@ -318,7 +313,7 @@ export default function Students() {
                     { label: 'Student ID', value: studentProfile.student_id },
                     { label: 'First Name', value: studentProfile.first_name },
                     { label: 'Last Name', value: studentProfile.last_name },
-                    { label: 'Date of Birth', value: studentProfile.date_of_birth?.split('T')[0] || '—' },
+                    { label: 'Date of Birth', value: studentProfile.date_of_birth ? new Date(studentProfile.date_of_birth).toLocaleDateString() : '—' },
                     { label: 'Gender', value: studentProfile.gender },
                     { label: 'Place of Birth', value: studentProfile.place_of_birth || '—' },
                     { label: 'Nationality', value: studentProfile.nationality || '—' },
@@ -341,8 +336,7 @@ export default function Students() {
                   {[
                     { label: 'Class', value: studentProfile.class?.name || '—' },
                     { label: 'Previous School', value: studentProfile.previous_school || '—' },
-                    { label: 'Grade Applying For', value: studentProfile.grade_applying_for || '—' },
-                    { label: 'Admission Date', value: studentProfile.admission_date?.split('T')[0] || '—' },
+                    { label: 'Admission Date', value: studentProfile.admission_date ? new Date(studentProfile.admission_date).toLocaleDateString() : '—' },
                     { label: 'Application Status', value: studentProfile.application_status || '—' },
                     { label: 'Registration Number', value: studentProfile.registration_number || '—' },
                   ].map(({ label, value }) => (
@@ -406,29 +400,26 @@ export default function Students() {
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between no-print">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">People management</p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Students</h1>
+              <p className="text-xs font-bold uppercase tracking-widest text-blue-700">People management</p>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Students</h1>
               <p className="mt-1 text-sm text-slate-500">{students.length} enrolled student{students.length !== 1 ? 's' : ''}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={handleSync} disabled={!isOnline}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              <Button onClick={handleSync} disabled={!isOnline} className="bg-blue-600 hover:bg-blue-700 text-white">
                 ↻ Sync
-              </button>
+              </Button>
               {isAdmin && (
-                <button onClick={() => setShowExportModal(true)}
-                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Button onClick={() => setShowExportModal(true)} variant="secondary">
                   📊 Export to Excel
-                </button>
+                </Button>
               )}
               {isAdmin && (
-                <button onClick={() => window.print()}
-                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Button onClick={() => window.print()} variant="secondary">
                   🖨️ Print PDF
-                </button>
+                </Button>
               )}
-              {isAdmin && <a href="/student-application"
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
+              {isAdmin && <a href="/application"
+                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
                 + Add student
               </a>}
             </div>
@@ -438,8 +429,8 @@ export default function Students() {
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Total Students</p>
-            <p className="mt-2 text-4xl font-bold tracking-tight text-slate-950">{students.length}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Total Students</p>
+            <p className="mt-2 text-4xl font-bold tracking-tight text-slate-900">{students.length}</p>
             <p className="mt-1 text-sm text-slate-500">Enrolled students</p>
           </div>
           <div className="flex gap-4 text-center">
@@ -466,105 +457,124 @@ export default function Students() {
       {/* Filters */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm no-print">
         <div className="flex flex-wrap gap-3 border-b border-slate-100 px-4 py-4 sm:px-5 no-print">
-          <input type="search" placeholder="Search by name or ID…" value={search}
-            onChange={(e) => setSearch(e.target.value)} className="input-field w-full max-w-xs text-sm" />
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input-field w-auto text-sm flex-1 min-w-[120px]">
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="graduated">Graduated</option>
-            <option value="transferred">Transferred</option>
-          </select>
-          <select value={filterApplicationStatus} onChange={(e) => setFilterApplicationStatus(e.target.value)} className="input-field w-auto text-sm flex-1 min-w-[120px]">
-            <option value="">All applications</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="input-field w-auto text-sm flex-1 min-w-[140px]">
-            <option value="name">Sort by Name</option>
-            <option value="student_id">Sort by ID</option>
-            <option value="grade_applying_for">Sort by Grade</option>
-            <option value="class">Sort by Class</option>
-            <option value="status">Sort by Status</option>
-            <option value="admission_date">Sort by Admission Date</option>
-          </select>
-          <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap">
+          <Input 
+            type="search" 
+            placeholder="Search by name or ID…" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)} 
+            className="w-full max-w-xs text-sm" 
+          />
+          <Select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)} 
+            className="w-auto text-sm flex-1 min-w-[120px]"
+            options={[
+              { value: '', label: 'All statuses' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+              { value: 'graduated', label: 'Graduated' },
+              { value: 'transferred', label: 'Transferred' },
+            ]}
+          />
+          <Select 
+            value={filterApplicationStatus} 
+            onChange={(e) => setFilterApplicationStatus(e.target.value)} 
+            className="w-auto text-sm flex-1 min-w-[120px]"
+            options={[
+              { value: '', label: 'All applications' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'approved', label: 'Approved' },
+              { value: 'rejected', label: 'Rejected' },
+            ]}
+          />
+          <Select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)} 
+            className="w-auto text-sm flex-1 min-w-[140px]"
+            options={[
+              { value: 'name', label: 'Sort by Name' },
+              { value: 'student_id', label: 'Sort by ID' },
+              { value: 'class', label: 'Sort by Class' },
+              { value: 'status', label: 'Sort by Status' },
+              { value: 'admission_date', label: 'Sort by Admission Date' },
+            ]}
+          />
+          <Button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} variant="secondary" className="whitespace-nowrap">
             {sortOrder === 'asc' ? '↑ Asc' : '↓ Desc'}
-          </button>
+          </Button>
           <span className="ml-auto self-center text-xs text-slate-400">{filtered.length} of {students.length}</span>
         </div>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-slate-500">Loading students…</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-[600px] divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Student ID</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Name</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden sm:table-cell">Gender</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden md:table-cell">Grade</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden md:table-cell">Class</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Application</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden sm:table-cell">Status</th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 no-print">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400">No students found.</td></tr>
-                ) : filtered.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 sm:px-4 py-3 font-mono text-xs text-slate-500">{student.user?.user_code || student.student_id}</td>
-                    <td className="px-3 sm:px-4 py-3 font-semibold text-slate-900">{student.first_name} {student.last_name}</td>
-                    <td className="px-3 sm:px-4 py-3 text-slate-600 capitalize hidden sm:table-cell">{student.gender || '—'}</td>
-                    <td className="px-3 sm:px-4 py-3 text-slate-600 hidden md:table-cell">{((student as any).grade_applying_for || '—').split(' - ')[0]}</td>
-                    <td className="px-3 sm:px-4 py-3 text-slate-600 hidden md:table-cell">{student.class?.name || '—'}</td>
-                    <td className="px-3 sm:px-4 py-3">
-                      {(() => {
-                        const appStatus = (student as any).application_status || 'pending';
-                        const cls = appStatus === 'approved' ? 'bg-emerald-100 text-emerald-700'
-                          : appStatus === 'rejected' ? 'bg-rose-100 text-rose-700'
-                          : 'bg-amber-100 text-amber-700';
-                        return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${cls}`}>{appStatus}</span>;
-                      })()}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 no-print">
-                      {isAdmin ? (
-                        <div className="flex gap-2 flex-wrap">
-                          {(student as any).application_status === 'pending' && (
-                            <button onClick={() => handleApprove(student.id)} disabled={approvingId === student.id}
-                              className="text-xs font-semibold text-emerald-600 hover:underline whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50">
-                              {approvingId === student.id ? 'Approving…' : 'Approve'}
-                            </button>
-                          )}
-                          {(student as any).application_status === 'approved' && !student.user && (
-                            <button onClick={() => handleCreateLogin(student)}
-                              className="text-xs font-semibold text-cyan-600 hover:underline whitespace-nowrap">
-                              Create Login
-                            </button>
-                          )}
-                          <a href={`/student-application?id=${student.id}`}
-                            className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">
-                            Edit
-                          </a>
-                          <button onClick={() => handleDelete(student.id)}
-                            className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">
-                            Delete
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400">View only</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <LoadingState message="Loading students…" />
+        ) : error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+            <p className="text-sm text-rose-800 mb-4">{error}</p>
+            <Button onClick={loadStudents} variant="secondary">Try Again</Button>
           </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title="No students found"
+            description="Try adjusting your search or filters to find what you're looking for."
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden sm:table-cell">Gender</TableHead>
+                <TableHead className="hidden md:table-cell">Grade</TableHead>
+                <TableHead className="hidden md:table-cell">Class</TableHead>
+                <TableHead>Application</TableHead>
+                <TableHead className="hidden sm:table-cell">Status</TableHead>
+                <TableHead className="no-print">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((student) => (
+                <TableRow key={student.id} onClick={() => navigate(`/students/${student.id}`)}>
+                  <TableCell className="font-mono text-xs text-slate-500">{student.user?.user_code || student.student_id}</TableCell>
+                  <TableCell className="font-semibold text-slate-900">{student.first_name} {student.last_name}</TableCell>
+                  <TableCell className="hidden sm:table-cell capitalize text-slate-600">{student.gender || '—'}</TableCell>
+                  <TableCell className="hidden md:table-cell text-slate-600">{student.class?.name || '—'}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const appStatus = (student as any).application_status || 'pending';
+                      const variant = appStatus === 'approved' ? 'success' as const
+                        : appStatus === 'rejected' ? 'danger' as const
+                        : 'warning' as const;
+                      return <Badge variant={variant}>{appStatus}</Badge>;
+                    })()}
+                  </TableCell>
+                  <TableCell className="no-print" onClick={(e: React.MouseEvent<HTMLTableCellElement>) => e.stopPropagation()}>
+                    {isAdmin ? (
+                      <div className="flex gap-2 flex-wrap">
+                        {(student as any).application_status === 'pending' && (
+                          <Button onClick={() => handleApprove(student.id)} disabled={approvingId === student.id} variant="ghost" className="text-emerald-600 hover:text-emerald-700 text-xs">
+                            {approvingId === student.id ? 'Approving…' : 'Approve'}
+                          </Button>
+                        )}
+                        {(student as any).application_status === 'approved' && !student.user && (
+                          <Button onClick={() => handleCreateLogin(student)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs">
+                            Create Login
+                          </Button>
+                        )}
+                        <a href={`/application?id=${student.id}&type=student`} className="text-xs font-semibold text-blue-700 hover:text-blue-900">
+                          Edit
+                        </a>
+                        <Button onClick={() => handleDelete(student.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs">
+                          Delete
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">View only</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
 
@@ -597,10 +607,9 @@ export default function Students() {
                 <td className="border border-black px-2 py-1 text-xs">{student.user?.user_code || student.student_id || ''}</td>
                 <td className="border border-black px-2 py-1 text-xs">{student.first_name} {student.last_name}</td>
                 <td className="border border-black px-2 py-1 text-xs capitalize">{student.gender || ''}</td>
-                <td className="border border-black px-2 py-1 text-xs">{student.date_of_birth?.split('T')[0] || ''}</td>
+                <td className="border border-black px-2 py-1 text-xs">{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : ''}</td>
                 <td className="border border-black px-2 py-1 text-xs">{(student as any).nationality || ''}</td>
                 <td className="border border-black px-2 py-1 text-xs">{(student as any).county || ''}</td>
-                <td className="border border-black px-2 py-1 text-xs">{((student as any).grade_applying_for || '').split(' - ')[0]}</td>
                 <td className="border border-black px-2 py-1 text-xs">{student.class?.name || ''}</td>
                 <td className="border border-black px-2 py-1 text-xs">{(student as any).father_name || ''}</td>
                 <td className="border border-black px-2 py-1 text-xs">{(student as any).mother_name || ''}</td>
@@ -636,7 +645,7 @@ export default function Students() {
                       type="checkbox"
                       checked={selectedFields.includes(field.key)}
                       onChange={() => toggleField(field.key)}
-                      className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-slate-700">{field.label}</span>
                   </label>
@@ -644,14 +653,12 @@ export default function Students() {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowExportModal(false)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <Button onClick={() => setShowExportModal(false)} variant="secondary">
                 Cancel
-              </button>
-              <button onClick={handleExport} disabled={selectedFields.length === 0}
-                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+              </Button>
+              <Button onClick={handleExport} disabled={selectedFields.length === 0}>
                 Export ({selectedFields.length} fields)
-              </button>
+              </Button>
             </div>
           </div>
         </div>

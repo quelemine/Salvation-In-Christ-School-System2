@@ -57,6 +57,7 @@ export interface ReportCardSettings {
 export interface SystemSettings {
   systemName: string;
   academicYear: string;
+  currentTerm: string;
   country: string;
   currency: 'LRD' | 'USD';
   exchangeRate: number; // LRD to USD conversion rate
@@ -178,6 +179,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   system: {
     systemName: 'SICSS',
     academicYear: '2026',
+    currentTerm: 'Term 1',
     country: 'Liberia',
     currency: 'LRD',
     exchangeRate: 200, // 200 LRD = 1 USD (typical Liberian exchange rate)

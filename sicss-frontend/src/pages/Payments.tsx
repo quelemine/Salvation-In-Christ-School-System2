@@ -4,9 +4,11 @@ import { studentService } from '../services/studentService';
 import { FormModal } from '../components/FormModal';
 import { formatCurrency, currencyOptions, type CurrencyCode } from '../utils/currency';
 import { useSettingsStore } from '../store/settingsStore';
+import { useAuthStore } from '../store/authStore';
 import type { Payment, Fee } from '../types';
 import type { Student } from '../types';
 import api from '../services/api';
+import { Button, Input, Badge } from '../components/ui';
 
 type FormData = {
   student_id: string;
@@ -36,12 +38,11 @@ const emptyForm = (defaultCurrency: CurrencyCode): FormData => ({
   status: 'completed',
 });
 
-const statusColors: Record<string, string> = {
-  completed: 'bg-emerald-100 text-emerald-800',
-  pending:   'bg-amber-100 text-amber-800',
-  cancelled: 'bg-rose-100 text-rose-700',
-  refunded:  'bg-slate-100 text-slate-600',
-};
+const statusBadgeVariant = (status: string): 'success' | 'warning' | 'danger' | 'default' =>
+  status === 'completed' ? 'success'
+  : status === 'pending' ? 'warning'
+  : status === 'cancelled' ? 'danger'
+  : 'default';
 
 const methodIcons: Record<string, string> = {
   cash: '💵',
@@ -53,6 +54,8 @@ const methodIcons: Record<string, string> = {
 
 export default function Payments() {
   const { settings } = useSettingsStore();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const { payment: payConfig, system } = settings;
   const defaultCurrency = system.currency as CurrencyCode;
 
@@ -184,16 +187,17 @@ export default function Payments() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Finance</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Payments</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Finance</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Payments</h1>
         </div>
-        <button onClick={() => { setFormData(emptyForm(defaultCurrency)); setProofFile(null); setIsModalOpen(true); }}
-          className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
-          + Record payment
-        </button>
+        {isAdmin && (
+          <Button onClick={() => { setFormData(emptyForm(defaultCurrency)); setProofFile(null); setIsModalOpen(true); }}>
+            + Record payment
+          </Button>
+        )}
       </div>
 
-      {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+      {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-center"><p className="text-sm text-rose-800 mb-4">{error}</p><Button onClick={load} variant="secondary">Try Again</Button></div>}
 
       {/* Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -208,9 +212,9 @@ export default function Payments() {
 
       {/* Table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <input type="search" placeholder="Search by student, reference or transaction ID…"
-            value={search} onChange={(e) => setSearch(e.target.value)} className="input-field max-w-sm" />
+        <div className="border-b border-slate-200 px-5 py-4">
+          <Input type="search" placeholder="Search by student, reference or transaction ID…"
+            value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
         </div>
         {loading ? <p className="py-12 text-center text-sm text-slate-500">Loading payments…</p> : (
           <div className="overflow-x-auto">
@@ -240,19 +244,19 @@ export default function Payments() {
                           <span className="capitalize">{method.replace(/_/g, ' ')}</span>
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{(p as any).payment_date || '—'}</td>
+                      <td className="px-4 py-3 text-slate-600">{(p as any).payment_date ? new Date((p as any).payment_date).toLocaleDateString() : '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[(p as any).status] || 'bg-slate-100 text-slate-600'}`}>
+                        <Badge variant={statusBadgeVariant((p as any).status)}>
                           {(p as any).status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         {proofUrl
-                          ? <button onClick={() => setViewProof(proofUrl)} className="text-xs font-semibold text-cyan-700 hover:underline">View</button>
+                          ? <Button onClick={() => setViewProof(proofUrl)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">View</Button>
                           : <span className="text-xs text-slate-300">—</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <button onClick={() => handleDelete(p.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                        <Button onClick={() => handleDelete(p.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">Delete</Button>
                       </td>
                     </tr>
                   );
@@ -403,7 +407,7 @@ export default function Payments() {
               onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => proofInputRef.current?.click()}
-                className="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 hover:border-cyan-400 hover:text-cyan-700">
+                className="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-700">
                 {proofFile ? '✓ ' + proofFile.name : 'Choose file'}
               </button>
               {proofFile && (

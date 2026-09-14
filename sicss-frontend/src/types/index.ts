@@ -90,7 +90,6 @@ export interface Teacher {
 export interface Subject {
   id: number;
   uuid: string;
-  code: string;
   name: string;
   slug: string;
   description?: string;

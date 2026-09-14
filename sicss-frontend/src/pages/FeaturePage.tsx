@@ -21,7 +21,7 @@ export default function FeaturePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <section className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">{detail.eyebrow}</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-700">{detail.eyebrow}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">{title}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">{detail.description}</p>
         <div className="mt-8 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
@@ -29,7 +29,7 @@ export default function FeaturePage() {
           <p className="mt-1 text-xs text-slate-500">This feature is connected and ready for data.</p>
         </div>
       </section>
-      <Link to="/dashboard" className="inline-flex rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700">Back to dashboard</Link>
+      <Link to="/dashboard" className="inline-flex rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">Back to dashboard</Link>
     </div>
   );
 }

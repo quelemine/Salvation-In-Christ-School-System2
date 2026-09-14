@@ -167,27 +167,6 @@ export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoCh
           <input style={fld} value={f('previous_school')} onChange={set('previous_school')} readOnly={readOnly}
             placeholder="Name of last school attended" />
         </label>
-        <label style={lbl}>
-          Grade / Class Applying For:
-          {readOnly
-            ? <input style={fld} value={f('grade_applying_for')} readOnly />
-            : <select style={fld} value={f('grade_applying_for')} onChange={set('grade_applying_for')}>
-                <option value="">— Select class —</option>
-                {classes.length > 0
-                  ? classes.map((c) => (
-                      <option key={c.id} value={c.name + (c.section ? ` - ${c.section}` : '')}>
-                        {c.name}{c.section ? ` - ${c.section}` : ''}
-                      </option>
-                    ))
-                  : ['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3',
-                     'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
-                     'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))
-                }
-              </select>
-          }
-        </label>
       </div>
 
       {/* Address full width */}

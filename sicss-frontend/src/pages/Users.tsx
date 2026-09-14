@@ -3,18 +3,31 @@ import { authService } from '../services/authService';
 import api from '../services/api';
 import type { Role, User } from '../types';
 import { FormModal } from '../components/FormModal';
+import { Button, Input, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
 
-type CreateForm = { first_name: string; last_name: string; email: string; password: string; role_id: string; phone: string; address: string; profile_photo: string; credential_image_path: string };
-type EditForm   = { first_name: string; last_name: string; email: string; phone: string; address: string; role_id: string; is_active: boolean; profile_photo: string; credential_image_path: string };
+type CreateForm = { first_name: string; last_name: string; email: string; password: string; role_id: string; phone: string; address: string; profile_photo: string; credential_image_path: string; privileges: string[] };
+type EditForm   = { first_name: string; last_name: string; email: string; phone: string; address: string; role_id: string; is_active: boolean; profile_photo: string; credential_image_path: string; privileges: string[] };
 type NewCredentials = { user: User; password: string };
 
-const emptyCreate: CreateForm = { first_name: '', last_name: '', email: '', password: '', role_id: '', phone: '', address: '', profile_photo: '', credential_image_path: '' };
+const emptyCreate: CreateForm = { first_name: '', last_name: '', email: '', password: '', role_id: '', phone: '', address: '', profile_photo: '', credential_image_path: '', privileges: [] };
 
-const roleColor = (slug?: string) =>
-  slug === 'admin' ? 'bg-rose-100 text-rose-700'
-  : slug === 'teacher' ? 'bg-cyan-100 text-cyan-800'
-  : slug?.includes('finance') ? 'bg-emerald-100 text-emerald-800'
-  : 'bg-slate-100 text-slate-600';
+const AVAILABLE_PRIVILEGES = [
+  { id: 'manage_users', label: 'Manage Users', description: 'Create, edit, and delete user accounts' },
+  { id: 'manage_roles', label: 'Manage Roles', description: 'Create and modify system roles' },
+  { id: 'manage_students', label: 'Manage Students', description: 'Full access to student records' },
+  { id: 'manage_teachers', label: 'Manage Teachers', description: 'Full access to teacher records' },
+  { id: 'manage_finance', label: 'Manage Finance', description: 'Access to financial records and payments' },
+  { id: 'manage_academics', label: 'Manage Academics', description: 'Access to grades and academic records' },
+  { id: 'manage_settings', label: 'Manage Settings', description: 'Access to system settings' },
+  { id: 'view_reports', label: 'View Reports', description: 'Access to all system reports' },
+  { id: 'approve_applications', label: 'Approve Applications', description: 'Approve student/staff applications' },
+];
+
+const roleBadgeVariant = (slug?: string) =>
+  slug === 'admin' ? 'danger' as const
+  : slug === 'teacher' ? 'info' as const
+  : slug?.includes('finance') ? 'success' as const
+  : 'default' as const;
 
 export default function Users() {
   const [users, setUsers]         = useState<User[]>([]);
@@ -31,7 +44,7 @@ export default function Users() {
 
   // Edit
   const [editUser, setEditUser]   = useState<User | null>(null);
-  const [editForm, setEditForm]   = useState<EditForm>({ first_name: '', last_name: '', email: '', phone: '', address: '', role_id: '', is_active: true, profile_photo: '', credential_image_path: '' });
+  const [editForm, setEditForm]   = useState<EditForm>({ first_name: '', last_name: '', email: '', phone: '', address: '', role_id: '', is_active: true, profile_photo: '', credential_image_path: '', privileges: [] });
   const [editSaving, setEditSaving] = useState(false);
 
   // Delete
@@ -72,13 +85,15 @@ export default function Users() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const [userData, roleData] = await Promise.all([authService.users(), authService.roles()]);
       setUsers(userData);
       setRoles(roleData);
       if (!createForm.role_id && roleData[0]) setCreateForm((c) => ({ ...c, role_id: String(roleData[0].id) }));
-    } catch { setError('Unable to load user accounts.'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Unable to load user accounts.');
+    } finally { setLoading(false); }
   };
 
   const handleCreate = async () => {
@@ -110,6 +125,7 @@ export default function Users() {
       credential_image_path: (u as any).credential_image_path || '',
       role_id:    String(u.role_id || ''),
       is_active:  u.is_active !== false,
+      privileges: (u as any).privileges || [],
     });
     setError('');
   };
@@ -128,13 +144,6 @@ export default function Users() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update user.');
     } finally { setEditSaving(false); }
-  };
-
-  const handleToggleActive = async (u: User) => {
-    try {
-      const res = await api.put(`/users/${u.id}`, { is_active: !u.is_active });
-      setUsers((prev) => prev.map((x) => x.id === u.id ? res.data : x));
-    } catch { setError('Failed to update status.'); }
   };
 
   const handleDelete = async () => {
@@ -258,14 +267,14 @@ export default function Users() {
         <p className="text-sm font-medium text-slate-700">Profile image <span className="font-normal text-slate-400">(optional)</span></p>
         <div className="mt-2 flex items-center gap-3">
           {form.profile_photo ? <img src={form.profile_photo} alt="Profile preview" className="h-14 w-14 rounded-full border border-slate-200 object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-xs text-slate-500">No photo</div>}
-          <div className="flex flex-col items-start gap-1"><button type="button" onClick={() => { setUploadTarget(target); profileImageRef.current?.click(); }} disabled={uploadingImage !== null} className="text-sm font-semibold text-cyan-700 hover:underline disabled:opacity-50">{uploadingImage === 'profile' ? 'Uploading…' : form.profile_photo ? 'Replace photo' : 'Upload photo'}</button>{form.profile_photo && <button type="button" onClick={() => setForm((current: any) => ({ ...current, profile_photo: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}</div>
+          <div className="flex flex-col items-start gap-1"><button type="button" onClick={() => { setUploadTarget(target); profileImageRef.current?.click(); }} disabled={uploadingImage !== null} className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-50">{uploadingImage === 'profile' ? 'Uploading…' : form.profile_photo ? 'Replace photo' : 'Upload photo'}</button>{form.profile_photo && <button type="button" onClick={() => setForm((current: any) => ({ ...current, profile_photo: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}</div>
         </div>
       </div>
       {showCredential && <div>
         <p className="text-sm font-medium text-slate-700">Credential image <span className="font-normal text-slate-400">(optional)</span></p>
         <div className="mt-2 flex items-center gap-3">
           {form.credential_image_path ? <img src={form.credential_image_path} alt="Credential preview" className="h-14 w-20 rounded border border-slate-200 object-cover" /> : <div className="flex h-14 w-20 items-center justify-center rounded border border-dashed border-slate-300 text-center text-xs text-slate-500">No credential</div>}
-          <div className="flex flex-col items-start gap-1"><button type="button" onClick={() => { setUploadTarget(target); credentialImageRef.current?.click(); }} disabled={uploadingImage !== null} className="text-sm font-semibold text-cyan-700 hover:underline disabled:opacity-50">{uploadingImage === 'credential' ? 'Uploading…' : form.credential_image_path ? 'Replace image' : 'Upload image'}</button>{form.credential_image_path && <button type="button" onClick={() => setForm((current: any) => ({ ...current, credential_image_path: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}</div>
+          <div className="flex flex-col items-start gap-1"><button type="button" onClick={() => { setUploadTarget(target); credentialImageRef.current?.click(); }} disabled={uploadingImage !== null} className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-50">{uploadingImage === 'credential' ? 'Uploading…' : form.credential_image_path ? 'Replace image' : 'Upload image'}</button>{form.credential_image_path && <button type="button" onClick={() => setForm((current: any) => ({ ...current, credential_image_path: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}</div>
         </div>
       </div>}
     </div>
@@ -287,7 +296,7 @@ export default function Users() {
       {newCredentials && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Account created</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Account created</p>
             <h3 className="mt-1 text-xl font-bold text-slate-950">Share login credentials</h3>
             <p className="mt-2 text-sm text-slate-500">Give these credentials to {newCredentials.user.first_name} now. For security, the password is shown only in this dialog.</p>
             <div className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
@@ -322,78 +331,102 @@ export default function Users() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">Access control</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">User accounts</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Access control</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">User accounts</h1>
           <p className="mt-1 text-sm text-slate-500">{users.length} account{users.length !== 1 ? 's' : ''} in the system.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {!newCredentials && !isApprovalRedirect && (
-            <button onClick={() => { setError(''); setIsCreateOpen(true); }} className="self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 sm:self-auto">
+            <Button onClick={() => { setError(''); setIsCreateOpen(true); }}>
               + Create user
-            </button>
+            </Button>
           )}
-          <button onClick={() => window.print()} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 no-print">
+          <Button onClick={() => window.print()} variant="secondary" className="no-print">
             🖨️ Print
-          </button>
+          </Button>
         </div>
       </div>
 
-      {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-4 py-4 sm:px-5 no-print">
-          <input type="search" placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} className="input-field w-full max-w-xs text-sm" />
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-sm text-rose-800 mb-4">{error}</p>
+          <Button onClick={load} variant="secondary">Try Again</Button>
         </div>
-        {loading ? <p className="py-12 text-center text-sm text-slate-500">Loading…</p> : (
-          <div className="overflow-x-auto">
-            <table className="min-w-[600px] divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>{['User ID', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="px-3 sm:px-5 py-3 text-left">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0
-                  ? <tr><td colSpan={7} className="py-10 text-center text-slate-400">No users found.</td></tr>
-                  : filtered.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50">
-                    <td className="px-3 sm:px-5 py-3 font-mono text-xs font-semibold text-cyan-700">{u.user_code || '—'}</td>
-                    <td className="px-3 sm:px-5 py-3">
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5 no-print">
+            <Input
+              type="search"
+              placeholder="Search by name or email…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          {loading ? (
+            <LoadingState message="Loading…" />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title="No users found"
+              description="Try adjusting your search to find what you're looking for."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Phone</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-mono text-xs font-semibold text-blue-600">{u.user_code || '—'}</TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         {u.profile_photo
                           ? <img src={u.profile_photo} alt={`${u.first_name} ${u.last_name}`} className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 rounded-full border border-slate-200 object-cover" />
                           : <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">{u.first_name?.charAt(0)}{u.last_name?.charAt(0)}</div>}
                         <span className="font-semibold text-slate-900">{u.first_name} {u.last_name}</span>
                       </div>
-                    </td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden sm:table-cell">{u.email}</td>
-                    <td className="px-3 sm:px-5 py-3 text-slate-600 hidden md:table-cell">{u.phone || '—'}</td>
-                    <td className="px-3 sm:px-5 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${roleColor(u.role?.slug)}`}>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-slate-600">{u.email}</TableCell>
+                    <TableCell className="hidden md:table-cell text-slate-600">{u.phone || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={roleBadgeVariant(u.role?.slug)}>
                         {u.role?.name || 'Unassigned'}
-                      </span>
-                    </td>
-                    <td className="px-3 sm:px-5 py-3">
-                      <button onClick={() => handleToggleActive(u)}
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold transition-colors ${u.is_active !== false ? 'bg-emerald-100 text-emerald-800 hover:bg-rose-50 hover:text-rose-700' : 'bg-slate-100 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'}`}
-                        title="Click to toggle">
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={u.is_active !== false ? 'success' : 'default'}>
                         {u.is_active !== false ? 'Active' : 'Inactive'}
-                      </button>
-                    </td>
-                    <td className="px-3 sm:px-5 py-3">
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => openEdit(u)} className="text-xs font-semibold text-cyan-700 hover:underline whitespace-nowrap">Edit</button>
-                        <button onClick={() => setDeleteId(u.id)} className="text-xs font-semibold text-rose-600 hover:underline whitespace-nowrap">Disable</button>
+                        <Button onClick={() => openEdit(u)} variant="ghost" className="text-blue-600 hover:text-blue-700 text-xs p-0 h-auto">
+                          Edit
+                        </Button>
+                        <Button onClick={() => setDeleteId(u.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 text-xs p-0 h-auto">
+                          Disable
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="border-t border-slate-100 px-4 py-3 sm:px-5 text-xs text-slate-400">{filtered.length} of {users.length}</div>
-      </div>
+              </TableBody>
+            </Table>
+          )}
+          <div className="border-t border-slate-200 px-4 py-3 sm:px-5 text-xs text-slate-400">{filtered.length} of {users.length}</div>
+        </CardContent>
+      </Card>
 
       {/* Create modal */}
       <FormModal isOpen={isCreateOpen} title="Create user account" onClose={() => setIsCreateOpen(false)} onSubmit={handleCreate} submitText="Create account" isLoading={creating}>
@@ -411,6 +444,35 @@ export default function Users() {
           <div><label className="mb-1.5 block text-sm font-semibold text-slate-700">Password <span className="text-rose-500">*</span></label><div className="flex gap-2"><input required type="password" minLength={8} value={createForm.password} onChange={cf('password')} className="input-field" placeholder="Select a role to generate" /><button type="button" onClick={() => setCreateForm((form) => ({ ...form, password: rolePassword(form.role_id) }))} disabled={!createForm.role_id} className="shrink-0 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Regenerate</button></div><p className="mt-1 text-xs text-slate-500">Generated with the role abbreviation and mixed characters.</p></div>
           <div className="sm:col-span-2"><label className="mb-1.5 block text-sm font-semibold text-slate-700">Address</label><input value={createForm.address} onChange={cf('address')} className="input-field" /></div>
           {accountImageFields(createForm, setCreateForm, 'create', !isStudentRole(createForm.role_id))}
+          
+          {/* Privileges Section - Only for Admin roles */}
+          {roles.find(r => String(r.id) === createForm.role_id)?.slug === 'admin' && (
+            <div className="sm:col-span-2 mt-4">
+              <label className="mb-3 block text-sm font-semibold text-slate-700">Privileges</label>
+              <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3 bg-slate-50">
+                {AVAILABLE_PRIVILEGES.map((priv) => (
+                  <label key={priv.id} className="flex items-start gap-3 cursor-pointer hover:bg-white p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={createForm.privileges.includes(priv.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCreateForm(f => ({ ...f, privileges: [...f.privileges, priv.id] }));
+                        } else {
+                          setCreateForm(f => ({ ...f, privileges: f.privileges.filter(p => p !== priv.id) }));
+                        }
+                      }}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-900">{priv.label}</span>
+                      <p className="text-xs text-slate-500">{priv.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </FormModal>
 
@@ -438,6 +500,35 @@ export default function Users() {
           </div>
           <div className="sm:col-span-2"><label className="mb-1.5 block text-sm font-semibold text-slate-700">Address</label><input value={editForm.address} onChange={ef('address')} className="input-field" /></div>
           {accountImageFields(editForm, setEditForm, 'edit', !isStudentRole(editForm.role_id))}
+          
+          {/* Privileges Section - Only for Admin roles */}
+          {roles.find(r => String(r.id) === editForm.role_id)?.slug === 'admin' && (
+            <div className="sm:col-span-2 mt-4">
+              <label className="mb-3 block text-sm font-semibold text-slate-700">Privileges</label>
+              <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3 bg-slate-50">
+                {AVAILABLE_PRIVILEGES.map((priv) => (
+                  <label key={priv.id} className="flex items-start gap-3 cursor-pointer hover:bg-white p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={editForm.privileges.includes(priv.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditForm(f => ({ ...f, privileges: [...f.privileges, priv.id] }));
+                        } else {
+                          setEditForm(f => ({ ...f, privileges: f.privileges.filter(p => p !== priv.id) }));
+                        }
+                      }}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-900">{priv.label}</span>
+                      <p className="text-xs text-slate-500">{priv.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </FormModal>
     </div>
