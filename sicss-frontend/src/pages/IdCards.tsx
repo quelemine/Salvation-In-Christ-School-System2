@@ -25,9 +25,9 @@ export default function IdCards() {
     try {
       let html: string;
       if (cardType === 'student') {
-        html = await idCardService.generateStudentIdCard(parseInt(id));
+        html = await idCardService.generateStudentIdCard(id);
       } else {
-        html = await idCardService.generateTeacherIdCard(parseInt(id));
+        html = await idCardService.generateTeacherIdCard(id);
       }
       setHtmlContent(html);
     } catch (err: any) {
@@ -76,7 +76,7 @@ export default function IdCards() {
                 {cardType === 'student' ? 'Student ID' : 'Teacher ID'}
               </label>
               <input
-                type="number"
+                type="text"
                 value={id}
                 onChange={(e) => setId(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

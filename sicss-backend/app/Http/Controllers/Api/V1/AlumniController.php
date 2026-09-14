@@ -10,7 +10,7 @@ class AlumniController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Alumni::with(['student', 'addedBy']);
+        $query = Alumni::query();
 
         if ($request->has('graduation_year')) {
             $query->byGraduationYear($request->graduation_year);
@@ -40,7 +40,7 @@ class AlumniController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'student_id' => 'nullable|exists:students,id',
+            'student_id' => 'nullable|exists:students,student_id',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
@@ -74,7 +74,7 @@ class AlumniController extends Controller
 
     public function show($id)
     {
-        $alumni = Alumni::with(['student', 'addedBy'])->findOrFail($id);
+        $alumni = Alumni::findOrFail($id);
         return response()->json($alumni);
     }
 
@@ -83,7 +83,7 @@ class AlumniController extends Controller
         $alumni = Alumni::findOrFail($id);
 
         $request->validate([
-            'student_id' => 'nullable|exists:students,id',
+            'student_id' => 'nullable|exists:students,student_id',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',

@@ -61,6 +61,11 @@ use App\Http\Controllers\Api\V1\CertificateController;
 use App\Http\Controllers\Api\V1\AlumniController;
 
 Route::prefix('v1')->group(function () {
+    // Health check endpoint (no authentication required)
+    Route::get('/health', function () {
+        return response()->json(['status' => 'ok', 'timestamp' => now()->toIso8601String()]);
+    });
+
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);

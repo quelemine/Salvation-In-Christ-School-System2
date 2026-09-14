@@ -292,8 +292,6 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'sicss-settings',
-      // Deep-merge persisted data with defaults so new keys (like `payment`)
-      // are always present even when loading an older saved state.
       merge: (persisted: unknown, current: SettingsState): SettingsState => {
         const p = (persisted as Partial<SettingsState>) ?? {};
         const stored = (p.settings ?? {}) as Partial<AppSettings>;

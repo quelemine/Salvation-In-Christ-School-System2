@@ -104,6 +104,14 @@ export default function Dashboard() {
 
   const handleSync = async () => { await syncManager.sync(); };
 
+  // ── Time-based greeting ───────────────────────────────────────────────────────
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   // ── Role-specific greeting ───────────────────────────────────────────────────
   const greeting = isAdmin   ? 'Administrator'
     : isTeacher ? `${user?.first_name || 'Teacher'}`
@@ -333,7 +341,7 @@ export default function Dashboard() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-sicss-text-primary">
-            Good morning, {greeting}
+            {getTimeBasedGreeting()}, {greeting}
           </h1>
           <p className="mt-1 text-sm text-sicss-text-secondary">
             Welcome to SICSS — Salvation In Christ School System

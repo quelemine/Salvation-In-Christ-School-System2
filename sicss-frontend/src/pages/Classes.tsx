@@ -72,7 +72,10 @@ export default function Classes() {
         subjectService.getAll(),
         teacherService.getAll(),
       ]);
-      setClasses((c as unknown as Class[]) || []);
+      const classesData = (c as any).data || (c as unknown as Class[]) || [];
+      // Remove duplicates based on id
+      const uniqueClasses = Array.from(new Map(classesData.map((item: Class) => [item.id, item])).values()) as Class[];
+      setClasses(uniqueClasses);
       setDivisions((Array.isArray(d) ? d : (d as any).data) || []);
       setSubjects((s as unknown as Subject[]) || []);
       setTeachers(((t as any).data || t as unknown as Teacher[]) || []);

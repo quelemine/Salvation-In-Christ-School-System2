@@ -13,10 +13,10 @@ class IdCardController extends Controller
     public function generateStudentIdCard(Request $request)
     {
         $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => 'required|exists:students,student_id',
         ]);
 
-        $student = Student::with(['class'])->findOrFail($request->student_id);
+        $student = Student::with(['class'])->where('student_id', $request->student_id)->firstOrFail();
 
         $html = $this->generateStudentIdCardHtml($student);
 
@@ -30,10 +30,10 @@ class IdCardController extends Controller
     public function generateTeacherIdCard(Request $request)
     {
         $request->validate([
-            'teacher_id' => 'required|exists:teachers,id',
+            'teacher_id' => 'required|exists:teachers,employee_id',
         ]);
 
-        $teacher = Teacher::findOrFail($request->teacher_id);
+        $teacher = Teacher::where('employee_id', $request->teacher_id)->firstOrFail();
 
         $html = $this->generateTeacherIdCardHtml($teacher);
 

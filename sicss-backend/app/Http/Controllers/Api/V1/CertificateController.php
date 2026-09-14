@@ -11,11 +11,11 @@ class CertificateController extends Controller
     public function generateCompletionCertificate(Request $request)
     {
         $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => 'required|exists:students,student_id',
             'academic_year' => 'required|string',
         ]);
 
-        $student = Student::with(['class'])->findOrFail($request->student_id);
+        $student = Student::with(['class'])->where('student_id', $request->student_id)->firstOrFail();
 
         $html = $this->generateCompletionCertificateHtml($student, $request->academic_year);
 
@@ -29,13 +29,13 @@ class CertificateController extends Controller
     public function generateAchievementCertificate(Request $request)
     {
         $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => 'required|exists:students,student_id',
             'achievement_type' => 'required|string|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
         ]);
 
-        $student = Student::with(['class'])->findOrFail($request->student_id);
+        $student = Student::with(['class'])->where('student_id', $request->student_id)->firstOrFail();
 
         $html = $this->generateAchievementCertificateHtml(
             $student, 

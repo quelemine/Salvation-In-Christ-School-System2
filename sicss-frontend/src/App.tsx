@@ -62,7 +62,7 @@ function ThemeInjector() {
     root.setAttribute('data-density', theme.density);
     root.setAttribute('data-radius', theme.borderRadius);
     root.setAttribute('data-accent', theme.accentColor);
-  }, [theme, reportCard.layout]);
+  }, [theme.accentColor, theme.fontSize, theme.density, theme.borderRadius, theme.sidebarStyle, reportCard.layout]);
 
   return null;
 }

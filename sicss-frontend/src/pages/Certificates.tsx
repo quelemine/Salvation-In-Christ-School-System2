@@ -39,10 +39,10 @@ export default function Certificates() {
     try {
       let html: string;
       if (certificateType === 'completion') {
-        html = await certificateService.generateCompletionCertificate(parseInt(studentId), academicYear);
+        html = await certificateService.generateCompletionCertificate(studentId, academicYear);
       } else {
         html = await certificateService.generateAchievementCertificate({
-          student_id: parseInt(studentId),
+          student_id: studentId,
           achievement_type: achievementType,
           description: description || undefined,
           date,
@@ -93,7 +93,7 @@ export default function Certificates() {
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Student ID</label>
             <input
-              type="number"
+              type="text"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
