@@ -56,7 +56,22 @@ export const authService = {
     return response.data;
   },
   login: async (credentials: LoginCredentials) => {
-    const response = await api.post<{ user: User; token: string }>('/auth/login', credentials);
+    const response = await api.post<{ user: User; token: string; requires_otp?: boolean; user_id?: number; email?: string; otp_code?: string; dev_mode?: boolean }>('/auth/login', credentials);
+    return response.data;
+  },
+
+  verifyOtp: async (userId: number, code: string) => {
+    const response = await api.post<{ user: User; token: string }>('/auth/verify-otp', { user_id: userId, code });
+    return response.data;
+  },
+
+  resendOtp: async (userId: number, deliveryMethod?: 'email' | 'sms' | 'whatsapp', countryCode?: string, phoneNumber?: string) => {
+    const response = await api.post<{ message: string; otp_code?: string; dev_mode?: boolean }>('/auth/resend-otp', { 
+      user_id: userId,
+      delivery_method: deliveryMethod,
+      country_code: countryCode,
+      phone: phoneNumber,
+    });
     return response.data;
   },
 

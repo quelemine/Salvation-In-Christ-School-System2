@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { authService } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
+import OtpModal from '../components/OtpModal';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -23,6 +24,11 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<number | null>(null);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [devMode, setDevMode] = useState(false);
+  const [devOtpCode, setDevOtpCode] = useState('');
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -33,7 +39,16 @@ export default function Login() {
     setLoading(true);
     try {
       const response = await authService.login(data);
-      if (response.user && response.token) {
+      if (response.requires_otp && response.user_id && response.email) {
+        // Show OTP modal
+        setPendingUserId(response.user_id);
+        setPendingEmail(response.email);
+        setDevMode(response.dev_mode || false);
+        setDevOtpCode(response.otp_code || '');
+        setShowOtpModal(true);
+        setError('');
+      } else if (response.user && response.token) {
+        // Direct login (no OTP required)
         setAuth(response.user, response.token);
         navigate('/dashboard');
       }
@@ -42,6 +57,18 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOtpSuccess = (user: any, token: string) => {
+    setAuth(user, token);
+    setShowOtpModal(false);
+    navigate('/dashboard');
+  };
+
+  const handleOtpClose = () => {
+    setShowOtpModal(false);
+    setPendingUserId(null);
+    setPendingEmail('');
   };
 
   return (
@@ -171,6 +198,20 @@ export default function Login() {
               </button>
             </form>
           </div>
+
+          {/* OTP Modal */}
+          {pendingUserId && (
+            <OtpModal
+              isOpen={showOtpModal}
+              onClose={handleOtpClose}
+              onSuccess={handleOtpSuccess}
+              userId={pendingUserId}
+              email={pendingEmail}
+              initialDevMode={devMode}
+              initialOtpCode={devOtpCode}
+              initialDeliveryMethod="email"
+            />
+          )}
 
           {/* Footer */}
           <p className="mt-5 text-center text-xs text-slate-400">

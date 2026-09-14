@@ -23,6 +23,8 @@ class User extends Authenticatable
         'password',
         'role_id',
         'phone',
+        'country_code',
+        'otp_delivery_method',
         'address',
         'profile_photo',
         'credential_image_path',
