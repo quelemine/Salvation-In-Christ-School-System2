@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
 import { idCardService } from '../services/idCardService';
 import { Button, Card, CardContent } from '../components/ui';
 
 export default function IdCards() {
-  const { user } = useAuthStore();
-  const isAdmin = user?.role?.slug === 'admin';
   const [cardType, setCardType] = useState<'student' | 'teacher'>('student');
   const [id, setId] = useState<string>('');
   const [loading, setLoading] = useState(false);

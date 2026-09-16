@@ -114,13 +114,7 @@ export default function AdminStaffUsers() {
   const handlePrint = () => {
     window.print();
   };
-
-  const openAdd = () => {
-    setEditingId(null);
-    setFormData(emptyForm);
-    setError('');
-    setIsModalOpen(true);
-  };
+
 
   const openEdit = (user: AdminStaffUser) => {
     setEditingId(user.id);
@@ -354,3 +348,4 @@ export default function AdminStaffUsers() {
     </div>
   );
 }
+

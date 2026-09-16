@@ -1,327 +1,922 @@
-import { useState, useEffect, useRef } from 'react';
+/**
+ * Teachers — Admin management page
+ *
+ * Displays all teachers in a clean list table showing:
+ *   - Teacher info (photo, name, employee ID)
+ *   - System Role  (the user account's role — e.g. Teacher, Principal)
+ *   - Subject Responsibilities (subjects + classes from teacher_subject_class)
+ *   - Class Sponsor (from classes.sponsor_teacher_id)
+ *   - Status + Manage action
+ *
+ * The "Manage" button opens a right-side drawer with three independent sections:
+ *   1. System Role — change via PUT /teachers/{id}/system-role
+ *   2. Subject Teacher Assignments — add/remove via POST/DELETE
+ *   3. Class Sponsor — add/remove via POST/DELETE
+ *
+ * These three sections are COMPLETELY INDEPENDENT. Changing one never
+ * automatically affects the others.
+ */
+
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { payrollService, teacherService, type SalaryStructure, type Teacher } from '../services/teacherService';
-import { classService, type Class } from '../services/classService';
-import { subjectService, type Subject } from '../services/subjectService';
-import { authService } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
-import type { User } from '../types';
-import { FormModal } from '../components/FormModal';
+import { classService } from '../services/classService';
+import { subjectService, type Subject } from '../services/subjectService';
+import { divisionService } from '../services/divisionService';
 import api from '../services/api';
-import { Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableHead, LoadingState, EmptyState, Card, CardContent } from '../components/ui';
+import {
+  teacherAssignmentService,
+  type TeacherSummary,
+  type TeacherAssignments,
+  type SubjectAssignment,
+} from '../services/teacherService';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  LoadingState,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui';
 
-type FormData = {
-  user_id: string;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  gender: string;
-  date_of_birth: string;
-  hire_date: string;
-  qualifications: string;
-  photo: string;
-  credential_image_path: string;
-  specialization: string;
-  status: string;
-  sponsor_class_id: string;
-  class_ids: number[];                                // classes this teacher is assigned to teach
-  subject_assignments: { class_id: string; subject_id: string }[];
-  salary_structure_id: string;
-};
+// ─── Local types ──────────────────────────────────────────────────────────────
 
-const emptyForm: FormData = {
-  user_id: '',
-  employee_id: '',
-  first_name: '',
-  last_name: '',
-  email: '',
-  phone: '',
-  gender: 'male',
-  date_of_birth: '',
-  hire_date: '',
-  qualifications: '',
-  photo: '',
-  credential_image_path: '',
-  specialization: '',
-  status: 'active',
-  sponsor_class_id: '',
-  class_ids: [],
-  subject_assignments: [],
-  salary_structure_id: '',
-};
+interface Role {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+}
+
+interface ClassOption {
+  id: number;
+  name: string;
+  section?: string | null;
+  division?: { name: string };
+  division_id?: number;
+}
+
+interface DivisionOption {
+  id: number;
+  name: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function classLabel(c: ClassOption) {
+  return c.section ? `${c.name} — ${c.section}` : c.name;
+}
+
+function roleVariant(slug: string | null): 'default' | 'info' | 'success' | 'warning' {
+  if (!slug) return 'default';
+  if (slug === 'admin') return 'danger' as any;
+  if (slug === 'teacher') return 'info';
+  if (slug === 'vice-principal-instruction' || slug === 'principal') return 'warning';
+  if (slug === 'proprietor' || slug === 'proprietress') return 'success';
+  return 'default';
+}
+
+// Authoritative roles that can be assigned via system-role change.
+// Class Sponsor and Subject Teacher are legacy/unused as system roles per RoleSeeder.
+const ASSIGNABLE_ROLE_SLUGS = [
+  'teacher',
+  'vice-principal-instruction',
+  'principal',
+  'proprietor',
+  'proprietress',
+  'finance-staff',
+  'admin',
+];
+
+// ─── Confirmation dialog ──────────────────────────────────────────────────────
+
+interface ConfirmProps {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmDialog({ title, message, confirmLabel = 'Confirm', danger = false, onConfirm, onCancel }: ConfirmProps) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="px-6 py-5 border-b border-slate-100">
+          <p className="text-base font-bold text-slate-900">{title}</p>
+        </div>
+        <div className="px-6 py-4">
+          <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+        </div>
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100">
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button variant={danger ? 'danger' : 'primary'} size="sm" onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline alert ──────────────────────────────────────────────────────────────
+
+function Alert({ ok, text, onDismiss }: { ok: boolean; text: string; onDismiss?: () => void }) {
+  return (
+    <div className={`flex items-start gap-2 rounded-xl border px-4 py-3 text-sm ${
+      ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+         : 'border-rose-200 bg-rose-50 text-rose-700'
+    }`}>
+      <span className="shrink-0 font-bold">{ok ? '✓' : '⚠'}</span>
+      <span className="flex-1">{text}</span>
+      {onDismiss && (
+        <button onClick={onDismiss} className="shrink-0 text-slate-400 hover:text-slate-600 text-base leading-none">×</button>
+      )}
+    </div>
+  );
+}
+
+// ─── Management drawer ────────────────────────────────────────────────────────
+
+interface DrawerProps {
+  summary: TeacherSummary;
+  allClasses: ClassOption[];
+  allDivisions: DivisionOption[];
+  allSubjects: Subject[];
+  allRoles: Role[];
+  onClose: () => void;
+  onRefreshList: () => void;
+}
+
+function TeacherManageDrawer({
+  summary,
+  allClasses,
+  allDivisions,
+  allSubjects,
+  allRoles,
+  onClose,
+  onRefreshList,
+}: DrawerProps) {
+  const [assignments, setAssignments] = useState<TeacherAssignments | null>(null);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  const [assignmentsError, setAssignmentsError] = useState('');
+
+  // Role-change form
+  const [roleChangeOpen, setRoleChangeOpen] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [roleConfirm, setRoleConfirm] = useState(false);
+  const [roleMsg, setRoleMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Subject assignment form
+  const [subjectFormOpen, setSubjectFormOpen] = useState(false);
+  const [selDivision, setSelDivision] = useState('');
+  const [selClass, setSelClass] = useState('');
+  const [selSubject, setSelSubject] = useState('');
+  const [assigningSubject, setAssigningSubject] = useState(false);
+  const [subjectMsg, setSubjectMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [removingSubjectId, setRemovingSubjectId] = useState<number | null>(null);
+  const [subjectRemoveConfirm, setSubjectRemoveConfirm] = useState<SubjectAssignment | null>(null);
+
+  // Class sponsor form
+  const [sponsorFormOpen, setSponsorFormOpen] = useState(false);
+  const [selSponsorDivision, setSelSponsorDivision] = useState('');
+  const [selSponsorClass, setSelSponsorClass] = useState('');
+  const [assigningSponsor, setAssigningSponsor] = useState(false);
+  const [sponsorMsg, setSponsorMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [removingSponsor, setRemovingSponsor] = useState(false);
+  const [sponsorRemoveConfirm, setSponsorRemoveConfirm] = useState(false);
+
+  const loadAssignments = useCallback(async () => {
+    setLoadingAssignments(true);
+    setAssignmentsError('');
+    try {
+      const data = await teacherAssignmentService.getAssignments(summary.id);
+      setAssignments(data);
+    } catch (err: any) {
+      setAssignmentsError(err.response?.data?.message || 'Failed to load assignments.');
+    } finally {
+      setLoadingAssignments(false);
+    }
+  }, [summary.id]);
+
+  useEffect(() => { loadAssignments(); }, [loadAssignments]);
+
+  // ── Division-filtered class lists ──
+  const subjectClassOptions = selDivision
+    ? allClasses.filter((c) => String(c.division_id) === selDivision)
+    : allClasses;
+  const sponsorClassOptions = selSponsorDivision
+    ? allClasses.filter((c) => String(c.division_id) === selSponsorDivision)
+    : allClasses;
+
+  // ── Role change ──────────────────────────────────────────────────────────────
+  const assignableRoles = allRoles.filter((r) => ASSIGNABLE_ROLE_SLUGS.includes(r.slug) && r.is_active);
+  const currentRoleId = assignableRoles.find((r) => r.slug === assignments?.teacher.system_role_slug)?.id;
+
+  const handleRoleChange = async () => {
+    if (!selectedRoleId) return;
+    setRoleMsg(null);
+    try {
+      const res = await teacherAssignmentService.changeSystemRole(summary.id, Number(selectedRoleId));
+      setRoleMsg({ ok: true, text: `System role changed to ${res.new_role}.` });
+      setRoleChangeOpen(false);
+      setSelectedRoleId('');
+      await loadAssignments();
+      onRefreshList();
+    } catch (err: any) {
+      setRoleMsg({ ok: false, text: err.response?.data?.message || 'Failed to change role.' });
+    } finally {
+      setRoleConfirm(false);
+    }
+  };
+
+  // ── Subject assignment ────────────────────────────────────────────────────────
+  const handleAssignSubject = async () => {
+    if (!selClass || !selSubject) {
+      setSubjectMsg({ ok: false, text: 'Please select both a class and a subject.' });
+      return;
+    }
+    setAssigningSubject(true); setSubjectMsg(null);
+    try {
+      const res = await teacherAssignmentService.assignSubject(
+        summary.id, Number(selSubject), Number(selClass),
+      );
+      setSubjectMsg({ ok: true, text: res.message });
+      setSubjectFormOpen(false);
+      setSelDivision(''); setSelClass(''); setSelSubject('');
+      await loadAssignments();
+      onRefreshList();
+    } catch (err: any) {
+      setSubjectMsg({ ok: false, text: err.response?.data?.message || 'Failed to assign subject.' });
+    } finally {
+      setAssigningSubject(false); }
+  };
+
+  const handleRemoveSubject = async (assignment: SubjectAssignment) => {
+    setRemovingSubjectId(assignment.id); setSubjectMsg(null);
+    try {
+      const res = await teacherAssignmentService.removeSubjectAssignment(summary.id, assignment.id);
+      setSubjectMsg({ ok: true, text: res.message });
+      await loadAssignments();
+      onRefreshList();
+    } catch (err: any) {
+      setSubjectMsg({ ok: false, text: err.response?.data?.message || 'Failed to remove assignment.' });
+    } finally {
+      setRemovingSubjectId(null); setSubjectRemoveConfirm(null);
+    }
+  };
+
+  // ── Class sponsor ─────────────────────────────────────────────────────────────
+  const handleAssignSponsor = async () => {
+    if (!selSponsorClass) {
+      setSponsorMsg({ ok: false, text: 'Please select a class.' });
+      return;
+    }
+    setAssigningSponsor(true); setSponsorMsg(null);
+    try {
+      const res = await teacherAssignmentService.assignClassSponsor(summary.id, Number(selSponsorClass));
+      setSponsorMsg({ ok: true, text: res.message });
+      setSponsorFormOpen(false);
+      setSelSponsorDivision(''); setSelSponsorClass('');
+      await loadAssignments();
+      onRefreshList();
+    } catch (err: any) {
+      setSponsorMsg({ ok: false, text: err.response?.data?.message || 'Failed to assign class sponsor.' });
+    } finally {
+      setAssigningSponsor(false);
+    }
+  };
+
+  const handleRemoveSponsor = async () => {
+    if (!assignments?.class_sponsorship) return;
+    setRemovingSponsor(true); setSponsorMsg(null);
+    try {
+      const res = await teacherAssignmentService.removeClassSponsor(
+        summary.id, assignments.class_sponsorship.class_id,
+      );
+      setSponsorMsg({ ok: true, text: res.message });
+      await loadAssignments();
+      onRefreshList();
+    } catch (err: any) {
+      setSponsorMsg({ ok: false, text: err.response?.data?.message || 'Failed to remove sponsorship.' });
+    } finally {
+      setRemovingSponsor(false); setSponsorRemoveConfirm(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Overlay */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40"
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* Drawer */}
+      <div
+        role="dialog"
+        aria-label={`Manage ${summary.name}`}
+        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[640px] flex-col border-l border-slate-200 bg-white shadow-2xl"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Manage teacher</p>
+            <h2 className="mt-0.5 text-xl font-bold text-slate-900">{summary.name}</h2>
+            <p className="mt-0.5 text-sm text-slate-500 font-mono">{summary.employee_id}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 text-xl leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+          {loadingAssignments && <LoadingState message="Loading assignments…" />}
+          {assignmentsError && <Alert ok={false} text={assignmentsError} />}
+
+          {assignments && (
+            <>
+              {/* ────────────────────────────────────────────────────────────── */}
+              {/* SECTION 1 — System Role                                       */}
+              {/* ────────────────────────────────────────────────────────────── */}
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">System Role</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      The user account's system-level role. Independent of teaching responsibilities.
+                    </p>
+                  </div>
+                  {!roleChangeOpen && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setRoleChangeOpen(true);
+                        setSelectedRoleId(String(currentRoleId ?? ''));
+                        setRoleMsg(null);
+                      }}
+                    >
+                      Change role
+                    </Button>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center gap-3">
+                  <span className="text-xl">🏷</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {assignments.teacher.system_role ?? <span className="text-slate-400 font-normal">No role assigned</span>}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {assignments.teacher.system_role_slug ?? '—'}
+                    </p>
+                  </div>
+                </div>
+
+                {roleMsg && (
+                  <div className="mt-2">
+                    <Alert ok={roleMsg.ok} text={roleMsg.text} onDismiss={() => setRoleMsg(null)} />
+                  </div>
+                )}
+
+                {roleChangeOpen && (
+                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-blue-800">Select new system role</p>
+                    <select
+                      value={selectedRoleId}
+                      onChange={(e) => setSelectedRoleId(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">— Select role —</option>
+                      {assignableRoles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                          {r.id === currentRoleId ? ' (current)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => { setRoleChangeOpen(false); setSelectedRoleId(''); }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={!selectedRoleId || selectedRoleId === String(currentRoleId)}
+                        onClick={() => setRoleConfirm(true)}
+                      >
+                        Apply change
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <hr className="border-slate-100" />
+
+              {/* ────────────────────────────────────────────────────────────── */}
+              {/* SECTION 2 — Subject Teacher Assignments                       */}
+              {/* ────────────────────────────────────────────────────────────── */}
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Subject Teacher Assignments</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Subjects this teacher is responsible for in specific classes. Stored in{' '}
+                      <code className="font-mono text-[10px] bg-slate-100 px-1 rounded">teacher_subject_class</code>.
+                    </p>
+                  </div>
+                  {!subjectFormOpen && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { setSubjectFormOpen(true); setSubjectMsg(null); }}
+                    >
+                      + Assign subject
+                    </Button>
+                  )}
+                </div>
+
+                {subjectMsg && (
+                  <div className="mb-3">
+                    <Alert ok={subjectMsg.ok} text={subjectMsg.text} onDismiss={() => setSubjectMsg(null)} />
+                  </div>
+                )}
+
+                {/* Add-subject form */}
+                {subjectFormOpen && (
+                  <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-blue-800">Assign a subject to a class</p>
+
+                    {/* Division filter */}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Division (filter)</label>
+                      <select
+                        value={selDivision}
+                        onChange={(e) => { setSelDivision(e.target.value); setSelClass(''); }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">All divisions</option>
+                        {allDivisions.map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Class */}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Class / Grade <span className="text-rose-500">*</span></label>
+                      <select
+                        value={selClass}
+                        onChange={(e) => setSelClass(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">— Select class —</option>
+                        {subjectClassOptions.map((c) => (
+                          <option key={c.id} value={c.id}>{classLabel(c)}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Subject */}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Subject <span className="text-rose-500">*</span></label>
+                      <select
+                        value={selSubject}
+                        onChange={(e) => setSelSubject(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">— Select subject —</option>
+                        {allSubjects.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.code ? `${s.code} — ` : ''}{s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => { setSubjectFormOpen(false); setSelDivision(''); setSelClass(''); setSelSubject(''); }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={!selClass || !selSubject || assigningSubject}
+                        onClick={handleAssignSubject}
+                      >
+                        {assigningSubject ? 'Assigning…' : 'Assign'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Assignments table */}
+                {assignments.subject_assignments.length === 0 ? (
+                  <div className="rounded-xl border-2 border-dashed border-slate-200 py-8 text-center">
+                    <p className="text-2xl mb-1">📚</p>
+                    <p className="text-sm font-semibold text-slate-500">No Subject Teacher assignments</p>
+                    <p className="text-xs text-slate-400 mt-1">Use the button above to assign a subject.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-100 text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Subject</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Class / Grade</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-20">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {assignments.subject_assignments.map((a) => (
+                          <tr key={a.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-semibold text-slate-900">{a.subject_name ?? '—'}</td>
+                            <td className="px-4 py-3 text-slate-600">{a.class_name ?? '—'}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => setSubjectRemoveConfirm(a)}
+                                disabled={removingSubjectId === a.id}
+                                className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40"
+                              >
+                                {removingSubjectId === a.id ? 'Removing…' : 'Remove'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              <hr className="border-slate-100" />
+
+              {/* ────────────────────────────────────────────────────────────── */}
+              {/* SECTION 3 — Class Sponsor                                     */}
+              {/* ────────────────────────────────────────────────────────────── */}
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Class Sponsor</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      The class this teacher sponsors. Stored in{' '}
+                      <code className="font-mono text-[10px] bg-slate-100 px-1 rounded">classes.sponsor_teacher_id</code>.
+                      Only one sponsor per class.
+                    </p>
+                  </div>
+                  {!sponsorFormOpen && !assignments.class_sponsorship && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { setSponsorFormOpen(true); setSponsorMsg(null); }}
+                    >
+                      + Assign sponsor
+                    </Button>
+                  )}
+                </div>
+
+                {sponsorMsg && (
+                  <div className="mb-3">
+                    <Alert ok={sponsorMsg.ok} text={sponsorMsg.text} onDismiss={() => setSponsorMsg(null)} />
+                  </div>
+                )}
+
+                {/* Add-sponsor form */}
+                {sponsorFormOpen && (
+                  <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-blue-800">Assign class sponsor responsibility</p>
+
+                    {/* Division filter */}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Division (filter)</label>
+                      <select
+                        value={selSponsorDivision}
+                        onChange={(e) => { setSelSponsorDivision(e.target.value); setSelSponsorClass(''); }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">All divisions</option>
+                        {allDivisions.map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Class */}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Class / Grade <span className="text-rose-500">*</span></label>
+                      <select
+                        value={selSponsorClass}
+                        onChange={(e) => setSelSponsorClass(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">— Select class —</option>
+                        {sponsorClassOptions.map((c) => (
+                          <option key={c.id} value={c.id}>{classLabel(c)}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                      If the selected class already has a sponsor, the assignment will be rejected. Remove the current sponsor first.
+                    </p>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => { setSponsorFormOpen(false); setSelSponsorDivision(''); setSelSponsorClass(''); }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={!selSponsorClass || assigningSponsor}
+                        onClick={handleAssignSponsor}
+                      >
+                        {assigningSponsor ? 'Assigning…' : 'Assign'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Current sponsorship */}
+                {assignments.class_sponsorship ? (
+                  <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-100 text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Sponsored Class</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-20">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white">
+                        <tr className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-semibold text-slate-900">
+                            {assignments.class_sponsorship.class_name}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => setSponsorRemoveConfirm(true)}
+                              disabled={removingSponsor}
+                              className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40"
+                            >
+                              {removingSponsor ? 'Removing…' : 'Remove'}
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : !sponsorFormOpen ? (
+                  <div className="rounded-xl border-2 border-dashed border-slate-200 py-8 text-center">
+                    <p className="text-2xl mb-1">🏫</p>
+                    <p className="text-sm font-semibold text-slate-500">No Class Sponsor assignment</p>
+                    <p className="text-xs text-slate-400 mt-1">Use the button above to assign a sponsored class.</p>
+                  </div>
+                ) : null}
+              </section>
+
+              {/* Bottom padding */}
+              <div className="h-6" />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Confirmation dialogs ── */}
+
+      {roleConfirm && (
+        <ConfirmDialog
+          title="Change System Role"
+          message={`Current: ${assignments?.teacher.system_role ?? '—'}\nNew: ${assignableRoles.find((r) => r.id === Number(selectedRoleId))?.name ?? '—'}\n\nAre you sure you want to change this user's system role? This does not affect their teaching responsibilities.`}
+          confirmLabel="Change role"
+          onConfirm={handleRoleChange}
+          onCancel={() => setRoleConfirm(false)}
+        />
+      )}
+
+      {subjectRemoveConfirm && (
+        <ConfirmDialog
+          title="Remove Subject Assignment"
+          message={`Remove ${subjectRemoveConfirm.subject_name ?? 'this subject'} — ${subjectRemoveConfirm.class_name ?? 'this class'} from this teacher's Subject Teacher assignments?\n\nThis will not affect their Class Sponsor responsibility or system role.`}
+          confirmLabel="Remove"
+          danger
+          onConfirm={() => handleRemoveSubject(subjectRemoveConfirm)}
+          onCancel={() => setSubjectRemoveConfirm(null)}
+        />
+      )}
+
+      {sponsorRemoveConfirm && assignments?.class_sponsorship && (
+        <ConfirmDialog
+          title="Remove Class Sponsor"
+          message={`Remove ${assignments.class_sponsorship.class_name} Class Sponsor responsibility from this teacher?\n\nThis will not affect their Subject Teacher assignments or system role.`}
+          confirmLabel="Remove"
+          danger
+          onConfirm={handleRemoveSponsor}
+          onCancel={() => setSponsorRemoveConfirm(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Main page component ──────────────────────────────────────────────────────
 
 export default function Teachers() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAdmin = user?.role?.slug === 'admin';
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>([]);
+
+  const [teachers, setTeachers] = useState<TeacherSummary[]>([]);
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
+  const [allClasses, setAllClasses] = useState<ClassOption[]>([]);
+  const [allDivisions, setAllDivisions] = useState<DivisionOption[]>([]);
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<FormData>(emptyForm);
+  const [pageError, setPageError] = useState('');
   const [search, setSearch] = useState('');
-  const [uploadingImage, setUploadingImage] = useState<'profile' | 'credential' | null>(null);
-  const [uploadError, setUploadError] = useState('');
-  const profileImageRef = useRef<HTMLInputElement>(null);
-  const credentialImageRef = useRef<HTMLInputElement>(null);
+  const [managingTeacher, setManagingTeacher] = useState<TeacherSummary | null>(null);
 
-  useEffect(() => { load(); }, []);
-
-  const load = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
-    setError('');
+    setPageError('');
     try {
-      if (isAdmin) {
-        const [res, userData, classData, subjectData, structures] = await Promise.all([teacherService.getAll(), authService.users(), classService.getAll(), subjectService.getAll(), payrollService.structures()]);
-        setTeachers(res.data || (res as unknown as Teacher[]) || []);
-        setUsers(userData);
-        setClasses((classData as any).data || classData as any);
-        setSubjects((subjectData as any).data || subjectData as any);
-        setSalaryStructures(structures);
-      } else {
-        const res = await teacherService.getAll();
-        setTeachers(res.data || (res as unknown as Teacher[]) || []);
+      const [teacherData, classData, subjectData, divisionData] = await Promise.all([
+        teacherAssignmentService.getAllWithAssignments(),
+        classService.getAll(),
+        subjectService.getAll(),
+        divisionService.getAll(),
+      ]);
+
+      setTeachers(Array.isArray(teacherData) ? teacherData : []);
+
+      const classes = ((classData as any).data ?? classData) as ClassOption[];
+      setAllClasses(Array.isArray(classes) ? classes : []);
+
+      const subjects = ((subjectData as any).data ?? subjectData) as Subject[];
+      setAllSubjects(Array.isArray(subjects) ? subjects : []);
+
+      const divisions = ((divisionData as any).data ?? divisionData) as DivisionOption[];
+      setAllDivisions(Array.isArray(divisions) ? divisions : []);
+
+      // Fetch roles for the role-change picker
+      try {
+        const rolesRes = await api.get('/roles');
+        const roles = rolesRes.data?.data ?? rolesRes.data ?? [];
+        setAllRoles(Array.isArray(roles) ? roles : []);
+      } catch {
+        // Roles endpoint may 403 for some builds — continue without it
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load teachers.');
-    } finally { setLoading(false); }
-  };
-
-  const filtered = teachers.filter((t) => {
-    const displayId = (t as any).user?.user_code || t.employee_id;
-    return `${t.first_name} ${t.last_name} ${t.email} ${displayId}`.toLowerCase().includes(search.toLowerCase());
-  });
-
-  const openEdit = (t: Teacher) => {
-    setEditingId(t.id);
-    setUploadError('');
-    setFormData({
-      user_id: String((t as any).user_id || ''),
-      employee_id: t.employee_id || '',
-      first_name: t.first_name || '',
-      last_name: t.last_name || '',
-      email: t.email || '',
-      phone: t.phone || '',
-      gender: (t as any).gender || 'male',
-      date_of_birth: (t as any).date_of_birth || '',
-      hire_date: (t as any).hire_date || '',
-      qualifications: (t as any).qualifications || '',
-      photo: (t as any).photo || '',
-      credential_image_path: (t as any).credential_image_path || '',
-      specialization: (t as any).specialization || t.subject_specialization || '',
-      status: (t as any).status || 'active',
-      sponsor_class_id: String((t as any).sponsored_class?.id || ''),
-      class_ids: ((t as any).classes || []).map((c: any) => c.id),
-      subject_assignments: ((t as any).subject_class_assignments || []).map((a: any) => ({ class_id: String(a.class_id), subject_id: String(a.subject_id) })),
-      salary_structure_id: String(t.salary_structure_id || ''),
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        ...formData,
-        user_id: formData.user_id ? Number(formData.user_id) : undefined,
-        salary_structure_id: formData.salary_structure_id ? Number(formData.salary_structure_id) : null,
-        sponsor_class_id: formData.sponsor_class_id ? Number(formData.sponsor_class_id) : null,
-        class_ids: formData.class_ids,
-        subject_assignments: formData.subject_assignments.filter((a) => a.class_id && a.subject_id).map((a) => ({ class_id: Number(a.class_id), subject_id: Number(a.subject_id) })),
-      };
-      if (editingId) {
-        const updated = await teacherService.update(editingId, payload as any);
-        setTeachers((c) => c.map((t) => (t.id === editingId ? (updated as any) : t)));
-      } else {
-        const created = await teacherService.create(payload as any);
-        setTeachers((c) => [created as any, ...c]);
-      }
-      setIsModalOpen(false);
-    } catch { setError('Failed to save teacher.'); }
-    finally { setIsSubmitting(false); }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this teacher record?')) return;
-    try {
-      await teacherService.delete(id);
-      setTeachers((c) => c.filter((t) => t.id !== id));
-    } catch { setError('Failed to delete teacher.'); }
-  };
-
-  const field = (key: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setFormData({ ...formData, [key]: e.target.value });
-
-  const uploadTeacherImage = async (type: 'profile' | 'credential', file?: File) => {
-    if (!file) return;
-    setUploadingImage(type);
-    setUploadError('');
-    try {
-      const upload = new FormData();
-      upload.append('file', file);
-      upload.append('type', type);
-      const response = await api.post('/upload/teacher-image', upload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setFormData((current) => ({
-        ...current,
-        [type === 'profile' ? 'photo' : 'credential_image_path']: response.data.full_url,
-      }));
-    } catch {
-      setUploadError(`Unable to upload the ${type === 'profile' ? 'profile photo' : 'credential image'}. Please use a PNG, JPG, or WebP image up to 5 MB.`);
+      setPageError(err.response?.data?.message || 'Failed to load teachers.');
     } finally {
-      setUploadingImage(null);
-      const input = type === 'profile' ? profileImageRef.current : credentialImageRef.current;
-      if (input) input.value = '';
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const selectedUser = users.find((u) => u.id === Number(formData.user_id));
-  const teachingRole = selectedUser?.role?.slug;
+  useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Toggle a class in the class_ids list
-  const toggleClass = (id: number) => {
-    setFormData((f) => ({
-      ...f,
-      class_ids: f.class_ids.includes(id)
-        ? f.class_ids.filter((c) => c !== id)
-        : [...f.class_ids, id],
-    }));
-  };
-
-  // A class-sponsor or class-teacher role qualifies for the sponsored class field
-  const isSponsorRole = teachingRole === 'class-teacher' || teachingRole === 'class-sponsor';
-  // Subject-teacher gets the subject+class assignment builder
-  const isSubjectRole = teachingRole === 'subject-teacher';
+  const filtered = teachers.filter((t) =>
+    `${t.name} ${t.email} ${t.employee_id}`.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div className="space-y-6">
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .rounded-xl { border-radius: 0 !important; }
-          .shadow-sm { box-shadow: none !important; }
-          table { border-collapse: collapse !important; width: 100% !important; }
-          th, td { border: 1px solid black !important; padding: 4px !important; font-size: 10px !important; }
-          th { background-color: #f0f0f0 !important; }
-        }
-      `}</style>
+
+      {/* ── Page header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Staff management</p>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Teachers</h1>
-          <p className="mt-2 text-base text-slate-500">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Teachers</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {teachers.length} teacher{teachers.length !== 1 ? 's' : ''} in the system.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => window.print()} variant="secondary" className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:bg-slate-100">
-            🖨️ Print
+        {isAdmin && (
+          <Button
+            onClick={() => navigate('/application')}
+            className="self-start sm:self-auto"
+          >
+            + Add teacher
           </Button>
-          {isAdmin && (
-            <Button onClick={() => navigate('/application')} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-xl">
-              📝 Add Teacher
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
-      {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
-          <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-          </svg>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-rose-800">{error}</p>
-            <Button onClick={load} variant="secondary" className="mt-2 text-xs">Try Again</Button>
-          </div>
-        </div>
-      )}
+      {pageError && <Alert ok={false} text={pageError} />}
 
-      <Card className="shadow-lg shadow-slate-200/50">
+      {/* ── Teacher list card ── */}
+      <Card>
         <CardContent className="p-0">
-          <div className="border-b border-slate-200 px-6 py-4 sm:px-6 no-print">
-            <div className="relative max-w-xs">
-              <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <Input
-                type="search"
-                placeholder="Search teachers…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 max-w-xs rounded-xl border-slate-300 bg-white shadow-sm transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
-              />
-            </div>
+
+          {/* Search bar */}
+          <div className="border-b border-slate-100 px-6 py-4">
+            <input
+              type="search"
+              placeholder="Search by name, email, or employee ID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full max-w-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
+
           {loading ? (
             <LoadingState message="Loading teachers…" />
           ) : filtered.length === 0 ? (
             <EmptyState
-              title="No teachers found"
-              description="Try adjusting your search to find what you're looking for."
+              title={search ? 'No results' : 'No teachers yet'}
+              description={search ? 'Try a different search.' : 'Add your first teacher to get started.'}
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-semibold text-slate-700">Photo</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Employee ID</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Name</TableHead>
-                  <TableHead className="hidden sm:table-cell font-semibold text-slate-700">Salary structure</TableHead>
-                  <TableHead className="hidden md:table-cell font-semibold text-slate-700">Email</TableHead>
-                  <TableHead className="hidden md:table-cell font-semibold text-slate-700">Phone</TableHead>
-                  <TableHead className="hidden lg:table-cell font-semibold text-slate-700">Class(es)</TableHead>
-                  <TableHead className="hidden lg:table-cell font-semibold text-slate-700">Specialization</TableHead>
-                  <TableHead className="hidden lg:table-cell font-semibold text-slate-700">Hire date</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                  <TableHead className="no-print font-semibold text-slate-700">Actions</TableHead>
+                  <TableHead>Teacher</TableHead>
+                  <TableHead>System Role</TableHead>
+                  <TableHead className="hidden md:table-cell">Subject Responsibilities</TableHead>
+                  <TableHead className="hidden md:table-cell">Class Sponsor</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((t) => (
-                  <TableRow key={t.id} className="hover:bg-slate-50 transition-colors">
+                  <TableRow key={t.id}>
+                    {/* Teacher info */}
+                    <TableCell className="min-w-[160px]">
+                      <div>
+                        <p className="font-semibold text-slate-900">{t.name}</p>
+                        <p className="text-xs text-slate-400 font-mono mt-0.5">{t.employee_id}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 hidden sm:block truncate max-w-[200px]">{t.email}</p>
+                      </div>
+                    </TableCell>
+
+                    {/* System role */}
                     <TableCell>
-                      {(t as any).photo
-                        ? <img src={(t as any).photo} alt={`${t.first_name} ${t.last_name}`} className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-slate-200 object-cover" />
-                        : <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{t.first_name?.[0]}{t.last_name?.[0]}</div>}
+                      {t.system_role ? (
+                        <Badge variant={roleVariant(t.system_role_slug) as any}>
+                          {t.system_role}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">No role</span>
+                      )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{t.employee_id}</TableCell>
-                    <TableCell className="font-semibold text-slate-900">{t.first_name} {t.last_name}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-slate-600">{t.salary_structure?.name || '—'}</TableCell>
-                    <TableCell className="hidden md:table-cell text-slate-600">{t.email}</TableCell>
-                    <TableCell className="hidden md:table-cell text-slate-600">{t.phone || '—'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-slate-600">
-                      {((t as any).classes || []).length > 0
-                        ? ((t as any).classes as any[]).map((c: any) => c.name.replace(/\s[A-Z][a-z]*$/, '').trim()).join(', ')
-                        : (t as any).sponsored_class?.name
-                          ? `${(t as any).sponsored_class.name.replace(/\s[A-Z][a-z]*$/, '').trim()}`
-                          : '—'}
+
+                    {/* Subject responsibilities */}
+                    <TableCell className="hidden md:table-cell">
+                      {t.subject_count > 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                          {t.subject_count} subject{t.subject_count !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-slate-600">{t.subject_specialization || (t as any).specialization || '—'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-slate-600">{(t as any).hire_date ? new Date((t as any).hire_date).toLocaleDateString() : '—'}</TableCell>
+
+                    {/* Class sponsor */}
+                    <TableCell className="hidden md:table-cell">
+                      {t.sponsored_class ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          {t.sponsored_class}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* Actions */}
                     <TableCell>
-                      <Badge variant={(t as any).status === 'active' ? 'success' : (t as any).status === 'on_leave' ? 'warning' : 'default'}>
-                        {(t as any).status || 'active'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="no-print">
                       {isAdmin ? (
-                        <div className="flex gap-2">
-                          <Button onClick={() => openEdit(t)} variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
-                            Edit
-                          </Button>
-                          <Button onClick={() => handleDelete(t.id)} variant="ghost" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
-                            Delete
-                          </Button>
-                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setManagingTeacher(t)}
+                        >
+                          Manage
+                        </Button>
                       ) : (
                         <span className="text-xs text-slate-400">View only</span>
                       )}
@@ -331,238 +926,25 @@ export default function Teachers() {
               </TableBody>
             </Table>
           )}
-          <div className="border-t border-slate-200 px-6 py-4 text-xs text-slate-500 font-medium">
+
+          <div className="border-t border-slate-100 px-6 py-3 text-xs text-slate-400 font-medium">
             {filtered.length} of {teachers.length} teacher{teachers.length !== 1 ? 's' : ''}
           </div>
         </CardContent>
       </Card>
 
-      <FormModal isOpen={isModalOpen} title={editingId ? 'Edit teacher' : 'Add teacher'} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit} submitText={editingId ? 'Save changes' : 'Add teacher'} isLoading={isSubmitting}>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Select
-              label="User account"
-              value={formData.user_id}
-              onChange={field('user_id')}
-              options={[
-                { value: '', label: 'No linked account' },
-                ...(users.some((u) => ['class-sponsor', 'class-teacher'].includes(u.role?.slug || '')) ? [{ value: 'class-sponsor', label: 'Class Sponsor' }] : []),
-                ...(users.some((u) => ['subject-teacher'].includes(u.role?.slug || '')) ? [{ value: 'subject-teacher', label: 'Subject Teacher' }] : [])
-              ]}
-              helperText="Create the user with a Class Teacher or Subject Teacher role first, then link it here."
-            />
-          </div>
-          <div>
-            <Input
-              label="Employee ID (optional - auto-generated if empty)"
-              value={formData.employee_id}
-              onChange={field('employee_id')}
-              placeholder="EMP-2026-0001"
-            />
-          </div>
-          <div>
-            <Input
-              label="First name"
-              value={formData.first_name}
-              onChange={field('first_name')}
-              required
-            />
-          </div>
-          <div>
-            <Input
-              label="Last name"
-              value={formData.last_name}
-              onChange={field('last_name')}
-              required
-            />
-          </div>
-          <div>
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={field('email')}
-              required
-            />
-          </div>
-          <div>
-            <Input
-              label="Phone"
-              value={formData.phone}
-              onChange={field('phone')}
-            />
-          </div>
-          <div>
-            <Select
-              label="Gender"
-              value={formData.gender}
-              onChange={field('gender')}
-              options={[
-                { value: 'male', label: 'Male' },
-                { value: 'female', label: 'Female' },
-                { value: 'other', label: 'Other' },
-              ]}
-            />
-          </div>
-          <div>
-            <Input
-              label="Date of birth"
-              type="date"
-              value={formData.date_of_birth}
-              onChange={field('date_of_birth')}
-            />
-          </div>
-          <div>
-            <Input
-              label="Hire date"
-              type="date"
-              value={formData.hire_date}
-              onChange={field('hire_date')}
-              required
-            />
-          </div>
-          <div>
-            <Input
-              label="Qualifications"
-              value={formData.qualifications}
-              onChange={field('qualifications')}
-              placeholder="B.Ed, M.Ed…"
-            />
-          </div>
-          <div className="sm:col-span-2 grid grid-cols-1 gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:grid-cols-2">
-            <input ref={profileImageRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => uploadTeacherImage('profile', event.target.files?.[0])} />
-            <input ref={credentialImageRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => uploadTeacherImage('credential', event.target.files?.[0])} />
-            <div>
-              <p className="text-sm font-medium text-slate-700">Profile image <span className="font-normal text-slate-400">(optional)</span></p>
-              <div className="mt-2 flex items-center gap-3">
-                {formData.photo ? <img src={formData.photo} alt="Teacher profile preview" className="h-14 w-14 rounded-full border border-slate-200 object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-xs text-slate-500">No photo</div>}
-                <div className="flex flex-col items-start gap-1">
-                  <button type="button" onClick={() => profileImageRef.current?.click()} disabled={uploadingImage !== null} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">{uploadingImage === 'profile' ? 'Uploading…' : formData.photo ? 'Replace photo' : 'Upload photo'}</button>
-                  {formData.photo && <button type="button" onClick={() => setFormData((current) => ({ ...current, photo: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-700">Qualification / credential image <span className="font-normal text-slate-400">(optional)</span></p>
-              <div className="mt-2 flex items-center gap-3">
-                {formData.credential_image_path ? <img src={formData.credential_image_path} alt="Credential preview" className="h-14 w-20 rounded border border-slate-200 object-cover" /> : <div className="flex h-14 w-20 items-center justify-center rounded border border-dashed border-slate-300 text-center text-xs text-slate-500">No credential</div>}
-                <div className="flex flex-col items-start gap-1">
-                  <button type="button" onClick={() => credentialImageRef.current?.click()} disabled={uploadingImage !== null} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">{uploadingImage === 'credential' ? 'Uploading…' : formData.credential_image_path ? 'Replace image' : 'Upload image'}</button>
-                  {formData.credential_image_path && <button type="button" onClick={() => setFormData((current) => ({ ...current, credential_image_path: '' }))} className="text-xs font-medium text-rose-600 hover:underline">Remove</button>}
-                </div>
-              </div>
-            </div>
-            {uploadError && <p className="sm:col-span-2 text-xs text-rose-600">{uploadError}</p>}
-          </div>
-          <div>
-            <Input
-              label="Specialization"
-              value={formData.specialization}
-              onChange={field('specialization')}
-              placeholder="Mathematics, Science…"
-            />
-          </div>
-          <div>
-            <Select
-              label="Status"
-              value={formData.status}
-              onChange={field('status')}
-              options={[
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-                { value: 'on_leave', label: 'On leave' },
-              ]}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Select
-              label="Salary structure"
-              value={formData.salary_structure_id}
-              onChange={field('salary_structure_id')}
-              options={[
-                { value: '', label: 'No structure assigned' },
-                ...salaryStructures.filter((structure) => structure.is_active).map((structure) => ({ value: String(structure.id), label: `${structure.name} — ${structure.currency} ${structure.monthly_salary}/month` }))
-              ]}
-              helperText="Payroll uses this as the default monthly salary. It can be adjusted when a monthly payroll is created."
-            />
-          </div>
-
-          {/* ── Classes assigned to this teacher (all roles) ── */}
-          <div className="sm:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">Classes assigned to this teacher</label>
-            {classes.length === 0 ? (
-              <p className="text-xs text-slate-400">No classes found. Add classes first.</p>
-            ) : (
-              <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 shadow-sm">
-                {classes.map((c) => (
-                  <label key={c.id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-2 focus:ring-blue-500/20"
-                      checked={formData.class_ids.includes(c.id)}
-                      onChange={() => toggleClass(c.id)}
-                    />
-                    <span className="text-sm text-slate-700">
-                      {c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {formData.class_ids.length > 0 && (
-              <p className="mt-2 text-xs text-slate-500">{formData.class_ids.length} class{formData.class_ids.length !== 1 ? 'es' : ''} selected</p>
-            )}
-          </div>
-
-          {/* ── Sponsored class — class-sponsor / class-teacher roles ── */}
-          {isSponsorRole && (
-            <div className="sm:col-span-2">
-              <Select
-                label="Sponsored class (home class)"
-                value={formData.sponsor_class_id}
-                onChange={field('sponsor_class_id')}
-                options={[
-                  { value: '', label: 'No sponsored class' },
-                  ...classes.map((c) => ({ value: String(c.id), label: `${c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}` }))
-                ]}
-                helperText="The sponsored class is the teacher's home class. They compile the mark sheet and send it to the VPI for approval."
-              />
-            </div>
-          )}
-
-          {/* ── Subject + class assignments — subject-teacher role ── */}
-          {isSubjectRole && (
-            <div className="sm:col-span-2 space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Subject and class assignments</label>
-              <p className="text-xs text-slate-500">Assign this teacher to specific subjects within specific classes.</p>
-              {formData.subject_assignments.map((assignment, index) => (
-                <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                  <select value={assignment.class_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, class_id: e.target.value } : a) }))} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
-                    <option value="">Class</option>
-                    {classes.map((c) => <option key={c.id} value={c.id}>{c.name.replace(/\s[A-Z][a-z]*$/, '').trim()}</option>)}
-                  </select>
-                  <select value={assignment.subject_id} onChange={(e) => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.map((a, i) => i === index ? { ...a, subject_id: e.target.value } : a) }))} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
-                    <option value="">Subject</option>
-                    {subjects.map((s) => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
-                  </select>
-                  <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: f.subject_assignments.filter((_, i) => i !== index) }))} className="px-2 text-sm font-semibold text-rose-600">Remove</button>
-                </div>
-              ))}
-              <button type="button" onClick={() => setFormData((f) => ({ ...f, subject_assignments: [...f.subject_assignments, { class_id: '', subject_id: '' }] }))} className="text-sm font-semibold text-blue-600">
-                + Assign a subject to a class
-              </button>
-            </div>
-          )}
-
-          {/* ── If no user account is linked yet, show a note about assigning roles ── */}
-          {!formData.user_id && (
-            <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
-              <p className="text-xs font-semibold text-amber-800">Tip — link a user account to unlock role-specific fields</p>
-              <p className="text-xs text-amber-700 mt-0.5">Select a user account above. If the linked user has the <strong>class-sponsor</strong> role, the sponsored class field appears. If they have <strong>subject-teacher</strong>, the subject assignment builder appears.</p>
-            </div>
-          )}
-        </div>
-      </FormModal>
+      {/* ── Management drawer ── */}
+      {managingTeacher && (
+        <TeacherManageDrawer
+          summary={managingTeacher}
+          allClasses={allClasses}
+          allDivisions={allDivisions}
+          allSubjects={allSubjects}
+          allRoles={allRoles}
+          onClose={() => setManagingTeacher(null)}
+          onRefreshList={loadAll}
+        />
+      )}
     </div>
   );
 }

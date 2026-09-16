@@ -36,7 +36,7 @@ function LetterGradeSelect({ value, onChange, gradingScale }: { value: string; o
       style={{ height: 32 }}
     >
       <option value="">—</option>
-      {Object.entries(gradingScale).map(([grade, label]) => (
+      {Object.entries(gradingScale).map(([grade, _label]) => (
         <option key={grade} value={grade}>{grade}</option>
       ))}
     </select>
@@ -168,7 +168,7 @@ export default function NurseryKGReportCardSheet(props: NurseryKGReportCardProps
               <thead>
                 <tr className="bg-slate-100">
                   <th className="border border-slate-300 px-2 py-2 text-left font-semibold">SUBJECTS</th>
-                  {sem1Periods.map(p => <th key={p} className="border border-slate-300 px-2 py-2 font-semibold">{p}</th>)}
+                  {sem1Periods.map((p: string) => <th key={p} className="border border-slate-300 px-2 py-2 font-semibold">{p}</th>)}
                   <th className="border border-slate-300 px-2 py-2 font-semibold">Sem. Ave</th>
                 </tr>
               </thead>
@@ -176,7 +176,7 @@ export default function NurseryKGReportCardSheet(props: NurseryKGReportCardProps
                 {learningAreas.map(area => (
                   <tr key={area.id}>
                     <td className="border border-slate-300 px-2 py-2 font-medium">{area.name}</td>
-                    {sem1Periods.map(p => (
+                    {sem1Periods.map((p: string) => (
                       <td key={p} className="border border-slate-300 px-1 py-1">
                         {editable ? (
                           <LetterGradeSelect
@@ -234,7 +234,7 @@ export default function NurseryKGReportCardSheet(props: NurseryKGReportCardProps
               <thead>
                 <tr className="bg-slate-100">
                   <th className="border border-slate-300 px-2 py-2 text-left font-semibold">SUBJECTS</th>
-                  {sem2Periods.map(p => <th key={p} className="border border-slate-300 px-2 py-2 font-semibold">{p}</th>)}
+                  {sem2Periods.map((p: string) => <th key={p} className="border border-slate-300 px-2 py-2 font-semibold">{p}</th>)}
                   <th className="border border-slate-300 px-2 py-2 font-semibold">Sem. Ave</th>
                 </tr>
               </thead>
@@ -242,7 +242,7 @@ export default function NurseryKGReportCardSheet(props: NurseryKGReportCardProps
                 {learningAreas.map(area => (
                   <tr key={area.id}>
                     <td className="border border-slate-300 px-2 py-2 font-medium">{area.name}</td>
-                    {sem2Periods.map(p => (
+                    {sem2Periods.map((p: string) => (
                       <td key={p} className="border border-slate-300 px-1 py-1">
                         {editable ? (
                           <LetterGradeSelect
