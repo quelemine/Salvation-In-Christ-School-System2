@@ -30,7 +30,7 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        return response()->json($user->load('role.permissions:id,name,slug'));
+        return response()->json($user->load('role:id,name,slug'));
     }
 
     public function store(Request $request)
@@ -45,13 +45,31 @@ class UserController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'profile_photo' => ['nullable', 'string', 'max:2048'],
             'credential_image_path' => ['nullable', 'string', 'max:2048'],
+            'username' => ['nullable', 'string', 'min:3', 'max:50', 'unique:users,username'],
             'user_code' => ['prohibited'],
             'student_id' => ['nullable', 'integer', Rule::exists('students', 'id')],
         ]);
 
         $studentId = $validated['student_id'] ?? null;
         unset($validated['student_id']);
+        
+        // Auto-generate username if not provided
+        if (empty($validated['username'])) {
+            $firstName = strtolower(preg_replace('/[^a-z]/', '', $validated['first_name']));
+            $lastName = strtolower(preg_replace('/[^a-z]/', '', $validated['last_name']));
+            $baseUsername = $firstName . $lastName;
+            $username = $baseUsername;
+            $counter = 1;
+            
+            while (User::where('username', $username)->exists()) {
+                $username = $baseUsername . $counter;
+                $counter++;
+            }
+            $validated['username'] = $username;
+        }
+        
         $validated['password'] = Hash::make($validated['password']);
+        $validated['two_fa_enabled'] = false;
         $user = DB::transaction(function () use ($validated, $studentId) {
             if ($studentId) {
                 $student = Student::lockForUpdate()->findOrFail($studentId);
@@ -67,13 +85,13 @@ class UserController extends Controller
             }
 
             return $user;
-        })->load('role.permissions:id,name,slug');
+        })->load('role:id,name,slug');
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'user_email' => $request->user()->email,
             'event' => 'user_created',
-            'description' => 'Created user account for '.$user->email,
+            'description' => 'Created user account for '.$user->email.' (username: '.$user->username.')',
             'ip_address' => $request->ip(),
             'device_type' => 'Desktop',
             'browser' => 'Other',
@@ -158,7 +176,7 @@ class UserController extends Controller
         $user = $request->user();
 
         abort_if(
-            in_array($user->role?->slug, ['student', 'teacher', 'class-sponsor', 'subject-teacher', 'finance', 'finance-staff'], true),
+            in_array($user->role?->slug, ['student', 'teacher', 'finance', 'finance-staff'], true),
             403,
             'This profile is managed by an administrator. Please contact the school for changes.'
         );
@@ -167,6 +185,7 @@ class UserController extends Controller
             'first_name' => ['sometimes', 'string', 'max:255'],
             'last_name'  => ['sometimes', 'string', 'max:255'],
             'email'      => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'username'   => ['sometimes', 'string', 'min:3', 'max:50', Rule::unique('users', 'username')->ignore($user->id)],
             'phone'      => ['nullable', 'string', 'max:30'],
             'address'    => ['nullable', 'string', 'max:255'],
             'user_code'  => ['prohibited'],

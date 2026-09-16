@@ -20,6 +20,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'email',
+        'username',
         'password',
         'role_id',
         'phone',
@@ -98,5 +99,37 @@ class User extends Authenticatable
     public function hasPermission(string $permissionSlug): bool
     {
         return $this->role && $this->role->permissions()->where('slug', $permissionSlug)->exists();
+    }
+
+    // Teaching responsibility checks (based on assignments, not roles)
+    public function isSubjectTeacher(): bool
+    {
+        $teacher = Teacher::where('user_id', $this->id)->first();
+        return $teacher && \App\Models\TeacherSubjectClass::where('teacher_id', $teacher->id)->exists();
+    }
+
+    public function isClassSponsor(): bool
+    {
+        $teacher = Teacher::where('user_id', $this->id)->first();
+        return $teacher && \App\Models\ClassModel::where('sponsor_teacher_id', $teacher->id)->exists();
+    }
+
+    public function hasSubjectAssignment(int $subjectId, int $classId): bool
+    {
+        $teacher = Teacher::where('user_id', $this->id)->first();
+        if (!$teacher) return false;
+        return \App\Models\TeacherSubjectClass::where('teacher_id', $teacher->id)
+            ->where('subject_id', $subjectId)
+            ->where('class_id', $classId)
+            ->exists();
+    }
+
+    public function isSponsorOfClass(int $classId): bool
+    {
+        $teacher = Teacher::where('user_id', $this->id)->first();
+        if (!$teacher) return false;
+        return \App\Models\ClassModel::where('id', $classId)
+            ->where('sponsor_teacher_id', $teacher->id)
+            ->exists();
     }
 }

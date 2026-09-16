@@ -37,6 +37,21 @@ class SubjectMarkController extends Controller
             return response()->json(['message' => 'No teacher profile linked to your account.'], 403);
         }
 
+        // Verify teacher is assigned to this subject for the report card's class
+        $subjectId = \App\Models\Subject::where('name', $data['subject'])->value('id');
+        if (!$subjectId) {
+            return response()->json(['message' => 'Subject not found.'], 404);
+        }
+
+        $isAssigned = \App\Models\TeacherSubjectClass::where('teacher_id', $teacher->id)
+            ->where('subject_id', $subjectId)
+            ->where('class_id', $reportCard->class_id)
+            ->exists();
+
+        if (!$isAssigned) {
+            return response()->json(['message' => 'You are not assigned to teach this subject for this class.'], 403);
+        }
+
         DB::transaction(function () use ($data, $reportCard, $teacher) {
             // Upsert — on resubmit reset the revision request and clear old feedback
             DB::table('report_card_subject_submissions')->upsert(
@@ -140,6 +155,11 @@ class SubjectMarkController extends Controller
 
         $reportCard = ReportCard::findOrFail($reportCardId);
 
+        // Verify user is the class sponsor for this report card's class
+        if (!$request->user()->isSponsorOfClass($reportCard->class_id)) {
+            return response()->json(['message' => 'Only the class sponsor can request revisions.'], 403);
+        }
+
         $submission = DB::table('report_card_subject_submissions')
             ->where('id', $submissionId)
             ->where('report_card_id', $reportCardId)
@@ -184,6 +204,11 @@ class SubjectMarkController extends Controller
     public function acceptSubmission(Request $request, $reportCardId, $submissionId)
     {
         $reportCard = ReportCard::findOrFail($reportCardId);
+
+        // Verify user is the class sponsor for this report card's class
+        if (!$request->user()->isSponsorOfClass($reportCard->class_id)) {
+            return response()->json(['message' => 'Only the class sponsor can accept submissions.'], 403);
+        }
 
         $submission = DB::table('report_card_subject_submissions')
             ->where('id', $submissionId)
@@ -234,6 +259,12 @@ class SubjectMarkController extends Controller
             return response()->json([
                 'message' => 'Only draft or rejected report cards can be compiled and submitted.',
             ], 422);
+        }
+
+        // Verify user is the class sponsor for this report card's class
+        $class = \App\Models\ClassModel::with('sponsor')->find($reportCard->class_id);
+        if (!$class || !$class->sponsor || $class->sponsor->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Only the class sponsor can compile and submit report cards for this class.'], 403);
         }
 
         // Merge all subject submissions into report card subject_marks

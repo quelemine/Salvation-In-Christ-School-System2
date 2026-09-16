@@ -14,6 +14,8 @@ class StudentController extends Controller
         $query = Student::with('class')->with('user:id,user_code');
 
         if ($this->isScopedTeacher($request)) {
+            // Teachers only see academic information
+            $query->select('id', 'student_id', 'first_name', 'last_name', 'class_id', 'gender', 'status', 'created_at', 'updated_at');
             $classIds = $this->permittedClassIds($request);
             if (empty($classIds)) return response()->json(['data' => [], 'total' => 0]);
             $query->whereIn('class_id', $classIds);
@@ -22,10 +24,10 @@ class StudentController extends Controller
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhereHas('user', fn ($q) => $q->where('user_code', 'like', "%{$search}%"))
-                    ->orWhere('student_id', 'like', "%{$search}%");
+                $q->where('first_name', 'like', "{$search}%")
+                    ->orWhere('last_name', 'like', "{$search}%")
+                    ->orWhereHas('user', fn ($q) => $q->where('user_code', 'like', "{$search}%"))
+                    ->orWhere('student_id', 'like', "{$search}%");
             });
         }
 
@@ -84,16 +86,50 @@ class StudentController extends Controller
             'approved_by_principal'  => 'nullable|string|max:255',
             'approval_date'          => 'nullable|date',
             'application_status'     => 'nullable|in:pending,approved,rejected',
+            'username'              => 'nullable|string|min:3|max:50|unique:users,username',
+            'password'              => 'nullable|string',
+            'is_active'              => 'nullable|boolean',
+            'role'                  => 'nullable|in:STUDENT,TEACHER,STAFF',
         ]);
 
         // Normalise gender to lowercase
         // Registration numbers are issued by the system and cannot be supplied
         // or changed by clients.
-        $data = $request->except('registration_number');
+        $data = $request->except('registration_number', 'username', 'password', 'is_active', 'role');
         if ($request->user()?->hasRole('student')) $data['user_id'] = $request->user()->id;
         $data['gender'] = strtolower($data['gender'] ?? 'other');
         if (!in_array($data['gender'], ['male', 'female', 'other'])) {
             $data['gender'] = 'other';
+        }
+
+        // Create user account if username and password are provided
+        if ($request->has('username') && $request->has('password')) {
+            $role = $request->input('role', 'STUDENT');
+            $roleSlug = strtolower(str_replace('_', '-', $role));
+            
+            // Generate email if not provided
+            $email = $request->input('email');
+            if (empty($email)) {
+                $email = strtolower($request->first_name . '.' . $request->last_name . '@sicss.edu.lr');
+            }
+            
+            // Check if email already exists and nullify if it does
+            $emailExists = \App\Models\User::where('email', $email)->exists();
+            if ($emailExists) {
+                $email = null;
+            }
+            
+            $user = \App\Models\User::create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email' => $email,
+                'username' => $request->username,
+                'password' => bcrypt($request->password),
+                'role_id' => \App\Models\Role::where('slug', $roleSlug)->first()?->id,
+                'is_active' => $request->is_active ?? true,
+                'two_fa_enabled' => false,
+            ]);
+            $data['user_id'] = $user->id;
         }
 
         // Ensure student_id is unique with proper sequential format
@@ -120,8 +156,17 @@ class StudentController extends Controller
 
     public function show(Request $request, Student $student)
     {
-        if ($this->isScopedTeacher($request) && !in_array($student->class_id, $this->permittedClassIds($request))) {
-            return response()->json(['message' => 'Unauthorized - student is not in your assigned class'], 403);
+        if ($this->isScopedTeacher($request)) {
+            if (!in_array($student->class_id, $this->permittedClassIds($request))) {
+                return response()->json(['message' => 'Unauthorized - student is not in your assigned class'], 403);
+            }
+            // Teachers only see academic information
+            $student = Student::where('id', $student->id)
+                ->select('id', 'student_id', 'first_name', 'last_name', 'class_id', 'gender', 'status', 'created_at', 'updated_at')
+                ->with('class')
+                ->with('user:id,user_code')
+                ->first();
+            return response()->json($student);
         }
         $student->load('class')->load('user:id,user_code');
         return response()->json($student);
@@ -215,7 +260,7 @@ class StudentController extends Controller
 
     private function isScopedTeacher(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['teacher', 'class-sponsor', 'subject-teacher']);
+        return $request->user()->hasRole('teacher');
     }
 
     private function permittedClassIds(Request $request): array
@@ -223,7 +268,7 @@ class StudentController extends Controller
         $teacher = Teacher::where('user_id', $request->user()->id)->first();
         if (!$teacher) return [];
 
-        if ($request->user()->hasRole('subject-teacher')) {
+        if ($request->user()->isSubjectTeacher()) {
             return $teacher->getSubjectClassIds();
         }
 

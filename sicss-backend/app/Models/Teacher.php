@@ -31,6 +31,11 @@ class Teacher extends Model
         'qualifications',
         'specialization',
         'status',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'next_of_kin_name',
+        'next_of_kin_phone',
+        'next_of_kin_relationship',
     ];
 
     protected $casts = [
@@ -113,5 +118,29 @@ class Teacher extends Model
     public function getUserCodeAttribute(): string
     {
         return $this->user?->user_code ?? $this->employee_id;
+    }
+
+    // Teaching responsibility checks
+    public function isSubjectTeacher(): bool
+    {
+        return $this->subjectClassAssignments()->exists();
+    }
+
+    public function isClassSponsor(): bool
+    {
+        return $this->sponsoredClass()->exists();
+    }
+
+    public function hasSubjectAssignment(int $subjectId, int $classId): bool
+    {
+        return $this->subjectClassAssignments()
+            ->where('subject_id', $subjectId)
+            ->where('class_id', $classId)
+            ->exists();
+    }
+
+    public function isSponsorOfClass(int $classId): bool
+    {
+        return $this->sponsoredClass()->where('id', $classId)->exists();
     }
 }

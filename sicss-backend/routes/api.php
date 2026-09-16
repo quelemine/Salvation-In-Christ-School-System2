@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\HelpdeskController;
 use App\Http\Controllers\Api\V1\SubjectMarkController;
+use App\Http\Controllers\Api\V1\TeacherAssignmentController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\StudentPortalController;
 use App\Http\Controllers\Api\V1\TeacherPayrollController;
@@ -242,6 +243,15 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('subjects', SubjectController::class)->except(['index']);
             // Admin can manage students (update, delete, index by default)
             Route::apiResource('students', StudentController::class)->only(['update', 'destroy']);
+
+            // Teacher assignment management - admin only
+            Route::get('/teachers', [TeacherAssignmentController::class, 'allTeachers']);
+            Route::get('/teachers/{teacherId}/assignments', [TeacherAssignmentController::class, 'index']);
+            Route::post('/teachers/{teacherId}/assign-subject', [TeacherAssignmentController::class, 'assignSubject']);
+            Route::delete('/teachers/{teacherId}/subject-assignments/{assignmentId}', [TeacherAssignmentController::class, 'removeSubjectAssignment']);
+            Route::post('/teachers/{teacherId}/assign-class-sponsor', [TeacherAssignmentController::class, 'assignClassSponsor']);
+            Route::delete('/teachers/{teacherId}/class-sponsorship/{classId}', [TeacherAssignmentController::class, 'removeClassSponsorship']);
+            Route::put('/teachers/{teacherId}/system-role', [TeacherAssignmentController::class, 'changeSystemRole']);
         });
 
         // Divisions - index registered here for all authenticated users; CRUD admin-only above
@@ -255,37 +265,38 @@ Route::prefix('v1')->group(function () {
         });
 
         // Report cards - accessible by admin, VPI, class-sponsor, principal, proprietor, and proprietress
-        Route::get('/report-cards', [ReportCardController::class, 'index'])->middleware('role:admin|vice-principal-instruction|class-sponsor|subject-teacher|principal|proprietor|proprietress');
-        Route::get('/report-cards/{id}', [ReportCardController::class, 'show'])->middleware('role:admin|vice-principal-instruction|class-sponsor|principal|proprietor|proprietress');
+        Route::get('/report-cards', [ReportCardController::class, 'index'])->middleware('role:admin|vice-principal-instruction|teacher|principal|proprietor|proprietress');
+        Route::get('/report-cards/{id}', [ReportCardController::class, 'show'])->middleware('role:admin|vice-principal-instruction|teacher|principal|proprietor|proprietress');
         // Create and delete report cards — admin only
-        Route::post('/report-cards', [ReportCardController::class, 'store'])->middleware('role:admin|class-sponsor');
+        Route::post('/report-cards', [ReportCardController::class, 'store'])->middleware('role:admin|teacher');
         Route::delete('/report-cards/{id}', [ReportCardController::class, 'destroy'])->middleware('role:admin');
-        Route::put('/report-cards/{id}', [ReportCardController::class, 'update'])->middleware('role:admin|class-sponsor');
+        Route::put('/report-cards/{id}', [ReportCardController::class, 'update'])->middleware('role:admin|teacher');
         // Submit for approval — class-sponsor and teacher roles only
-        Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval'])->middleware('role:class-sponsor|admin');
-        Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:class-sponsor|admin');
+        Route::post('/report-cards/{id}/submit', [ReportCardController::class, 'submitForApproval'])->middleware('role:teacher|admin');
+        Route::post('/report-cards/{id}/sponsor-approve', [ReportCardController::class, 'sponsorApprove'])->middleware('role:teacher|admin');
         Route::post('/report-cards/{id}/vpi-approve', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
+        Route::post('/report-cards/{id}/principal-approve', [ReportCardController::class, 'principalApprove'])->middleware('role:principal|admin');
         // Comments on report cards — principal, VPI, proprietor, proprietress can add; class-sponsor can add replies
-        Route::post('/report-cards/{id}/comment', [ReportCardController::class, 'addComment'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|class-sponsor');
-        Route::get('/report-cards/{id}/comments', [ReportCardController::class, 'getComments'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|class-sponsor');
+        Route::post('/report-cards/{id}/comment', [ReportCardController::class, 'addComment'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|teacher');
+        Route::get('/report-cards/{id}/comments', [ReportCardController::class, 'getComments'])->middleware('role:admin|principal|vice-principal-instruction|proprietor|proprietress|teacher');
 
         // Subject marks workflow:
         //   Subject teachers submit marks per subject
         //   Class sponsor views all submissions, compiles, and sends to VPI
-        Route::get('/report-cards/{id}/subject-submissions',                                        [SubjectMarkController::class, 'index'])->middleware('role:admin|class-sponsor|subject-teacher');
-        Route::post('/report-cards/{id}/subject-marks',                                             [SubjectMarkController::class, 'submit'])->middleware('role:subject-teacher|class-sponsor|admin');
-        Route::post('/report-cards/{id}/compile-and-submit',                                        [SubjectMarkController::class, 'compile'])->middleware('role:class-sponsor|admin');
+        Route::get('/report-cards/{id}/subject-submissions',                                        [SubjectMarkController::class, 'index'])->middleware('role:admin|teacher');
+        Route::post('/report-cards/{id}/subject-marks',                                             [SubjectMarkController::class, 'submit'])->middleware('role:teacher|admin');
+        Route::post('/report-cards/{id}/compile-and-submit',                                        [SubjectMarkController::class, 'compile'])->middleware('role:teacher|admin');
         // Sponsor feedback on individual subject submissions
-        Route::post('/report-cards/{id}/subject-submissions/{submissionId}/request-revision',       [SubjectMarkController::class, 'requestRevision'])->middleware('role:class-sponsor|admin');
-        Route::post('/report-cards/{id}/subject-submissions/{submissionId}/accept',                 [SubjectMarkController::class, 'acceptSubmission'])->middleware('role:class-sponsor|admin');
+        Route::post('/report-cards/{id}/subject-submissions/{submissionId}/request-revision',       [SubjectMarkController::class, 'requestRevision'])->middleware('role:teacher|admin');
+        Route::post('/report-cards/{id}/subject-submissions/{submissionId}/accept',                 [SubjectMarkController::class, 'acceptSubmission'])->middleware('role:teacher|admin');
         // Subject teacher: fetch all their own pending revision requests across all report cards
-        Route::get('/my-subject-submissions',                                                        [SubjectMarkController::class, 'mySubmissions'])->middleware('role:subject-teacher|class-sponsor|admin');
+        Route::get('/my-subject-submissions',                                                        [SubjectMarkController::class, 'mySubmissions'])->middleware('role:teacher|admin');
 
         // VPI: approve/reject compiled report card
         Route::post('/report-cards/{id}/vpi-review', [ReportCardController::class, 'vpiApprove'])->middleware('role:vice-principal-instruction|admin');
 
         // Teachers, admins, VPI, principal, proprietor, and proprietress can view students
-        Route::middleware('role:admin|teacher|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress')->group(function () {
+        Route::middleware('role:admin|teacher|vice-principal-instruction|principal|proprietor|proprietress')->group(function () {
             Route::get('/students', [StudentController::class, 'index']);
             Route::get('/students/{student}', [StudentController::class, 'show']);
         });
@@ -376,9 +387,6 @@ Route::prefix('v1')->group(function () {
             Route::post('page-columns/{pageKey}/reset', [PageColumnController::class, 'reset']);
             
             Route::apiResource('academic-calendar', AcademicCalendarController::class);
-            Route::apiResource('exams', ExamController::class);
-            Route::post('exams/{id}/publish', [ExamController::class, 'publish']);
-            Route::post('exams/{id}/unpublish', [ExamController::class, 'unpublish']);
             Route::apiResource('timetables', TimetableController::class);
             Route::apiResource('discipline-records', DisciplineRecordController::class);
             Route::post('discipline-records/{id}/resolve', [DisciplineRecordController::class, 'resolve']);
@@ -409,6 +417,13 @@ Route::prefix('v1')->group(function () {
             Route::post('certificates/completion', [CertificateController::class, 'generateCompletionCertificate']);
             Route::post('certificates/achievement', [CertificateController::class, 'generateAchievementCertificate']);
             Route::apiResource('alumni', AlumniController::class);
+        });
+
+        // Exams - accessible by admin and teachers
+        Route::middleware('role:admin|class-sponsor|subject-teacher|vice-principal-instruction|principal|proprietor|proprietress')->group(function () {
+            Route::apiResource('exams', ExamController::class);
+            Route::post('exams/{id}/publish', [ExamController::class, 'publish']);
+            Route::post('exams/{id}/unpublish', [ExamController::class, 'unpublish']);
         });
 
         // Financial reports — finance/admin can send reports; principal/proprietor/proprietress can VIEW only

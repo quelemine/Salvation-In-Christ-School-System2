@@ -15,7 +15,7 @@ class ReportCardController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ReportCard::with(['student.class', 'class', 'teacher']);
+        $query = ReportCard::with(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']);
 
         if ($request->filled('student_id'))    { $query->where('student_id', $request->student_id); }
         if ($request->filled('class_id'))      { $query->where('class_id', $request->class_id); }
@@ -27,7 +27,7 @@ class ReportCardController extends Controller
 
     public function show($id)
     {
-        $reportCard = ReportCard::with(['student.class', 'class', 'teacher'])->find($id);
+        $reportCard = ReportCard::with(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher'])->find($id);
         if (!$reportCard) {
             return response()->json(['message' => 'Report card not found'], 404);
         }
@@ -42,7 +42,7 @@ class ReportCardController extends Controller
             'teacher_id'           => 'nullable|exists:teachers,id',
             'academic_year'        => 'required|string|max:20',
             'grade_level'          => 'required|string|max:100',
-            'subject_marks'        => 'required|array',
+            'subject_marks'        => 'sometimes|array',
             'aggregate'            => 'nullable|numeric',
             'average'              => 'nullable|numeric',
             'rank'                 => 'nullable|integer|min:1',
@@ -56,12 +56,17 @@ class ReportCardController extends Controller
             'closing_date'         => 'nullable|string',
         ]);
 
+        // Prevent class sponsors from setting subject_marks directly during creation
+        if ($request->user()->isClassSponsor()) {
+            unset($data['subject_marks']);
+        }
+
         $reportCard = ReportCard::updateOrCreate(
             ['student_id' => $data['student_id'], 'academic_year' => $data['academic_year']],
             $data
         );
 
-        return response()->json($reportCard->load(['student.class', 'class', 'teacher']), 201);
+        return response()->json($reportCard->load(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']), 201);
     }
 
     public function update(Request $request, $id)
@@ -89,8 +94,13 @@ class ReportCardController extends Controller
             'closing_date'         => 'nullable|string',
         ]);
 
+        // Prevent class sponsors from silently modifying teacher-submitted subject_marks
+        if ($request->user()->isClassSponsor()) {
+            unset($data['subject_marks']);
+        }
+
         $reportCard->update($data);
-        return response()->json($reportCard->load(['student.class', 'class', 'teacher']));
+        return response()->json($reportCard->load(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']));
     }
 
     public function destroy($id)
@@ -194,9 +204,17 @@ class ReportCardController extends Controller
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404);
         }
+
+        // Check if student has outstanding fees
+        if (!$student->fees_cleared) {
+            return response()->json([
+                'message' => 'Report card access denied. Outstanding fees must be cleared.'
+            ], 403);
+        }
+
         $reportCards = ReportCard::where('student_id', $student->id)
             ->where('approval_status', 'approved')
-            ->with(['student.class', 'class', 'teacher'])
+            ->with(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher'])
             ->latest()
             ->get();
         return response()->json($reportCards);
@@ -212,7 +230,7 @@ class ReportCardController extends Controller
             return response()->json(['message' => 'Report card can only be submitted from draft status'], 400);
         }
         $reportCard->update(['approval_status' => 'pending_sponsor']);
-        return response()->json($reportCard->load(['student.class', 'class', 'teacher']));
+        return response()->json($reportCard->load(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']));
     }
 
     public function sponsorApprove(Request $request, $id)
@@ -242,7 +260,7 @@ class ReportCardController extends Controller
                 'vpi_feedback_sent_at' => null,
             ]);
         }
-        return response()->json($reportCard->load(['student.class', 'class', 'teacher']));
+        return response()->json($reportCard->load(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']));
     }
 
     public function vpiApprove(Request $request, $id)
@@ -256,20 +274,64 @@ class ReportCardController extends Controller
         }
 
         $data = $request->validate([
-            'action'           => 'required|in:approve,reject',
-            'rejection_reason' => 'required_if:action,reject|nullable|string',
+            'action'           => 'required|in:approve,reject,request_correction',
+            'rejection_reason' => 'required_if:action,reject,request_correction|nullable|string',
         ]);
 
         if ($data['action'] === 'reject') {
             $reportCard->update(['approval_status' => 'rejected', 'rejection_reason' => $data['rejection_reason']]);
+        } elseif ($data['action'] === 'request_correction') {
+            // Return to Class Sponsor for correction
+            $reportCard->update([
+                'approval_status' => 'pending_sponsor',
+                'rejection_reason' => $data['rejection_reason'],
+                'vpi_review_status' => 'correction_requested',
+            ]);
+            // Notify Class Sponsor
+            $this->notifySponsorVPIFeedback($reportCard, $request->user(), $data['rejection_reason'], $reportCard->student->first_name . ' ' . $reportCard->student->last_name);
         } else {
             $reportCard->update([
-                'approval_status' => 'approved',
+                'approval_status' => 'pending_principal',
                 'vpi_approved_by' => $request->user()->id,
                 'vpi_approved_at' => now(),
             ]);
         }
-        return response()->json($reportCard->load(['student.class', 'class', 'teacher']));
+        return response()->json($reportCard->load(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']));
+    }
+
+    public function principalApprove(Request $request, $id)
+    {
+        $reportCard = ReportCard::find($id);
+        if (!$reportCard) {
+            return response()->json(['message' => 'Report card not found'], 404);
+        }
+        if ($reportCard->approval_status !== 'pending_principal') {
+            return response()->json(['message' => 'Report card is not pending Principal approval. Current status: ' . $reportCard->approval_status], 400);
+        }
+
+        $data = $request->validate([
+            'action'           => 'required|in:approve,reject,request_correction',
+            'rejection_reason' => 'required_if:action,reject,request_correction|nullable|string',
+        ]);
+
+        if ($data['action'] === 'reject') {
+            $reportCard->update(['approval_status' => 'rejected', 'rejection_reason' => $data['rejection_reason']]);
+        } elseif ($data['action'] === 'request_correction') {
+            // Return to Class Sponsor for correction
+            $reportCard->update([
+                'approval_status' => 'pending_sponsor',
+                'rejection_reason' => $data['rejection_reason'],
+            ]);
+            // Notify Class Sponsor (reuse existing notification method)
+            $this->notifySponsorVPIFeedback($reportCard, $request->user(), $data['rejection_reason'], $reportCard->student->first_name . ' ' . $reportCard->student->last_name);
+        } else {
+            $reportCard->update([
+                'approval_status' => 'approved',
+                'principal_approved_by' => $request->user()->id,
+                'principal_approved_at' => now(),
+            ]);
+        }
+        return response()->json($reportCard->load(['student:id,student_id,first_name,last_name,class_id', 'class', 'teacher']));
     }
 
     // ──────────────────────────────────────────────────────────────────────────

@@ -18,16 +18,22 @@ class RoleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'name' => 'TEACHER',
+                'slug' => 'teacher',
+                'description' => 'Base role for all teaching staff. Specific responsibilities (Subject Teacher, Class Sponsor) are managed via assignment tables.',
+                'is_active' => true,
+            ],
+            [
                 'name' => 'CLASS SPONSOR',
                 'slug' => 'class-sponsor',
-                'description' => 'Class sponsor with access to all students in their sponsored class',
-                'is_active' => true,
+                'description' => 'Legacy role - Class sponsor responsibilities are now managed via classes.sponsor_teacher_id. Kept for backward compatibility.',
+                'is_active' => false,
             ],
             [
                 'name' => 'SUBJECT TEACHER',
                 'slug' => 'subject-teacher',
-                'description' => 'Teacher with access only to assigned subjects and class students',
-                'is_active' => true,
+                'description' => 'Legacy role - Subject teacher responsibilities are now managed via teacher_subject_class table. Kept for backward compatibility.',
+                'is_active' => false,
             ],
             [
                 'name' => 'STUDENT',
@@ -82,6 +88,6 @@ class RoleSeeder extends Seeder
 
         // The original broad Teacher role is retained for existing records only.
         // Administrators must reassign those accounts to one of the scoped roles.
-        Role::where('slug', 'teacher')->update(['is_active' => false]);
+        Role::where('slug', 'teacher')->where('name', 'TEACHER')->update(['is_active' => true]);
     }
 }

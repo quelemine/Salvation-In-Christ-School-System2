@@ -20,7 +20,7 @@ class GradeController extends Controller
         } elseif ($this->isTeacher($request)) {
             $teacher = $this->teacherFor($request);
             if (!$teacher) return response()->json(['data' => [], 'total' => 0]);
-            if ($request->user()->hasRole('subject-teacher')) {
+            if ($request->user()->isSubjectTeacher()) {
                 $assignments = $this->assignmentsFor($request);
                 if ($assignments->isEmpty()) return response()->json(['data' => [], 'total' => 0]);
                 $query->where(function ($scope) use ($assignments) {
@@ -75,17 +75,47 @@ class GradeController extends Controller
         if ($this->isTeacher($request) && !$this->canTeach($request, $request->student_id, $request->subject_id)) {
             return response()->json(['message' => 'Unauthorized - subject or student is not assigned to you'], 403);
         }
+
         $data = $request->all();
         if ($this->isTeacher($request)) {
             $teacher = $this->teacherFor($request);
             if (!$teacher) return response()->json(['message' => 'No teacher profile is linked to this account.'], 403);
             $data['teacher_id'] = $teacher->id;
         }
-        $grade = new Grade($data);
-        $grade->grade = $grade->calculateGradeLetter($request->score);
-        $grade->save();
+
+        // Calculate grade letter from score
+        $data['grade'] = (new Grade())->calculateGradeLetter($request->score);
+
+        // Set default approval_status to draft for new grades
+        if (!isset($data['approval_status'])) {
+            $data['approval_status'] = 'draft';
+        }
+
+        // Check if existing grade is not in draft status (prevent updating submitted grades)
+        $existingGrade = Grade::where('student_id', $request->student_id)
+            ->where('subject_id', $request->subject_id)
+            ->where('term', $request->term)
+            ->where('academic_year', $request->academic_year)
+            ->first();
+
+        if ($existingGrade && $existingGrade->approval_status !== 'draft' && $this->isTeacher($request)) {
+            return response()->json(['message' => 'Submitted grades cannot be changed until returned for revision.'], 422);
+        }
+
+        // Use updateOrCreate for atomic upsert behavior
+        $grade = Grade::updateOrCreate(
+            [
+                'student_id' => $request->student_id,
+                'subject_id' => $request->subject_id,
+                'term' => $request->term,
+                'academic_year' => $request->academic_year,
+            ],
+            $data
+        );
+
         $grade->load('student.user:id,user_code', 'subject', 'teacher');
-        return response()->json($grade, 201);
+        $statusCode = $grade->wasRecentlyCreated ? 201 : 200;
+        return response()->json($grade, $statusCode);
     }
 
     public function show(Request $request, Grade $grade)
@@ -265,7 +295,7 @@ class GradeController extends Controller
 
     private function isTeacher(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['teacher', 'class-sponsor', 'subject-teacher']);
+        return $request->user()->hasRole('teacher');
     }
 
     private function teacherFor(Request $request): ?Teacher
@@ -283,7 +313,7 @@ class GradeController extends Controller
     {
         $teacher = $this->teacherFor($request);
         if (!$teacher) return false;
-        if (!$request->user()->hasRole('subject-teacher')) {
+        if (!$request->user()->isSubjectTeacher()) {
             return \App\Models\Student::whereKey($studentId)->whereIn('class_id', $this->classIdsFor($teacher))->exists();
         }
         return TeacherSubjectClass::where('teacher_id', $teacher->id)->where('subject_id', $subjectId)

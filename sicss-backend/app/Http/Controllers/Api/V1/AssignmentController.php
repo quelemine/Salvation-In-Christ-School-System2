@@ -14,7 +14,7 @@ class AssignmentController extends Controller
     {
         $query = Assignment::with('subject', 'class', 'teacher');
 
-        if ($request->user()->hasRole('subject-teacher')) {
+        if ($request->user()->isSubjectTeacher()) {
             $teacher = $this->teacherFor($request);
             $pairs = $teacher ? TeacherSubjectClass::where('teacher_id', $teacher->id)->get() : collect();
             if ($pairs->isEmpty()) return response()->json(['data' => [], 'total' => 0]);
@@ -55,11 +55,11 @@ class AssignmentController extends Controller
             'status' => 'in:draft,published,closed',
         ]);
 
-        if ($request->user()->hasRole('subject-teacher') && !$this->canTeach($request, $request->class_id, $request->subject_id)) {
+        if ($request->user()->isSubjectTeacher() && !$this->canTeach($request, $request->class_id, $request->subject_id)) {
             return response()->json(['message' => 'Unauthorized - subject is not assigned to this class'], 403);
         }
         $data = $request->all();
-        if ($request->user()->hasRole('subject-teacher')) $data['teacher_id'] = $this->teacherFor($request)->id;
+        if ($request->user()->isSubjectTeacher()) $data['teacher_id'] = $this->teacherFor($request)->id;
         $assignment = Assignment::create($data);
         $assignment->load('subject', 'class', 'teacher');
         return response()->json($assignment, 201);
@@ -67,7 +67,7 @@ class AssignmentController extends Controller
 
     public function show(Request $request, Assignment $assignment)
     {
-        if ($request->user()->hasRole('subject-teacher') && !$this->canTeach($request, $assignment->class_id, $assignment->subject_id)) return response()->json(['message' => 'Unauthorized'], 403);
+        if ($request->user()->isSubjectTeacher() && !$this->canTeach($request, $assignment->class_id, $assignment->subject_id)) return response()->json(['message' => 'Unauthorized'], 403);
         $assignment->load('subject', 'class', 'teacher');
         return response()->json($assignment);
     }
@@ -84,9 +84,9 @@ class AssignmentController extends Controller
             'status' => 'in:draft,published,closed',
         ]);
 
-        if ($request->user()->hasRole('subject-teacher') && !$this->canTeach($request, $request->class_id, $request->subject_id)) return response()->json(['message' => 'Unauthorized'], 403);
+        if ($request->user()->isSubjectTeacher() && !$this->canTeach($request, $request->class_id, $request->subject_id)) return response()->json(['message' => 'Unauthorized'], 403);
         $data = $request->all();
-        if ($request->user()->hasRole('subject-teacher')) $data['teacher_id'] = $this->teacherFor($request)->id;
+        if ($request->user()->isSubjectTeacher()) $data['teacher_id'] = $this->teacherFor($request)->id;
         $assignment->update($data);
         $assignment->load('subject', 'class', 'teacher');
         return response()->json($assignment);
@@ -94,7 +94,7 @@ class AssignmentController extends Controller
 
     public function destroy(Request $request, Assignment $assignment)
     {
-        if ($request->user()->hasRole('subject-teacher') && !$this->canTeach($request, $assignment->class_id, $assignment->subject_id)) return response()->json(['message' => 'Unauthorized'], 403);
+        if ($request->user()->isSubjectTeacher() && !$this->canTeach($request, $assignment->class_id, $assignment->subject_id)) return response()->json(['message' => 'Unauthorized'], 403);
         $assignment->delete();
         return response()->json(['message' => 'Assignment deleted successfully']);
     }
