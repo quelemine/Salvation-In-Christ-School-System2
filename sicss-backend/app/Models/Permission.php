@@ -3,12 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permission extends Model
 {
     protected $fillable = [
-        'role_id',
         'name',
         'slug',
         'description',
@@ -19,8 +18,8 @@ class Permission extends Model
         'is_active' => 'boolean',
     ];
 
-    public function role(): BelongsTo
+    public function roles(): BelongsToMany
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsToMany(Role::class, 'permission_role');
     }
 }
