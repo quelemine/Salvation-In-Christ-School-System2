@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSettingsStore } from '../store/settingsStore';
+import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, LoadingState } from '../components/ui';
 
@@ -48,13 +49,20 @@ interface Student {
 export default function StudentDetail() {
   const { studentId: paramStudentId } = useParams<{ studentId: string }>();
   const { settings } = useSettingsStore();
+  const { user } = useAuthStore();
   const { branding, system } = settings;
-  
+
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showIdCard, setShowIdCard] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Check if user is a teacher (any teacher role)
+  const isTeacher = user?.role?.slug === 'teacher' ||
+                    user?.role?.slug === 'subject-teacher' ||
+                    user?.role?.slug === 'class-sponsor' ||
+                    user?.role?.slug === 'class-teacher';
 
   useEffect(() => {
     if (paramStudentId) {
@@ -135,12 +143,16 @@ export default function StudentDetail() {
           <p className="mt-1 text-sm text-slate-500">Student ID: {studentId}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handlePrintProfile} variant="secondary">
-            🖨️ Print Profile
-          </Button>
-          <Button onClick={handlePrintIdCard} variant="secondary">
-            🆔 Print ID Card
-          </Button>
+          {!isTeacher && (
+            <>
+              <Button onClick={handlePrintProfile} variant="secondary">
+                🖨️ Print Profile
+              </Button>
+              <Button onClick={handlePrintIdCard} variant="secondary">
+                🆔 Print ID Card
+              </Button>
+            </>
+          )}
           <Link to="/students">
             <Button variant="secondary">← Back to List</Button>
           </Link>
@@ -252,9 +264,9 @@ export default function StudentDetail() {
       <Tabs className="no-print">
         <TabsList>
           <TabsTrigger value="overview" activeValue={activeTab} onClick={setActiveTab}>Overview</TabsTrigger>
-          <TabsTrigger value="personal" activeValue={activeTab} onClick={setActiveTab}>Personal Information</TabsTrigger>
-          <TabsTrigger value="guardian" activeValue={activeTab} onClick={setActiveTab}>Guardian</TabsTrigger>
-          <TabsTrigger value="health" activeValue={activeTab} onClick={setActiveTab}>Health & Emergency</TabsTrigger>
+          {!isTeacher && <TabsTrigger value="personal" activeValue={activeTab} onClick={setActiveTab}>Personal Information</TabsTrigger>}
+          {!isTeacher && <TabsTrigger value="guardian" activeValue={activeTab} onClick={setActiveTab}>Guardian</TabsTrigger>}
+          {!isTeacher && <TabsTrigger value="health" activeValue={activeTab} onClick={setActiveTab}>Health & Emergency</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" activeValue={activeTab}>
@@ -273,21 +285,25 @@ export default function StudentDetail() {
                     <span className="text-slate-500">Student ID</span>
                     <span className="font-semibold text-slate-900 font-mono">{studentId}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Date of Birth</span>
-                    <span className="font-semibold text-slate-900">{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : '—'}</span>
-                  </div>
+                  {!isTeacher && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Date of Birth</span>
+                        <span className="font-semibold text-slate-900">{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Phone</span>
+                        <span className="font-semibold text-slate-900">{student.phone || '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Address</span>
+                        <span className="font-semibold text-slate-900">{student.address || '—'}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-slate-500">Gender</span>
                     <span className="font-semibold text-slate-900 capitalize">{student.gender || '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Phone</span>
-                    <span className="font-semibold text-slate-900">{student.phone || '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Address</span>
-                    <span className="font-semibold text-slate-900">{student.address || '—'}</span>
                   </div>
                 </div>
               </CardContent>
@@ -306,10 +322,12 @@ export default function StudentDetail() {
                     <span className="text-slate-500">Academic Year</span>
                     <span className="font-semibold text-slate-900">{system.academicYear}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Enrollment Date</span>
-                    <span className="font-semibold text-slate-900">{student.admission_date ? new Date(student.admission_date).toLocaleDateString() : '—'}</span>
-                  </div>
+                  {!isTeacher && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Enrollment Date</span>
+                      <span className="font-semibold text-slate-900">{student.admission_date ? new Date(student.admission_date).toLocaleDateString() : '—'}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-slate-500">Status</span>
                     <span className="font-semibold text-slate-900 capitalize">{student.status || 'Active'}</span>
@@ -317,31 +335,33 @@ export default function StudentDetail() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Guardian Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Guardian Name</span>
-                    <span className="font-semibold text-slate-900">{student.parent_guardian_name || student.father_name || student.mother_name || '—'}</span>
+            {!isTeacher && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Guardian Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Guardian Name</span>
+                      <span className="font-semibold text-slate-900">{student.parent_guardian_name || student.father_name || student.mother_name || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Relationship</span>
+                      <span className="font-semibold text-slate-900">Parent/Guardian</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Phone</span>
+                      <span className="font-semibold text-slate-900">{student.parent_guardian_phone || student.father_contact || student.mother_contact || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Email</span>
+                      <span className="font-semibold text-slate-900">{student.parent_guardian_email || '—'}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Relationship</span>
-                    <span className="font-semibold text-slate-900">Parent/Guardian</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Phone</span>
-                    <span className="font-semibold text-slate-900">{student.parent_guardian_phone || student.father_contact || student.mother_contact || '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Email</span>
-                    <span className="font-semibold text-slate-900">{student.parent_guardian_email || '—'}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardHeader>
                 <CardTitle>Attendance Summary</CardTitle>
@@ -398,7 +418,6 @@ export default function StudentDetail() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <InfoCard label="Class" value={student.class?.name || '—'} />
               <InfoCard label="Previous School" value={student.previous_school || '—'} />
-              <InfoCard label="Admission Date" value={student.admission_date ? new Date(student.admission_date).toLocaleDateString() : '—'} />
               <InfoCard label="Application Status" value={student.application_status || '—'} />
               <InfoCard label="Registration Number" value={student.registration_number || '—'} />
               <InfoCard label="Current Status" value={student.status || '—'} />
