@@ -1,5 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
-import api from '../../services/api';
+import { useRef, useState } from 'react';
 
 // ── Shared inline styles ──────────────────────────────────────────────────────
 export const sec: React.CSSProperties = {
@@ -31,8 +30,6 @@ const LIBERIAN_COUNTIES = [
   'Montserrado', 'Nimba', 'River Cess', 'River Gee', 'Sinoe',
 ];
 
-type ClassOption = { id: number; name: string; section?: string };
-
 interface Props {
   data: Record<string, string>;
   onChange: (key: string, value: string) => void;
@@ -40,24 +37,13 @@ interface Props {
   onPhotoChange: (url: string) => void;
   readOnly?: boolean;
   isNewStudent?: boolean;          // true = show document upload section
-  classes?: ClassOption[];
   missingFields?: string[];
 }
 
-export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoChange, readOnly, isNewStudent = true, classes: classesProp, missingFields = [] }: Props) {
+export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoChange, readOnly, isNewStudent = true, missingFields = [] }: Props) {
   const photoRef   = useRef<HTMLInputElement>(null);
   const docRef     = useRef<HTMLInputElement>(null);
-  const [classes, setClasses] = useState<ClassOption[]>(classesProp ?? []);
   const [docName, setDocName] = useState<string>(data['prev_doc_name'] ?? '');
-
-  useEffect(() => {
-    if (classesProp) { setClasses(classesProp); return; }
-    if (readOnly) return;
-    api.get('/classes').then((res) => {
-      const raw = res.data;
-      setClasses(Array.isArray(raw) ? raw : raw.data ?? []);
-    }).catch(() => {});
-  }, [classesProp, readOnly]);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 
@@ -12,10 +11,6 @@ export default function BlankApplicationForm() {
 
   const isStudentRole = roleType === 'student';
   const isTeacherRole = roleType === 'teacher';
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white">

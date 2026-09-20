@@ -115,13 +115,6 @@ export default function AdminStaffUsers() {
     window.print();
   };
 
-  const openAdd = () => {
-    setEditingId(null);
-    setFormData(emptyForm);
-    setError('');
-    setIsModalOpen(true);
-  };
-
   const openEdit = (user: AdminStaffUser) => {
     setEditingId(user.id);
     setFormData({
