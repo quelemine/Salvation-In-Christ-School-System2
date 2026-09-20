@@ -70,9 +70,47 @@ export default function UnifiedApplicationForm() {
   const [accountActive, setAccountActive] = useState(true);
   const [userPhone, setUserPhone] = useState('');
   const [selectedRole, setSelectedRole] = useState(roleParam || 'student');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   const isStudentRole = selectedRole === 'student';
   const isTeacherRole = selectedRole === 'teacher';
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    try {
+      const endpoint = isStudentRole ? '/students' : '/teachers';
+      const res = await api.get(`${endpoint}?search=${query}`);
+      const results = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      setSearchResults(results);
+      setShowSearchResults(true);
+    } catch {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  const selectSearchResult = (result: any) => {
+    setSearchQuery('');
+    setShowSearchResults(false);
+    setSearchResults([]);
+    // Navigate to edit mode with the selected ID
+    window.location.href = `/application?id=${result.id}&role=${selectedRole}`;
+  };
+
+  // Clear search results when role changes
+  useEffect(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+  }, [selectedRole]);
 
   useEffect(() => {
     api.get('/classes').then((res) => {
@@ -133,9 +171,9 @@ export default function UnifiedApplicationForm() {
           photo_url:               s.photo_url || '',
           email:                  s.email ?? '',
           phone:                  s.phone ?? '',
-          qualification:          s.qualification ?? '',
-          subject_specialization:  s.subject_specialization ?? '',
-          joining_date:            s.joining_date?.slice?.(0, 10) ?? '',
+          qualification:          s.qualification ?? s.qualifications ?? '',
+          subject_specialization:  s.subject_specialization ?? s.specialization ?? '',
+          joining_date:            s.hire_date?.slice?.(0, 10) ?? s.joining_date?.slice?.(0, 10) ?? '',
           employment_type:        s.employment_type ?? '',
           salary_structure_id:    s.salary_structure_id ?? '',
           employee_id:            s.employee_id ?? '',
@@ -281,8 +319,8 @@ export default function UnifiedApplicationForm() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setSaving(true);
     setMsg(null);
 
@@ -326,9 +364,18 @@ export default function UnifiedApplicationForm() {
       payload.specialization = form.subject_specialization;
       payload.hire_date = form.joining_date;
       payload.salary_structure_id = form.salary_structure_id;
-      payload.employee_id = form.employee_id;
+      // Include employee_id when editing
+      if (editId) {
+        payload.employee_id = form.employee_id;
+      }
       payload.credential_image_path = qualificationDocumentUrl;
       payload.role = isTeacherRole ? 'TEACHER' : 'STAFF';
+      // Include emergency contact and next of kin fields
+      payload.emergency_contact_name = form.emergency_contact_name;
+      payload.emergency_contact_phone = form.emergency_contact_phone;
+      payload.next_of_kin_name = form.next_of_kin_name;
+      payload.next_of_kin_phone = form.next_of_kin_phone;
+      payload.next_of_kin_relationship = form.next_of_kin_relationship;
     }
 
     if (createUserAccount) {
@@ -388,6 +435,51 @@ export default function UnifiedApplicationForm() {
           />
         </div>
       </div>
+
+      {/* Search Bar for Admin */}
+      {isAdmin && !editId && (
+        <div className="relative">
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder={`Search ${isStudentRole ? 'students' : 'teachers'} by name, ID, or email...`}
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+          
+          {/* Search Results Dropdown */}
+          {showSearchResults && searchResults.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+              <div className="max-h-96 overflow-y-auto">
+                {searchResults.map((result) => (
+                  <button
+                    key={result.id}
+                    type="button"
+                    onClick={() => selectSearchResult(result)}
+                    className="w-full px-4 py-3 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                  >
+                    <div className="font-medium text-slate-900">
+                      {result.first_name} {result.last_name}
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      {isStudentRole ? `ID: ${result.student_id}` : `ID: ${result.employee_id}`}
+                      {result.email && ` • ${result.email}`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {showSearchResults && searchResults.length === 0 && searchQuery.length >= 2 && (
+            <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
+              No results found for "{searchQuery}"
+            </div>
+          )}
+        </div>
+      )}
 
       {msg && (
         <div className={`rounded-lg px-4 py-3 ${msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -537,10 +629,17 @@ export default function UnifiedApplicationForm() {
                         <Input
                           type="text"
                           value={form.phone}
-                          onChange={(e) => set('phone', e.target.value)}
+                          onChange={(e) => {
+                            // Only allow numbers and + symbol
+                            const value = e.target.value.replace(/[^0-9+]/g, '');
+                            set('phone', value);
+                          }}
                           placeholder="+231..."
                           className={missingFields.includes('phone') ? 'border-red-500' : ''}
                         />
+                        {form.phone && form.phone.length < 10 && (
+                          <p className="mt-1 text-xs text-rose-600">Please enter a complete phone number</p>
+                        )}
                       </div>
 
                       <div>
@@ -733,10 +832,17 @@ export default function UnifiedApplicationForm() {
                         </label>
                         <Input
                           value={form.father_contact}
-                          onChange={(e) => set('father_contact', e.target.value)}
+                          onChange={(e) => {
+                            // Only allow numbers and + symbol
+                            const value = e.target.value.replace(/[^0-9+]/g, '');
+                            set('father_contact', value);
+                          }}
                           placeholder="+231..."
                           className={missingFields.includes('father_contact') ? 'border-red-500' : ''}
                         />
+                        {form.father_contact && form.father_contact.length < 10 && (
+                          <p className="mt-1 text-xs text-rose-600">Please enter a complete phone number</p>
+                        )}
                       </div>
 
                       <div>
@@ -745,9 +851,16 @@ export default function UnifiedApplicationForm() {
                         </label>
                         <Input
                           value={form.mother_contact}
-                          onChange={(e) => set('mother_contact', e.target.value)}
+                          onChange={(e) => {
+                            // Only allow numbers and + symbol
+                            const value = e.target.value.replace(/[^0-9+]/g, '');
+                            set('mother_contact', value);
+                          }}
                           placeholder="+231..."
                         />
+                        {form.mother_contact && form.mother_contact.length < 10 && (
+                          <p className="mt-1 text-xs text-rose-600">Please enter a complete phone number</p>
+                        )}
                       </div>
 
                       <div className="md:col-span-2">
@@ -843,10 +956,17 @@ export default function UnifiedApplicationForm() {
                       </label>
                       <Input
                         value={form.emergency_contact_phone}
-                        onChange={(e) => set('emergency_contact_phone', e.target.value)}
+                        onChange={(e) => {
+                          // Only allow numbers and + symbol
+                          const value = e.target.value.replace(/[^0-9+]/g, '');
+                          set('emergency_contact_phone', value);
+                        }}
                         placeholder="+231..."
                         className={missingFields.includes('emergency_contact_phone') ? 'border-red-500' : ''}
                       />
+                      {form.emergency_contact_phone && form.emergency_contact_phone.length < 10 && (
+                        <p className="mt-1 text-xs text-rose-600">Please enter a complete phone number</p>
+                      )}
                     </div>
 
                     {!isStudentRole && (
@@ -868,9 +988,16 @@ export default function UnifiedApplicationForm() {
                           </label>
                           <Input
                             value={form.next_of_kin_phone}
-                            onChange={(e) => set('next_of_kin_phone', e.target.value)}
+                            onChange={(e) => {
+                              // Only allow numbers and + symbol
+                              const value = e.target.value.replace(/[^0-9+]/g, '');
+                              set('next_of_kin_phone', value);
+                            }}
                             placeholder="+231..."
                           />
+                          {form.next_of_kin_phone && form.next_of_kin_phone.length < 10 && (
+                            <p className="mt-1 text-xs text-rose-600">Please enter a complete phone number</p>
+                          )}
                         </div>
 
                         <div className="md:col-span-2">
@@ -1177,7 +1304,7 @@ Status: ${accountActive ? 'Active' : 'Inactive'}
                   Next →
                 </Button>
               ) : (
-                <Button type="button" onClick={handleSubmit} disabled={saving} className="bg-blue-600 text-white hover:bg-blue-700">
+                <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="bg-blue-600 text-white hover:bg-blue-700">
                   {saving ? 'Submitting...' : editId ? 'Update Application' : 'Submit Application'}
                 </Button>
               )}
