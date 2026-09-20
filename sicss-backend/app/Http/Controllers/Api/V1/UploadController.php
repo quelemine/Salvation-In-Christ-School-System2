@@ -65,12 +65,29 @@ class UploadController extends Controller
 
     private function uploadImage(Request $request, string $directory)
     {
-        $request->validate([
-            'file' => 'required|file|image|max:5120|mimes:png,jpg,jpeg,webp',
-            'type' => 'required|in:profile,credential',
-        ]);
+        $type = $request->input('type');
+        
+        // For profile photos, only allow images
+        if ($type === 'profile') {
+            $request->validate([
+                'file' => 'required|file|image|max:5120|mimes:png,jpg,jpeg,webp',
+                'type' => 'required|in:profile,credential',
+            ]);
+        } 
+        // For credentials, allow both images and PDFs
+        else if ($type === 'credential') {
+            $request->validate([
+                'file' => 'required|file|max:5120|mimes:png,jpg,jpeg,webp,pdf',
+                'type' => 'required|in:profile,credential',
+            ]);
+        } else {
+            $request->validate([
+                'file' => 'required|file|image|max:5120|mimes:png,jpg,jpeg,webp',
+                'type' => 'required|in:profile,credential',
+            ]);
+        }
 
-        $path = $request->file('file')->store($directory . '/' . $request->input('type'), 'public');
+        $path = $request->file('file')->store($directory . '/' . $type, 'public');
 
         return response()->json([
             'path' => $path,
