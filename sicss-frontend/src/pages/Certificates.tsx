@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useAuthStore } from '../store/authStore';
 import { certificateService } from '../services/certificateService';
 import { Button, Card, CardContent } from '../components/ui';
 
 export default function Certificates() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const [certificateType, setCertificateType] = useState<'completion' | 'achievement'>('completion');
   const [studentId, setStudentId] = useState<string>('');
   const [academicYear, setAcademicYear] = useState<string>(new Date().getFullYear().toString());

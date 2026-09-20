@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useAuthStore } from '../store/authStore';
 import { bulkImportService, type ImportResult } from '../services/bulkImportService';
-import { Button, Card, CardContent } from '../components/ui';
+import { Button, Card, CardContent, LoadingState } from '../components/ui';
 
 export default function BulkImportExport() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role?.slug === 'admin';
   const [activeTab, setActiveTab] = useState<'import' | 'export'>('import');
   const [importType, setImportType] = useState<'students' | 'teachers'>('students');
   const [file, setFile] = useState<File | null>(null);

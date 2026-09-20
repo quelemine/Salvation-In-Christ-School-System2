@@ -1,8 +1,9 @@
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 
 const LIBERIAN_COUNTIES = ['Bomi', 'Bong', 'Gbarpolu', 'Grand Bassa', 'Grand Cape Mount', 'Grand Gedeh', 'Grand Kru', 'Lofa', 'Margibi', 'Maryland', 'Montserrado', 'Nimba', 'River Gee', 'River Cess', 'Sinoe'];
-const GRADES = ['ABC', 'K1', 'K2', 'Nursery 1', 'Nursery 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+const GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 const QUALIFICATIONS = ['High School Diploma', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD', 'Teaching Certificate', 'Vocational Training'];
 
 export default function BlankApplicationForm() {
@@ -11,7 +12,10 @@ export default function BlankApplicationForm() {
 
   const isStudentRole = roleType === 'student';
   const isTeacherRole = roleType === 'teacher';
-
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white">
@@ -195,4 +199,3 @@ export default function BlankApplicationForm() {
     </div>
   );
 }
-

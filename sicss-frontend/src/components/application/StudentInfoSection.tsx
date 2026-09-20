@@ -47,7 +47,7 @@ interface Props {
 export default function StudentInfoSection({ data, onChange, photoUrl, onPhotoChange, readOnly, isNewStudent = true, classes: classesProp, missingFields = [] }: Props) {
   const photoRef   = useRef<HTMLInputElement>(null);
   const docRef     = useRef<HTMLInputElement>(null);
-  const [_classes, setClasses] = useState<ClassOption[]>(classesProp ?? []);
+  const [classes, setClasses] = useState<ClassOption[]>(classesProp ?? []);
   const [docName, setDocName] = useState<string>(data['prev_doc_name'] ?? '');
 
   useEffect(() => {
