@@ -139,7 +139,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     logoUrl: '',
   },
   theme: {
-    accentColor: 'cyan',
+    accentColor: 'blue',
     sidebarStyle: 'dark',
     fontSize: 'normal',
     density: 'comfortable',

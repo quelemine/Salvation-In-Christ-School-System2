@@ -339,7 +339,7 @@ export default function HelpDeskAdmin() {
                       <p className="text-xs text-slate-400">Your reply will be marked as a staff response.</p>
                       <p className="text-[10px] text-slate-400">Changing status above also auto-notifies the user with a message.</p>
                     </div>
-                    <Button type="submit" disabled={sending || !reply.trim()} variant="primary" className="text-sm text-white">
+                    <Button type="submit" disabled={sending || !reply.trim()} variant="primary" className="text-sm bg-blue-600 hover:bg-blue-700 text-white">
                       {sending ? 'Sending…' : '🛠 Send response'}
                     </Button>
                   </div>

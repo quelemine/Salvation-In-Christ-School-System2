@@ -150,7 +150,7 @@ function NewTicketForm({ onCreated }: { onCreated: (t: Ticket) => void }) {
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" onClick={() => setOpen(false)} variant="secondary">Cancel</Button>
-        <Button type="submit" disabled={saving}>
+        <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
           {saving ? 'Submitting…' : '🎫 Submit ticket'}
         </Button>
       </div>
@@ -238,15 +238,16 @@ export default function HelpDesk() {
         ) : (
           <div className="divide-y divide-slate-100">
             {filtered.map((t) => {
-              const sm = STATUS_META[t.status];
-              const pm = PRIORITY_META[t.priority];
+              const sm = STATUS_META[t.status as keyof typeof STATUS_META] || { label: t.status || 'Unknown', badgeVariant: 'default' as const, dot: 'bg-slate-400' };
+              const pm = PRIORITY_META[t.priority as keyof typeof PRIORITY_META] || { label: t.priority || 'Unknown', badgeVariant: 'default' as const };
+              const categoryIcon = CATEGORY_ICONS[t.category as keyof typeof CATEGORY_ICONS] || '💬';
               const unread = t.replies.filter((r) => r.is_staff_reply).length;
               return (
                 <button key={t.id}
                   className="w-full px-5 py-4 text-left hover:bg-slate-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <span className="text-xl mt-0.5 shrink-0">{CATEGORY_ICONS[t.category]}</span>
+                      <span className="text-xl mt-0.5 shrink-0">{categoryIcon}</span>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5 mb-1">
                           <Badge variant={sm.badgeVariant}>

@@ -137,7 +137,7 @@ export default function Assignments() {
           <p className="text-xs font-bold uppercase tracking-widest text-blue-700">Teaching tools</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Assignments</h1>
         </div>
-        <Button onClick={openAdd}>
+        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white">
           + Add assignment
         </Button>
       </div>

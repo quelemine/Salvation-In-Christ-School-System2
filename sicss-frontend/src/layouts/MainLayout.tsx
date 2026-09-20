@@ -237,7 +237,7 @@ export default function MainLayout() {
         { name: 'Main', items: commonItems },
         { name: 'My Students', items: [{ path: '/students', label: 'My students', icon: '👨‍🎓' }] },
         { name: 'Attendance', items: [{ path: '/attendance', label: 'Student attendance', icon: '📋' }] },
-        { name: 'Academics', items: [{ path: '/comments', label: 'Comments', icon: '💬' }, { path: '/report-cards', label: 'Report cards', icon: '🎓' }] },
+        { name: 'Academics', items: [{ path: '/comments', label: 'Comments', icon: '💬' }, { path: '/report-cards', label: 'Report cards', icon: '🎓' }, { path: '/exams', label: 'Exams', icon: '📋' }] },
         { name: 'Teaching', items: teacherSpecificItems },
         { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
         { name: 'Help', items: helpItems },
@@ -248,7 +248,7 @@ export default function MainLayout() {
       return [
         { name: 'Main', items: commonItems },
         { name: 'My Students', items: [{ path: '/students', label: 'My students', icon: '👨‍🎓' }] },
-        { name: 'Academics', items: [{ path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }] },
+        { name: 'Academics', items: [{ path: '/grades', label: 'Grades', icon: '📝' }, { path: '/assignments', label: 'Assignments', icon: '📄' }, { path: '/exams', label: 'Exams', icon: '📋' }] },
         { name: 'Teaching', items: teacherSpecificItems },
         { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
         { name: 'Help', items: helpItems },
@@ -290,6 +290,7 @@ export default function MainLayout() {
         { name: 'People', items: [{ path: '/students', label: 'Students', icon: '👨‍🎓' }] },
         { name: 'Attendance', items: [{ path: '/attendance', label: 'Student attendance', icon: '📋' }] },
         { name: 'Academics', items: academicsItems },
+        { name: 'Teaching', items: teacherSpecificItems },
         { name: 'Finance', items: [{ path: '/fee-structure', label: 'Fee structure', icon: '📋' }] },
         { name: 'Help', items: helpItems },
       ];
@@ -306,10 +307,10 @@ export default function MainLayout() {
 
   const allowedPaths: Record<string, string[]> = {
     admin:          [...allMenuItems.map((item) => item.path), '/settings', '/security', '/change-password', '/announcements', '/helpdesk', '/helpdesk-admin', '/users/account/student', '/teacher-application', '/application'],
-    teacher:        ['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/grades', '/assignments', '/comments'],
-    'class-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards'],
-    'class-sponsor':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards'],
-    'subject-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/grades', '/assignments', '/subject-marks'],
+    teacher:        ['/dashboard', '/profile', '/helpdesk', '/students', '/attendance', '/grades', '/assignments', '/comments', '/report-cards', '/subject-marks', '/class-sponsor-portal', '/exams'],
+    'class-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards', '/exams'],
+    'class-sponsor':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/attendance', '/comments', '/class-sponsor-portal', '/report-cards', '/exams'],
+    'subject-teacher':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/students', '/grades', '/assignments', '/subject-marks', '/class-sponsor-portal', '/exams'],
     finance:        ['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
     'finance-staff':['/dashboard', '/profile', '/helpdesk', '/fee-structure', '/payments', '/receipts', '/reports', '/teacher-attendance'],
     'vice-principal-instruction': ['/dashboard', '/profile', '/helpdesk', '/report-cards', '/divisions', '/classes', '/subjects', '/teachers', '/students', '/grades', '/attendance', '/teacher-attendance', '/announcements'],
