@@ -62,11 +62,45 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|string|email',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        // Check if the input is an email or username
+        $loginField = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        
+        // Find user by email or username to check if they exist
+        $user = User::where($loginField, $request->email)->first();
+        
+        if (!$user) {
+            ActivityLog::create([
+                'event' => 'login_failed',
+                'user_email' => $request->input('email'),
+                'description' => 'User not found: '.$request->input('email'),
+                ...$this->deviceDetails($request),
+            ]);
+            Log::warning('User not found', [
+                'email' => $request->input('email'),
+                'ip' => $request->ip(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => ['Invalid credentials. If you forgot your password, you can reset it using the Forgot Password option.'],
+            ]);
+        }
+        
+        // Check if user is active before attempting authentication
+        if (!$user->is_active) {
+            ActivityLog::create([
+                'event' => 'login_failed',
+                'user_email' => $request->input('email'),
+                'description' => 'Account inactive for user: '.$user->username,
+                ...$this->deviceDetails($request),
+            ]);
+            return response()->json(['message' => 'Account is inactive'], 403);
+        }
+        
+        if (!Auth::attempt([$loginField => $request->email, 'password' => $request->password])) {
             ActivityLog::create([
                 'event' => 'login_failed',
                 'user_email' => $request->input('email'),
@@ -79,15 +113,11 @@ class AuthController extends Controller
             ]);
 
             throw ValidationException::withMessages([
-                'email' => ['Invalid email or password. If you forgot your password, you can reset it using the Forgot Password option.'],
+                'email' => ['Invalid credentials. If you forgot your password, you can reset it using the Forgot Password option.'],
             ]);
         }
 
         $user = Auth::user()->load('role');
-        
-        if (!$user->is_active) {
-            return response()->json(['message' => 'Account is inactive'], 403);
-        }
 
         // Check if user requires OTP verification
         if ($this->otpService->requiresOtp($user)) {

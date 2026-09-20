@@ -91,6 +91,7 @@ export default function Profile() {
     first_name: user?.first_name || '',
     last_name:  user?.last_name  || '',
     email:      user?.email      || '',
+    username:   user?.username   || '',
     phone:      user?.phone      || '',
     address:    user?.address    || '',
   });
@@ -101,10 +102,11 @@ export default function Profile() {
       first_name: user?.first_name || '',
       last_name:  user?.last_name  || '',
       email:      user?.email      || '',
+      username:   user?.username   || '',
       phone:      user?.phone      || '',
       address:    user?.address    || '',
     });
-  }, [user?.first_name, user?.last_name, user?.email, user?.phone, user?.address]);
+  }, [user?.first_name, user?.last_name, user?.email, user?.username, user?.phone, user?.address]);
   const [editSaving, setEditSaving] = useState(false);
   const [editStatus, setEditStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -267,6 +269,7 @@ export default function Profile() {
               ['first_name', 'First name'],
               ['last_name',  'Last name'],
               ['email',      'Email address'],
+              ['username',   'Username'],
               ['phone',      'Phone'],
             ] as [keyof typeof editForm, string][]).map(([key, label]) => (
               <div key={key}>

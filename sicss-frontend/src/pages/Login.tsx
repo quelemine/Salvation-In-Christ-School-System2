@@ -9,7 +9,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import OtpModal from '../components/OtpModal';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().min(3, 'Email or username must be at least 3 characters'),
   password: z.string().min(4, 'Password must be at least 4 characters'),
 });
 
@@ -154,10 +154,10 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              {/* Email */}
+              {/* Email/Username */}
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
-                  Email address
+                  Email or username
                 </label>
                 <div className="relative">
                   <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,10 +166,10 @@ export default function Login() {
                   <input
                     {...register('email')}
                     id="email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm font-medium text-slate-700 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-slate-400"
-                    placeholder="you@example.com"
+                    placeholder="Email or username"
                   />
                 </div>
                 {errors.email && <p className="mt-2 text-xs text-rose-600 font-medium">{errors.email.message}</p>}
