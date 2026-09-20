@@ -56,12 +56,32 @@ export default function Grades() {
   }, [classId]);
 
   const filteredClasses = classes.filter((item) => !divisionId || item.division_id === Number(divisionId));
+  const uniqueClasses = filteredClasses.filter((item, index, self) => index === self.findIndex((c) => c.name === item.name));
   const createGrade = async () => {
     setSaving(true); setError('');
     try {
       const created = await gradeService.create({ ...form, student_id: Number(form.student_id), subject_id: Number(form.subject_id), score: Number(form.score) });
-      setGrades((current) => [created, ...current]); setIsOpen(false); setForm({ ...form, student_id: '', subject_id: '', score: '', remarks: '' });
-    } catch { setError('Unable to save this grade.'); } finally { setSaving(false); }
+      // Check if this is an update (grade already exists in list) or new grade
+      const existingIndex = grades.findIndex((g) =>
+        g.student_id === created.student_id &&
+        g.subject_id === created.subject_id &&
+        g.term === created.term &&
+        g.academic_year === created.academic_year
+      );
+      if (existingIndex >= 0) {
+        // Update existing grade
+        setGrades((current) => current.map((grade, index) => index === existingIndex ? created : grade));
+      } else {
+        // Add new grade
+        setGrades((current) => [created, ...current]);
+      }
+      setIsOpen(false);
+      setForm({ ...form, student_id: '', subject_id: '', score: '', remarks: '' });
+      alert('Grade saved successfully');
+    } catch (err: any) {
+      console.error('Grade save error:', err);
+      setError(err.response?.data?.message || 'Unable to save this grade.');
+    } finally { setSaving(false); }
   };
 
   const replaceGrade = (updated: GradeRecord) => setGrades((current) => current.map((grade) => grade.id === updated.id ? updated : grade));
@@ -92,7 +112,7 @@ export default function Grades() {
           </p>
         </div>
         {!isApprover && (
-          <Button onClick={() => setIsOpen(true)}>
+          <Button onClick={() => setIsOpen(true)} className="bg-blue-600 hover:bg-blue-700">
             + Add grade
           </Button>
         )}
@@ -189,7 +209,7 @@ export default function Grades() {
                     onChange={(event) => setClassId(event.target.value)}
                     options={[
                       { value: '', label: 'All classes' },
-                      ...filteredClasses.map((item) => ({ value: String(item.id), label: `${item.name} ${item.section ? `- ${item.section}` : ''}` }))
+                      ...uniqueClasses.map((item) => ({ value: String(item.id), label: item.name }))
                     ]}
                   />
                 </div>
@@ -264,7 +284,7 @@ export default function Grades() {
               onChange={(event) => { setClassId(event.target.value); setForm({ ...form, student_id: '' }); }}
               options={[
                 { value: '', label: 'Select a class' },
-                ...filteredClasses.map((item) => ({ value: String(item.id), label: `${item.name} ${item.section ? `- ${item.section}` : ''}` }))
+                ...uniqueClasses.map((item) => ({ value: String(item.id), label: item.name }))
               ]}
               required
             />
@@ -288,7 +308,7 @@ export default function Grades() {
               onChange={(event) => setForm({ ...form, subject_id: event.target.value })}
               options={[
                 { value: '', label: 'Select a subject' },
-                ...subjects.map((subject) => ({ value: String(subject.id), label: `${subject.code} - ${subject.name}` }))
+                ...subjects.map((subject) => ({ value: String(subject.id), label: `${subject.code || ''} - ${subject.name || 'Unnamed Subject'}` }))
               ]}
               required
             />

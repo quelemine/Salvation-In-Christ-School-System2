@@ -33,7 +33,7 @@ const getClassSuggestions = (divisionName: string, description: string): string[
   if (lowerName.includes('nursery division') || lowerDesc.includes('nursery division')) {
     return ['Nursery 1', 'Nursery 2', 'Nursery 3'];
   }
-  if (lowerName.includes('kindergarten division') || lowerDesc.includes('kindergarten division')) {
+  if (lowerName.includes('kindergarten') || lowerDesc.includes('kindergarten')) {
     return ['ABC', 'K1', 'K2', 'Nursery 1', 'Nursery 2'];
   }
   if (lowerName.includes('elementary division') || lowerDesc.includes('elementary division') || lowerName.includes('primary division') || lowerDesc.includes('primary division')) {
