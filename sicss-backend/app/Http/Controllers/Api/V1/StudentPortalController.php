@@ -92,13 +92,21 @@ class StudentPortalController extends Controller
         $student = $this->student($request);
         $academicYear = $request->input('academic_year', date('Y'));
         
+        // Check if student has outstanding fees
+        if (!$student->fees_cleared) {
+            return response()->json([
+                'message' => 'Report card access denied. Outstanding fees must be cleared.'
+            ], 403);
+        }
+        
         $reportCard = ReportCard::with(['student.class', 'class', 'teacher'])
             ->where('student_id', $student->id)
             ->where('academic_year', $academicYear)
+            ->where('approval_status', 'approved')
             ->first();
         
         if (!$reportCard) {
-            return response()->json(['message' => 'No report card found for the specified academic year'], 404);
+            return response()->json(['message' => 'No approved report card found for the specified academic year'], 404);
         }
         
         return response()->json($reportCard);
