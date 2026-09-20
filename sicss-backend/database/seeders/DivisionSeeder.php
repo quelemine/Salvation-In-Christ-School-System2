@@ -14,7 +14,7 @@ class DivisionSeeder extends Seeder
             [
                 'name' => 'Kindergarten Division',
                 'slug' => 'kindergarten',
-                'description' => 'ABC, K1, K2',
+                'description' => 'ABC, K1, K2, Nursery 1, Nursery 2',
                 'order' => 1,
                 'is_active' => true,
             ],

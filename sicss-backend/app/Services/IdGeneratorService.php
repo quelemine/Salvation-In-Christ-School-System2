@@ -53,7 +53,7 @@ class IdGeneratorService
         $year = date('Y');
         
         $last = Teacher::where('employee_id', 'like', "{$prefix}-{$year}-%")
-            ->orderBy('id', 'desc')
+            ->orderByRaw("CAST(SPLIT_PART(employee_id, '-', 3) AS INTEGER) DESC")
             ->first();
         
         $lastNumber = 0;
@@ -94,7 +94,7 @@ class IdGeneratorService
         $year = date('Y');
         
         $last = User::where('user_code', 'like', "{$prefix}-{$year}-%")
-            ->orderBy('id', 'desc')
+            ->orderByRaw("CAST(SPLIT_PART(user_code, '-', 3) AS INTEGER) DESC")
             ->first();
         
         $lastNumber = 0;
